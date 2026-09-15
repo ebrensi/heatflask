@@ -12,9 +12,9 @@ import { href, HHMMSS, escapeHTML } from "./appUtil"
 import { activity_icon, activityURL } from "./Strava"
 import * as ActivityCollection from "./DotLayer/ActivityCollection"
 import { dotLayer } from "./DotLayerAPI"
+import { fitTo } from "./Render"
 
-import { LatLngBounds } from "leaflet"
-import type { Map as LMap } from "leaflet"
+import type { Map as MLMap } from "maplibre-gl"
 import type { Activity } from "./DotLayer/Activity"
 import type { ActivityType } from "./Strava"
 import type { State } from "./Model"
@@ -24,7 +24,7 @@ const DIST_SCALE = METRIC ? 1 / 1000 : 1 / 1609.34
 const DIST_LABEL = METRIC ? "km" : "mi"
 
 let tableEl: HTMLTableElement
-let _map: LMap
+let _map: MLMap
 let _state: State
 
 /** Is the "Zoom to selection" box ticked? */
@@ -35,7 +35,7 @@ function zoomToSelection(): boolean {
   return !!el && el.checked
 }
 
-export function init(map: LMap, appState: State): void {
+export function init(map: MLMap, appState: State): void {
   _map = map
   _state = appState
 
@@ -77,20 +77,15 @@ export function selectionChanged(): void {
   if (zoomToSelection()) zoomToSelected()
 }
 
-/** Paths change width with selection, so they need a redraw. Dots pick it up
- * on the next animation frame by themselves. */
+/** Selection changes path widths, dot shapes and layering */
 function redrawSelection(): void {
-  if (dotLayer) dotLayer.redraw(true)
+  if (dotLayer) dotLayer.redraw()
 }
 
 /** Fit the map to these activities. An empty selection leaves the map alone. */
 function zoomTo(activities: Activity[]): void {
   if (!activities.length || !_map) return
-  /* A fresh bounds: LatLngBounds.extend mutates in place, so extending the
-   * first activity's own llBounds would grow that activity's bounds. */
-  const bounds = new LatLngBounds([])
-  for (const A of activities) bounds.extend(A.llBounds)
-  if (bounds.isValid()) _map.fitBounds(bounds)
+  fitTo(ActivityCollection.boundsOf(activities))
 }
 
 export function selected(): Activity[] {

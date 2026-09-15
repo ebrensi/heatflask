@@ -1,0 +1,267 @@
+/* heatflask mods to MapLibre GL styling, and the map's own UI */
+
+.maplibregl-map {
+  background-image: linear-gradient(black, blue);
+  user-select: none; /* disables text-selection on shift-click */
+}
+
+/* Links on the main page are white (main-page.css), which on the near-white
+   attribution strip made the tile credits unreadable. The credits are a
+   condition of using most of the tile providers, so they must show. */
+.maplibregl-ctrl.maplibregl-ctrl-attrib {
+  background: rgba(0, 0, 0, 0.5);
+  color: #ddd;
+}
+.maplibregl-ctrl-attrib a {
+  color: #ddd;
+}
+.maplibregl-ctrl-attrib-button {
+  filter: invert(1);
+}
+
+/* buttons: translucent dark, as the Leaflet ones were */
+.maplibregl-ctrl-group {
+  background: rgba(0, 0, 0, 0.5);
+}
+.maplibregl-ctrl-group button {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 16px;
+}
+.maplibregl-ctrl-group button + button {
+  border-top-color: rgba(255, 255, 255, 0.2);
+}
+.maplibregl-ctrl-group button:not(:disabled):hover {
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+}
+/* MapLibre draws its own icons dark; ours are icon-font glyphs coloured
+ * above, but the navigation control's are background images */
+.maplibregl-ctrl-group .maplibregl-ctrl-icon {
+  filter: invert(1);
+}
+
+.maplibregl-popup-content {
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+}
+.maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
+  border-top-color: rgba(0, 0, 0, 0.7);
+}
+.maplibregl-popup-anchor-top .maplibregl-popup-tip {
+  border-bottom-color: rgba(0, 0, 0, 0.7);
+}
+.maplibregl-popup-close-button {
+  color: white;
+}
+
+/* Strava and Heatflask logos, bottom left */
+.heatflask-watermarks {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  pointer-events: none;
+}
+.heatflask-watermarks img {
+  height: 40px;
+  width: auto;
+  opacity: 0.5;
+}
+
+/* basemap and terrain picker */
+.layer-picker {
+  position: relative;
+}
+.layer-picker-panel {
+  position: absolute;
+  top: 0;
+  left: 34px;
+  padding: 6px 10px;
+  max-height: 70vh;
+  overflow-y: auto;
+  white-space: nowrap;
+  background: rgba(0, 0, 0, 0.75);
+  color: rgba(255, 255, 255, 0.9);
+  border-radius: 4px;
+  font-size: 13px;
+}
+.layer-picker-panel label {
+  display: block;
+  cursor: pointer;
+  line-height: 1.6;
+}
+.layer-picker-terrain {
+  padding-bottom: 4px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+  font-weight: bold;
+}
+
+/* admin readout from HeatflaskLayer */
+.gl-info-box {
+  position: absolute;
+  bottom: 30px;
+  right: 50px;
+  z-index: 2;
+  padding: 3px 6px;
+  background: rgba(50, 50, 240, 0.6);
+  color: white;
+  font: 11px monospace;
+  pointer-events: none;
+}
+
+/* box select */
+.box-select-crosshair,
+.box-select-crosshair canvas {
+  cursor: crosshair !important;
+}
+.box-select-box {
+  position: absolute;
+  z-index: 3;
+  border: 2px dotted #38f;
+  background: rgba(255, 255, 255, 0.3);
+  pointer-events: none;
+}
+
+/* capture area */
+.area-select {
+  position: absolute;
+  z-index: 3;
+  box-sizing: border-box;
+  border: 2px dashed rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+.area-select-handle {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: white;
+  border: 1px solid #333;
+  pointer-events: auto;
+  touch-action: none;
+}
+.area-select-nw {
+  left: -8px;
+  top: -8px;
+  cursor: nwse-resize;
+}
+.area-select-ne {
+  right: -8px;
+  top: -8px;
+  cursor: nesw-resize;
+}
+.area-select-sw {
+  left: -8px;
+  bottom: -8px;
+  cursor: nesw-resize;
+}
+.area-select-se {
+  right: -8px;
+  bottom: -8px;
+  cursor: nwse-resize;
+}
+
+/* dialogs: the import progress and flash messages */
+.heatflask-dialog {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 16rem;
+  max-width: 90%;
+  box-shadow: 2px 2px 10px 0 rgba(0, 0, 0, 0.75);
+  font: 14px/1.5 "Helvetica Neue", Arial, Helvetica, sans-serif;
+}
+.heatflask-dialog.dialog-center {
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+.heatflask-dialog.dialog-top {
+  top: 10px;
+}
+.heatflask-dialog .titlebar {
+  position: relative;
+  min-height: 38px;
+  padding: 10px 45px 10px 10px;
+}
+.heatflask-dialog .close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  color: #e4e4e4;
+  font-size: 20px;
+  line-height: 28px;
+  cursor: pointer;
+}
+.heatflask-dialog .content {
+  padding: 0 10px 10px;
+}
+
+/* The dialog shown while activities stream in */
+.import-progress {
+  min-width: 16rem;
+  text-align: center;
+}
+
+.import-progress .info-message {
+  margin-bottom: 0.5rem;
+}
+
+.import-progress .progbar {
+  width: 100%;
+  height: 0.8rem;
+}
+
+.import-progress .import-stop {
+  margin-top: 0.6rem;
+}
+
+/* .btn sets display, which beats the hidden attribute */
+.import-progress .import-stop[hidden] {
+  display: none;
+}
+
+.import-progress .import-count {
+  margin-top: 0.4rem;
+  font-family: monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9rem;
+  opacity: 0.85;
+  min-height: 1.2em;
+}
+
+/* Readout while a video capture runs. Centred at the top of the map so it
+ * clears the controls in both top corners. */
+.capture-progress {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  padding: 6px 12px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.75);
+  color: rgba(255, 255, 255, 0.95);
+  font-family: monospace;
+  font-size: 14px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* The link under "saved ..." has to be clickable through the readout's
+ * pointer-events: none. */
+.capture-sponsor {
+  margin-top: 4px;
+  font-family: sans-serif;
+  text-align: center;
+}
+
+.capture-progress .capture-sponsor a {
+  pointer-events: auto;
+  color: #fc4c02;
+}

@@ -51,6 +51,9 @@ export type VisualParameters = {
   geohash?: string // a string representing zoom/center
   baselayer?: string // map background tile group name
   autozoom?: boolean // Whether or not to automatically zoom to include all of the activities after render
+  pitch?: number // camera tilt, degrees from straight down
+  bearing?: number // camera rotation, degrees clockwise from north
+  terrain?: boolean // 3D terrain
 
   // Animation
   tau?: number // time scale: activity-seconds per real second
@@ -78,6 +81,9 @@ export const DefaultVisual: VisualParameters = {
   geohash: DEFAULT_GEOHASH,
   baselayer: DEFAULT_BASELAYER,
   autozoom: true,
+  pitch: 0,
+  bearing: 0,
+  terrain: false,
   tau: 30, // time scale: activity-seconds per real second
   T: 60, // s: spacing between dots, in activity-seconds
   sz: 3,
@@ -106,6 +112,9 @@ export type URLParameters = {
   autozoom?: string
   geohash?: string
   baselayer?: string
+  pitch?: string
+  bearing?: string
+  terrain?: string
   // Animation
   tau?: string
   T?: string

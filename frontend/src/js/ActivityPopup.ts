@@ -1,5 +1,5 @@
 /*
- * ActivityPopup -- a Leaflet popup with one activity's vital statistics.
+ * ActivityPopup -- a map popup with one activity's vital statistics.
  *
  * A port of master's activityDataPopup(): name, type and local start time,
  * distance and elapsed time, speed or pace, and links to the activity on
@@ -11,12 +11,12 @@
  * it up the next time the index is rebuilt.
  */
 
-import { popup } from "leaflet"
+import { Popup } from "maplibre-gl"
 import { href, HHMMSS, escapeHTML } from "./appUtil"
 import { activityURL, activity_vtype } from "./Strava"
 import { heatflaskURL } from "./Table"
 
-import type { Map as LMap } from "leaflet"
+import type { Map as MLMap } from "maplibre-gl"
 import type { Activity } from "./DotLayer/Activity"
 
 const KM = 1000
@@ -39,7 +39,9 @@ function speedText(A: Activity): string {
   return `${kmh} km/hr (${mih} mi/hr)`
 }
 
-export function activityPopup(map: LMap, A: Activity): void {
+let open: Popup | undefined
+
+export function activityPopup(map: MLMap, A: Activity): void {
   const d = A.total_distance || 0
   const dkm = +(d / KM).toFixed(2)
   const dmi = +(d / MI).toFixed(2)
@@ -54,5 +56,9 @@ export function activityPopup(map: LMap, A: Activity): void {
     `View in ${href(activityURL(A.id), "Strava")}, ` +
     href(heatflaskURL([A.id]), "Heatflask")
 
-  popup().setLatLng(A.llBounds.getCenter()).setContent(content).openOn(map)
+  open?.remove()
+  open = new Popup({ maxWidth: "320px" })
+    .setLngLat(A.llBounds.getCenter())
+    .setHTML(content)
+    .addTo(map)
 }

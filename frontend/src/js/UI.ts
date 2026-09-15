@@ -20,6 +20,8 @@ import * as MapAPI from "./MapAPI"
 import * as Sidebar from "./Sidebar"
 
 import { createDotLayer } from "./DotLayerAPI"
+import { Dialog } from "./Dialog"
+import { LayerPicker } from "./MapControls"
 import { addAnimationControl } from "./AnimationControl"
 import { addBoxSelect } from "./BoxSelect"
 import { addCaptureControl } from "./CaptureControl"
@@ -30,12 +32,11 @@ import * as StreamCache from "./StreamCache"
 
 const map = MapAPI.CreateMap()
 
-if (ADMIN) map.showInfoBox()
-
 if (!!FLASHES && FLASHES.length) {
   // escaped: a flash can quote a URL parameter or an athlete's name
-  map.controlWindow.title(FLASHES.map(escapeHTML).join("<br>"))
-  map.controlWindow.show()
+  new Dialog(map.getContainer(), { position: "top" })
+    .title(FLASHES.map(escapeHTML).join("<br>"))
+    .show()
 }
 
 // The query/render pipeline lives in Render.ts, so the query tab can drive it
@@ -54,6 +55,7 @@ export async function start() {
 
   // **** Map settings / bindings ****
   MapAPI.BindMap(map, appState)
+  map.addControl(new LayerPicker(appState), "top-left")
 
   // Create the animation layer and add it to the map. Without this nothing
   // draws, however many activities the query returns.
@@ -91,6 +93,8 @@ export async function start() {
   Table.init(map, appState)
 
   await renderFromQuery()
+
+  if (ADMIN) Object.assign(window, { heatflask: { map, appState } })
 
   return appState
 }

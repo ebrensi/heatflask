@@ -14,11 +14,11 @@ import { qToQ, makeActivityQuery, decodePackedStreams } from "./DataImport"
 import { nextTask } from "./appUtil"
 import { URLS } from "./Env"
 
-import type { Map as LMap } from "leaflet"
+import type { Map as MLMap, LngLatBounds } from "maplibre-gl"
 import type { State } from "./Model"
 import type { ImportedActivity } from "./DataImport"
 
-let _map: LMap
+let _map: MLMap
 let _state: State
 
 /* The render in progress, if there is one. Aborting it cancels its requests
@@ -34,7 +34,7 @@ let current: AbortController | undefined
 const STOPPED = "stopped"
 const SUPERSEDED = "superseded"
 
-export function initRender(map: LMap, appState: State): void {
+export function initRender(map: MLMap, appState: State): void {
   _map = map
   _state = appState
   ImportProgress.onStop(abortRender)
@@ -321,10 +321,19 @@ async function render(
    * colour swatches come out blank. */
   Table.update()
 
-  if (autozoom) {
-    const bounds = await ActivityCollection.getLatLngBounds()
-    if (bounds && bounds.isValid()) _map.fitBounds(bounds)
-  }
+  if (autozoom) fitTo(await ActivityCollection.getLatLngBounds())
 
   return count
+}
+
+/** Fit the map to some bounds, keeping the camera's pitch and bearing, and
+ * clear of the sidebar tabs on the left */
+export function fitTo(bounds: LngLatBounds | undefined): void {
+  if (!bounds || !_map) return
+  _map.fitBounds(bounds, {
+    padding: { top: 40, bottom: 40, left: 60, right: 40 },
+    pitch: _map.getPitch(),
+    bearing: _map.getBearing(),
+    maxZoom: 16,
+  })
 }

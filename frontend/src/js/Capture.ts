@@ -12,6 +12,11 @@
  * Encoding is WebCodecs (in every current browser) with mediabunny doing the
  * MP4 muxing.
  *
+ * Each frame is the map's own WebGL canvas -- basemap, terrain, paths and
+ * dots together, exactly as they appear -- read back right after MapLibre
+ * renders it. With Leaflet a frame had to be composited by hand from tile
+ * images and two overlay canvases.
+ *
  * Why one period: the animation is periodic. The set of dot positions at time
  * t+s is the same set as at time t, so a recording exactly one period long
  * ends where it began and loops seamlessly.
@@ -28,7 +33,7 @@ import { CAPTURE_DURATION_MAX } from "./Env"
 import heatflaskImgSrc from "url:../images/logo.png"
 import stravaImgSrc from "url:../images/pbs4.png"
 
-import type { Map as LMap } from "leaflet"
+import type { Map as MLMap } from "maplibre-gl"
 import type { VideoCodec } from "mediabunny"
 
 /* 25fps is plenty for this material -- the dots move smoothly but there is no
@@ -41,7 +46,10 @@ const LOGO_HEIGHT = 50
 const LOGO_MARGIN = 4
 const LOGO_ALPHA = 0.5
 
-/** A rectangle of the map viewport, in container pixels. */
+/** The longest side a recording is scaled down to, if it is bigger */
+const MAX_VIDEO_SIDE = 1920
+
+/** A rectangle of the map viewport, in CSS pixels. */
 export type Selection = {
   x: number
   y: number
@@ -66,71 +74,6 @@ export function isCapturing(): boolean {
 
 export function abortCapture(): void {
   _aborted = true
-}
-
-/* ------------------------------------------------------------------ *
- * The basemap
- * ------------------------------------------------------------------ */
-
-/**
- * Draw the basemap as it currently appears on screen.
- *
- * Rather than re-deriving which tiles cover the viewport, this reads the tile
- * <img> elements Leaflet has already placed and asks each one where it landed.
- * getBoundingClientRect() reports post-CSS-transform geometry, so this comes
- * out right at fractional zoom and mid-pan without knowing anything about how
- * Leaflet positions tiles.
- *
- * The tile elements are drawn directly. An earlier version re-loaded each
- * tile.src into a fresh crossOrigin="anonymous" Image to keep the canvas
- * readable, which was both a second decode per tile and, as it turned out,
- * broken: CachedTileLayer serves tiles from blob: URLs, and it was revoking
- * them the instant they loaded, so every re-load failed and the capture came
- * out on black.
- *
- * Drawing the elements is also what keeps the canvas readable. CachedTileLayer
- * fetches each tile and displays it from a blob: URL, which is same-origin and
- * so does not taint -- and a tainted canvas cannot be encoded at all, since
- * VideoEncoder throws SecurityError on the first frame.
- */
-function drawBasemap(
-  map: LMap,
-  ctx: CanvasRenderingContext2D,
-  sel: Selection
-): boolean {
-  const container = map.getContainer()
-  const origin = container.getBoundingClientRect()
-
-  const tiles = Array.from(
-    container.querySelectorAll<HTMLImageElement>("img.leaflet-tile")
-  ).filter((t) => t.complete && t.naturalWidth > 0)
-
-  let drew = false
-  for (const tile of tiles) {
-    /* A tile mid-fade or being swapped out can be transparent; honour it so
-     * the capture matches what is on screen. */
-    const opacity = Number(tile.style.opacity || "1")
-    if (opacity <= 0) continue
-
-    const r = tile.getBoundingClientRect()
-    const prev = ctx.globalAlpha
-    ctx.globalAlpha = opacity
-    try {
-      ctx.drawImage(
-        tile,
-        r.left - origin.left - sel.x,
-        r.top - origin.top - sel.y,
-        r.width,
-        r.height
-      )
-      drew = true
-    } catch (e) {
-      /* A tile whose src never resolved throws here rather than drawing */
-      console.warn("capture: could not draw a tile", e)
-    }
-    ctx.globalAlpha = prev
-  }
-  return drew
 }
 
 /* ------------------------------------------------------------------ *
@@ -166,16 +109,26 @@ function drawLogos(ctx: CanvasRenderingContext2D, sel: Selection): void {
  * @param sel the region of the viewport to record, in container pixels
  */
 export async function captureVideo(
-  map: LMap,
+  map: MLMap,
   sel: Selection,
   onProgress: ProgressFn = () => undefined
 ): Promise<Blob | null> {
   if (_capturing) return null
 
+  /* The canvas is at device resolution, so a selection in CSS pixels covers
+   * pixelRatio times as many canvas pixels. Record at that resolution, up to
+   * MAX_VIDEO_SIDE. */
+  const pr = map.getPixelRatio()
+  const src = {
+    x: Math.round(sel.x * pr),
+    y: Math.round(sel.y * pr),
+    width: Math.round(sel.width * pr),
+    height: Math.round(sel.height * pr),
+  }
+  const shrink = Math.min(1, MAX_VIDEO_SIDE / Math.max(src.width, src.height))
   /* H.264 needs even dimensions, and every other codec is happier with them */
-  const width = Math.max(2, Math.floor(sel.width / 2) * 2)
-  const height = Math.max(2, Math.floor(sel.height / 2) * 2)
-  const region: Selection = { ...sel, width, height }
+  const width = Math.max(2, Math.floor((src.width * shrink) / 2) * 2)
+  const height = Math.max(2, Math.floor((src.height * shrink) / 2) * 2)
 
   const period = dotLayer.periodInSecs()
   if (!isFinite(period) || period <= 0) {
@@ -207,11 +160,12 @@ export async function captureVideo(
   _capturing = true
   _aborted = false
 
-  /* The animation loop and the capture both draw into the same dot canvas, so
-   * they cannot run at once. Remember whether it was running so we can put it
-   * back the way we found it. */
+  /* Frames are stepped by hand, so the animation must not advance the clock
+   * underneath. Remember whether it was running to put it back. */
   const wasRunning = !dotLayer.paused()
   dotLayer.pause()
+  const t0 = dotLayer.getSimTime()
+  const T = period * dotLayer.speed()
 
   const frame = document.createElement("canvas")
   frame.width = width
@@ -237,27 +191,8 @@ export async function captureVideo(
   try {
     await output.start()
 
-    onProgress(0, "capturing basemap…")
-    /* Captured once: the map does not move during a capture, so the basemap is
-     * the same in every frame and re-compositing it per frame would be pure
-     * waste. */
-    const basemap = document.createElement("canvas")
-    basemap.width = width
-    basemap.height = height
-    const haveBasemap = drawBasemap(map, basemap.getContext("2d"), region)
-    if (!haveBasemap) {
-      /* Worth saying out loud: with no basemap the frames are transparent
-       * behind the dots, and MP4 has no alpha channel, so the recording comes
-       * out on a black background. That looks like a broken capture rather
-       * than a missing basemap. The usual cause is a tile server that sends no
-       * CORS headers, since a tainted canvas cannot be encoded. */
-      console.warn(
-        "capture: no basemap tiles could be composited; " +
-          "recording on a black background"
-      )
-    }
-
-    const { path: pathCanvas, dot: dotCanvas, dotFilter } = dotLayer.canvases()
+    onProgress(0, "waiting for the map to load…")
+    await mapSettled(map)
 
     for (let i = 0; i < numFrames; i++) {
       if (_aborted) {
@@ -268,32 +203,22 @@ export async function captureVideo(
       /* Frame i sits at i/numFrames of the way through one period. The frame
        * *at* the period is frame 0 again, so it is not recorded -- that is
        * what makes the loop seamless rather than double-exposing one frame. */
-      const t = (i * period) / numFrames
-      await dotLayer.drawDotsAt(t)
-
-      ctx.clearRect(0, 0, width, height)
-      if (haveBasemap) ctx.drawImage(basemap, 0, 0)
-
-      for (const src of [pathCanvas, dotCanvas]) {
-        if (!src) continue
-        /* The dot shadows are a CSS filter on the live canvas, which drawImage
-         * does not carry over -- so apply the same filter here. */
-        ctx.filter = src === dotCanvas ? dotFilter : "none"
+      dotLayer.setSimTime(t0 + (i * T) / numFrames)
+      await renderedFrame(map, (canvas) => {
+        ctx.clearRect(0, 0, width, height)
         ctx.drawImage(
-          src,
-          region.x,
-          region.y,
-          width,
-          height,
+          canvas,
+          src.x,
+          src.y,
+          src.width,
+          src.height,
           0,
           0,
           width,
           height
         )
-      }
-
-      ctx.filter = "none"
-      drawLogos(ctx, region)
+      })
+      drawLogos(ctx, { x: 0, y: 0, width, height })
 
       /* Awaited so encoder and writer backpressure is respected -- without it
        * a long capture queues every frame in memory at once. */
@@ -311,11 +236,37 @@ export async function captureVideo(
     return new Blob([target.buffer], { type: "video/mp4" })
   } finally {
     _capturing = false
-    /* Put the layer back as we found it. If it was already paused, redraw so
-     * the last capture frame is not left sitting on screen. */
+    dotLayer.setSimTime(t0)
     if (wasRunning) dotLayer.animate()
-    else await dotLayer.redraw(true)
+    else dotLayer.updateDotSettings()
   }
+}
+
+/** Resolve once the map has no tiles still loading */
+function mapSettled(map: MLMap): Promise<void> {
+  if (map.loaded()) return Promise.resolve()
+  return new Promise((resolve) => map.once("idle", () => resolve()))
+}
+
+/**
+ * Render one frame and hand the map's canvas to `read` straight away.
+ *
+ * The WebGL drawing buffer is only guaranteed until the browser composites
+ * it, so it has to be read in the same task that drew it. MapLibre fires
+ * "render" at the end of drawing a frame, synchronously, which is that task.
+ * (The alternative, preserveDrawingBuffer, costs every frame of normal use.)
+ */
+function renderedFrame(
+  map: MLMap,
+  read: (canvas: HTMLCanvasElement) => void
+): Promise<void> {
+  return new Promise((resolve) => {
+    map.once("render", () => {
+      read(map.getCanvas())
+      resolve()
+    })
+    map.triggerRepaint()
+  })
 }
 
 /** Hand the finished file to the user. */

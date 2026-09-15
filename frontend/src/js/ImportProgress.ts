@@ -10,25 +10,17 @@
  * alongside a commented flags.onChange("importing", ...) that would have
  * shown and hidden it. None of it was ever connected.
  *
- * Content is set once and the pieces updated by reference: Control.Window's
+ * Content is set once and the pieces updated by reference: Dialog's
  * content() assigns innerHTML, so calling it per message would rebuild the
  * DOM on every update and restart the progress bar's animation.
  */
 
-import { Control } from "leaflet"
 import { icon } from "./Icons"
+import { Dialog } from "./Dialog"
 
-import type { Map as LMap } from "leaflet"
+import type { Map as MLMap } from "maplibre-gl"
 
-type ControlWindow = {
-  title(html: string): unknown
-  content(html: string): unknown
-  getContainer(): HTMLElement
-  show(position?: string): unknown
-  hide(): unknown
-}
-
-let win: ControlWindow
+let win: Dialog
 let msgEl: HTMLElement
 let barEl: HTMLProgressElement
 let countEl: HTMLElement
@@ -42,13 +34,8 @@ const LINGER_MS = 700
 /** Longer, when what it says is an error worth reading. */
 const LINGER_ERROR_MS = 6000
 
-export function initImportProgress(map: LMap): void {
-  const Ctor = <
-    new (map: LMap, opts: Record<string, unknown>) => ControlWindow
-  >(<unknown>Control.Window)
-
-  win = new Ctor(map, {
-    visible: false,
+export function initImportProgress(map: MLMap): void {
+  win = new Dialog(map.getContainer(), {
     position: "center",
     title: `${icon("cloud-download")} Importing`,
     content: `

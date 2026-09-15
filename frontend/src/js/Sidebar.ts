@@ -13,17 +13,63 @@ import * as profileTab from "../webpages/main-page/tab.profile"
 import * as infoTab from "../webpages/main-page/tab.info"
 import * as controlsTab from "../webpages/main-page/tab.controls"
 
-import { control, Control, Map } from "leaflet"
-import "~/node_modules/sidebar-v2/js/leaflet-sidebar"
+import type { Map as MLMap } from "maplibre-gl"
 
 import { nextAnimationFrame } from "./appUtil"
 import { icon } from "./Icons"
 import { State } from "./Model"
 
-interface Sidebar extends Control.Sidebar {
-  tabNames: string[]
-  currentTab: number
-  isOpen: boolean
+/**
+ * sidebar-v2's behaviour without its Leaflet control: the markup and the
+ * stylesheet are the same, and all it ever did was move .active and
+ * .collapsed classes around.
+ */
+class Sidebar {
+  tabNames: string[] = []
+  currentTab = 0
+  isOpen = false
+
+  constructor(private el: HTMLElement) {
+    el.classList.add("sidebar-left")
+    for (const a of Array.from(
+      el.querySelectorAll<HTMLAnchorElement>(".sidebar-tabs > ul > li > a")
+    )) {
+      a.addEventListener("click", (e) => {
+        e.preventDefault()
+        const li = a.parentElement
+        if (li.classList.contains("active")) this.close()
+        else if (!li.classList.contains("disabled")) this.open(a.hash.slice(1))
+      })
+    }
+    for (const btn of Array.from(el.querySelectorAll(".sidebar-close"))) {
+      btn.addEventListener("click", () => this.close())
+    }
+  }
+
+  open(id: string): void {
+    for (const pane of Array.from(this.el.querySelectorAll(".sidebar-pane"))) {
+      pane.classList.toggle("active", pane.id === id)
+    }
+    for (const a of Array.from(
+      this.el.querySelectorAll<HTMLAnchorElement>(".sidebar-tabs > ul > li > a")
+    )) {
+      a.parentElement.classList.toggle("active", a.hash === `#${id}`)
+    }
+    const i = this.tabNames.indexOf(id)
+    if (i >= 0) this.currentTab = i
+    this.el.classList.remove("collapsed")
+    this.isOpen = true
+  }
+
+  close(): void {
+    for (const li of Array.from(
+      this.el.querySelectorAll(".sidebar-tabs > ul > li.active")
+    )) {
+      li.classList.remove("active")
+    }
+    this.el.classList.add("collapsed")
+    this.isOpen = false
+  }
 }
 
 type setupFunc = (appState: State) => void
@@ -69,7 +115,7 @@ const DOWN_ARROW_KEY = 38
 const RIGHT_ARROW_KEY = 39
 const LEFT_ARROW_KEY = 37
 
-export async function renderTabs(map: Map, state: State, tabIds?: string[]) {
+export async function renderTabs(map: MLMap, state: State, tabIds?: string[]) {
   const tabs: string[] = []
   const contents: string[] = []
   const setupFuncs: setupFunc[] = []
@@ -99,16 +145,8 @@ export async function renderTabs(map: Map, state: State, tabIds?: string[]) {
   sidebar_tablist_el.innerHTML = tabs.join("\n")
   sidebar_content_el.innerHTML = contents.join("")
 
-  // The main sidebar UI
-  // Leaflet sidebar v2
-  const S = <Sidebar>control.sidebar("sidebar")
+  const S = new Sidebar(document.getElementById("sidebar"))
   S.tabNames = tabIds
-  S.currentTab = 0
-
-  /* key and mouse bindings to the map to control the sidebar */
-  S.addEventListener("opening", () => (S.isOpen = true))
-  S.addEventListener("closing", () => (S.isOpen = false))
-  S.isOpen = false
 
   document.addEventListener("keydown", (e) => {
     const key = e.key || e.keyCode
@@ -137,8 +175,7 @@ export async function renderTabs(map: Map, state: State, tabIds?: string[]) {
     }
   })
 
-  S.addTo(map)
-  map.addEventListener("click", () => S.isOpen && S.close())
+  map.on("click", () => S.isOpen && S.close())
 
   await nextAnimationFrame()
 

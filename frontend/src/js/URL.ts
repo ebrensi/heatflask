@@ -36,6 +36,9 @@ const urlArgNames: Record<URLParameter, string[]> = {
   autozoom: ["autozoom", "az"],
   geohash: ["geohash", "gh"],
   baselayer: ["baselayer", "map", "bl"],
+  pitch: ["pitch", "pi"],
+  bearing: ["bearing", "be"],
+  terrain: ["terrain", "3d"],
   //  Animation
   tau: ["tau", "timescale"],
   T: ["T", "period"],
@@ -79,6 +82,9 @@ function QVtoURL({ query, visual }: QVParams): URLParameters {
     paths: boolString(visual.paths),
     alpha: str(visual.alpha),
     baselayer: visual.baselayer,
+    pitch: str(visual.pitch),
+    bearing: str(visual.bearing),
+    terrain: boolString(visual.terrain),
   }
   return urlparams
 }
@@ -175,12 +181,20 @@ export function parseURL(urlString: string) {
   }
 
   // numerical params
-  for (const p of ["zoom", "tau", "T", "sz", "alpha"] as URLParameter[]) {
+  for (const p of [
+    "zoom",
+    "tau",
+    "T",
+    "sz",
+    "alpha",
+    "pitch",
+    "bearing",
+  ] as URLParameter[]) {
     if (urlParams[p]) vparams[p] = +urlParams[p]
   }
 
   // boolean params
-  for (const p of ["paths", "paused"] as URLParameter[]) {
+  for (const p of ["paths", "paused", "terrain"] as URLParameter[]) {
     if (urlParams[p]) vparams[p] = boolVal(urlParams[p])
   }
 

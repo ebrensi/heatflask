@@ -1,58 +1,31 @@
 /*
- * DotLayerAPI -- creates the one DotLayer instance and exposes it.
- *
- * UI.ts imported `{ dotLayer }` from this module, but the module did not
- * exist: that import sat commented out, and nothing else imported DotLayer
- * either. That is why the animation layer was never bundled, never
- * typechecked, and never ran.
+ * DotLayerAPI -- creates the one HeatflaskLayer and exposes it.
  */
 
-import { DotLayer } from "./DotLayer/DotLayer"
+import { HeatflaskLayer } from "./GL/HeatflaskLayer"
+import { onStyleLoad } from "./MapAPI"
 
-import type { Map as LMap } from "leaflet"
+import type { Map as MLMap } from "maplibre-gl"
 import type { State } from "./Model"
 
-/* Layer.extend() types its result as a constructor taking no arguments, but
- * Leaflet forwards whatever you pass to initialize(). This describes the
- * surface we actually use. */
-type DotLayerInstance = {
-  addTo(map: LMap): DotLayerInstance
-  reset(): Promise<void>
-  redraw(forceFullRedraw?: boolean): Promise<void>
-  animate(): void
-  pause(): void
-  paused(): boolean
-  updateDotSettings(): unknown
-  options: { showPaths: boolean }
-
-  /* Frame stepping, for Capture.ts: the length of one animation loop in real
-   * seconds, a draw at an arbitrary time rather than "now", and the canvases
-   * a capture composites (bottom to top), with the CSS filter the dot canvas
-   * is displayed through. */
-  periodInSecs(): number
-  drawDotsAt(tsecs: number): Promise<number>
-  canvases(): {
-    path: HTMLCanvasElement
-    dot: HTMLCanvasElement
-    dotFilter: string
-  }
-}
-type DotLayerCtor = new (options: Record<string, unknown>) => DotLayerInstance
-
 // Assigned by createDotLayer(). Importers get the live binding.
-export let dotLayer: DotLayerInstance = null
+export let dotLayer: HeatflaskLayer = null
 
-export function createDotLayer(map: LMap, appState: State) {
+export function createDotLayer(map: MLMap, appState: State): HeatflaskLayer {
   const { visual } = appState
-  const Ctor = <DotLayerCtor>(<unknown>DotLayer)
 
-  dotLayer = new Ctor({
-    // The animation settings (tau, T, sz, alpha, paused) are read from here
-    visual: visual,
+  dotLayer = new HeatflaskLayer({
+    // The animation settings (tau, T, sz, paused) are read from here
+    visual,
     showPaths: visual.paths,
     startPaused: visual.paused,
   })
 
-  dotLayer.addTo(map)
+  /* On top of everything, labels included, as the canvases sat over Leaflet's
+   * panes. Re-added after every basemap change, which replaces the style. */
+  onStyleLoad(map, () => {
+    if (!map.getLayer(dotLayer.id)) map.addLayer(dotLayer)
+  })
+
   return dotLayer
 }

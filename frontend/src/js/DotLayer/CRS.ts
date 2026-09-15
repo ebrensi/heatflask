@@ -52,3 +52,22 @@ export function makePT(zoom: number): (p: PointArray) => PointArray {
     return T(P(llpt))
   }
 }
+
+/* The inverse of makePT(0): a point in zoom-0 pixel space (the world is
+ * 256px square) back to [lng, lat]. Leaflet's 256px world is the coordinate
+ * space every Activity stores its track in; MapLibre's MercatorCoordinate is
+ * the same square scaled to 1, so dividing by WORLD_PX converts between them. */
+export const WORLD_PX = 256
+
+export function px2lngLat(x: number, y: number): [number, number] {
+  const lng = (x / WORLD_PX) * 360 - 180
+  const n = Math.PI * (1 - (2 * y) / WORLD_PX)
+  const lat = (Math.atan(Math.sinh(n)) * 180) / Math.PI
+  return [lng, lat]
+}
+
+/** World pixels per metre of height at a latitude: Mercator stretches
+ * distances by 1/cos(lat), and heights have to stretch with them. */
+export function pxPerMeter(lat: number): number {
+  return WORLD_PX / (2 * Math.PI * EARTH_RADIUS * Math.cos(lat * RAD))
+}

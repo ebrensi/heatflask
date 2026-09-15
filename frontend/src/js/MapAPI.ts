@@ -1,255 +1,360 @@
 /*
- * mapAPI -- Leaflet map background is initialized here
- *    as well as all of the plugins we're going to need
- *    except for the sidebar overlay.
+ * MapAPI -- the MapLibre GL map, its basemaps, and 3D terrain.
+ *
+ * Basemap names are kept from the Leaflet version wherever the same map still
+ * exists, so a baselayer saved in someone's link still resolves. Several of
+ * them are vector styles now where they were raster tiles: CARTO's and
+ * Stadia's styles are published both ways, and the vector versions stay sharp
+ * at fractional zoom and when the map is pitched or rotated.
  */
 
 import Geohash from "latlon-geohash"
-import { Map, Control, AreaSelect, TileLayer } from "leaflet"
-import "leaflet-areaselect"
-import "leaflet-control-window"
-import "leaflet-easybutton"
-import "leaflet-providers"
+import { Map as MLMap, NavigationControl } from "maplibre-gl"
 
 import strava_logo from "url:../images/pbs4.png"
 import heatflask_logo from "url:../images/logo.png"
 
-import "./CachedTileLayer"
-import "./LeafletExtensions"
-
-import { MAPBOX_ACCESS_TOKEN, CARTO_API_KEY, OFFLINE, MOBILE } from "./Env"
+import { MAPBOX_ACCESS_TOKEN } from "./Env"
 import { State, DefaultVisual } from "./Model"
 import { setURLfromQV } from "./URL"
+import { Dialog } from "./Dialog"
+import { escapeHTML } from "./appUtil"
 
-import type { Point } from "leaflet"
+import type {
+  StyleSpecification,
+  RasterSourceSpecification,
+  IControl,
+} from "maplibre-gl"
 
-/*
- * Initialize map Baselayers
- */
+export type { MLMap }
 
-export const baselayers: { [b: string]: TileLayer } = {
-  None: new TileLayer("", { useCache: false }),
+/* ------------------------------------------------------------------ *
+ * Basemaps
+ * ------------------------------------------------------------------ */
+
+type RasterOptions = Partial<RasterSourceSpecification>
+
+function rasterStyle(
+  tiles: string,
+  attribution: string,
+  opts: RasterOptions = {}
+): StyleSpecification {
+  return {
+    version: 8,
+    sources: {
+      basemap: {
+        type: "raster",
+        tiles: [tiles],
+        tileSize: 256,
+        attribution,
+        ...opts,
+      },
+    },
+    layers: [{ id: "basemap", type: "raster", source: "basemap" }],
+  }
 }
 
-const mapBox_layer_names = {
-  "Mapbox.dark": "mapbox/dark-v10",
-  "Mapbox.streets": "mapbox/streets-v11",
-  "Mapbox.outdoors": "mapbox/outdoors-v11",
-  "Mapbox.satellite": "mapbox/satellite-streets-v11",
-}
-const mapbox_layer_spec = (id: string) => ({
-  id: id,
-  accessToken: MAPBOX_ACCESS_TOKEN,
-  useOnlyCache: OFFLINE,
-})
-
-for (const [name, id] of Object.entries(mapBox_layer_names)) {
-  baselayers[name] = new TileLayer.Provider("MapBox", mapbox_layer_spec(id))
-}
-
-// leaflet-providers has no key option for CartoDB, so put it in the URL
-TileLayer.Provider.providers.CartoDB.url += `?key=${CARTO_API_KEY}`
-
-const providers_names = [
-  "Esri.WorldImagery",
-  "Esri.NatGeoWorldMap",
-  "CartoDB.Positron",
-  "CartoDB.DarkMatter",
-  "OpenStreetMap.Mapnik",
-  "Stadia.AlidadeSmoothDark",
-]
-
-for (const name of providers_names) {
-  baselayers[name] = new TileLayer.Provider(name, {
-    useOnlyCache: OFFLINE,
-  })
-}
-
-/* Stamen's styles, now served by Stadia Maps.
- *
- * Stamen shut its own tile servers down in 2023 and Stadia took over hosting
- * the styles. leaflet-providers 1.13 still points Stamen.* at the old
- * stamen-tiles-*.a.ssl.fastly.net, which answers 503, so these two layers had
- * been blank.
- *
- * Stadia authorizes by the requesting page's domain rather than a key in the
- * URL: heatflask.com is registered on the account, localhost is allowed for
- * development, and any other origin gets 401.
- *
- * The names stay "Stamen.*" so a baselayer someone saved, or put in a link,
- * still resolves. */
-const STADIA_ATTRIBUTION =
-  '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> ' +
-  '&copy; <a href="https://stamen.com/">Stamen Design</a> ' +
-  '&copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> ' +
+const OSM =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+const ESRI = "Tiles &copy; Esri"
 
-const stamen_on_stadia = {
-  "Stamen.Terrain": { style: "stamen_terrain", maxZoom: 18 },
-  "Stamen.TonerLite": { style: "stamen_toner_lite", maxZoom: 20 },
-}
-
-for (const [name, { style, maxZoom }] of Object.entries(stamen_on_stadia)) {
-  baselayers[name] = new TileLayer(
-    `https://tiles.stadiamaps.com/tiles/${style}/{z}/{x}/{y}{r}.png`,
-    { attribution: STADIA_ATTRIBUTION, maxZoom, useOnlyCache: OFFLINE }
-  )
-}
-
-/* Japanese maps from GSI, the Geospatial Information Authority of Japan
- * (国土地理院): very detailed, labelled in Japanese, and covering Japan only --
- * elsewhere a tile is a 404 and the map is blank.
- *
- * Heatflask has many riders in Japan, and every other layer labels Japan
- * either in Japanese at far less detail (OpenStreetMap) or in romanized English
- * (CARTO, the default). Worldwide Japanese labels need vector tiles, which is
- * the MapLibre move.
- *
- * GSI's terms (maps.gsi.go.jp/development/ichiran.html): loading tiles live in
- * a web page needs no application, only attribution naming 国土地理院 or
- * 地理院タイル with a link to that page. Tiles are served with
- * Access-Control-Allow-Origin: *, so the tile cache and video capture can read
- * them. Zoom 3-18 answer; below that Leaflet scales zoom 3 down.
- *
- * The names carry the Japanese titles so Japanese riders can find them in the
- * layer menu. */
-const GSI_ATTRIBUTION =
+/* GSI, the Geospatial Information Authority of Japan (国土地理院): very
+ * detailed Japanese-labelled maps covering Japan only. Their terms ask only
+ * for attribution naming 地理院タイル with a link to this page. */
+const GSI =
   '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>'
 
-const gsi_layers = {
-  "GSI.Standard 地理院 標準地図": "std",
-  "GSI.Pale 地理院 淡色地図": "pale",
-}
-
-for (const [name, style] of Object.entries(gsi_layers)) {
-  baselayers[name] = new TileLayer(
-    `https://cyberjapandata.gsi.go.jp/xyz/${style}/{z}/{x}/{y}.png`,
-    {
-      attribution: GSI_ATTRIBUTION,
-      minNativeZoom: 3,
-      maxZoom: 18,
-      useOnlyCache: OFFLINE,
-    }
+const mapboxRaster = (id: string) =>
+  rasterStyle(
+    `https://api.mapbox.com/styles/v1/mapbox/${id}/tiles/512/{z}/{x}/{y}?access_token=${MAPBOX_ACCESS_TOKEN}`,
+    '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> ' + OSM,
+    { tileSize: 512 }
   )
+
+export const baselayers: Record<string, string | StyleSpecification> = {
+  None: {
+    version: 8,
+    sources: {},
+    layers: [
+      {
+        id: "background",
+        type: "background",
+        paint: { "background-color": "#000" },
+      },
+    ],
+  },
+
+  /* OpenFreeMap: free vector tiles with no key and no usage limits */
+  "OpenFreeMap.Liberty": "https://tiles.openfreemap.org/styles/liberty",
+  "OpenFreeMap.Bright": "https://tiles.openfreemap.org/styles/bright",
+  "OpenFreeMap.Positron": "https://tiles.openfreemap.org/styles/positron",
+  "OpenFreeMap.Dark": "https://tiles.openfreemap.org/styles/dark",
+  "OpenFreeMap.Fiord": "https://tiles.openfreemap.org/styles/fiord",
+
+  "CartoDB.Positron":
+    "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+  "CartoDB.DarkMatter":
+    "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
+  "CartoDB.Voyager":
+    "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json",
+
+  /* Stadia authorizes by the requesting page's domain rather than a key:
+   * heatflask.com is registered on the account and localhost is allowed. */
+  "Stadia.AlidadeSmoothDark":
+    "https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json",
+  "Stadia.Outdoors": "https://tiles.stadiamaps.com/styles/outdoors.json",
+  "Stamen.Terrain": "https://tiles.stadiamaps.com/styles/stamen_terrain.json",
+  "Stamen.TonerLite":
+    "https://tiles.stadiamaps.com/styles/stamen_toner_lite.json",
+
+  "OpenStreetMap.Mapnik": rasterStyle(
+    "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    OSM,
+    { maxzoom: 19 }
+  ),
+  "Esri.WorldImagery": rasterStyle(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    ESRI,
+    { maxzoom: 19 }
+  ),
+  "Esri.NatGeoWorldMap": rasterStyle(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}",
+    ESRI,
+    { maxzoom: 16 }
+  ),
+
+  "Mapbox.dark": mapboxRaster("dark-v10"),
+  "Mapbox.streets": mapboxRaster("streets-v11"),
+  "Mapbox.outdoors": mapboxRaster("outdoors-v11"),
+  "Mapbox.satellite": mapboxRaster("satellite-streets-v11"),
+
+  "GSI.Standard 地理院 標準地図": rasterStyle(
+    "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png",
+    GSI,
+    { minzoom: 2, maxzoom: 18 }
+  ),
+  "GSI.Pale 地理院 淡色地図": rasterStyle(
+    "https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png",
+    GSI,
+    { minzoom: 2, maxzoom: 18 }
+  ),
 }
 
-//  * Set the zoom range the same for all basemaps because this TileLayer
-//  * will fill in missing zoom levels with tiles from the nearest zoom level.
+/* ------------------------------------------------------------------ *
+ * Terrain
+ * ------------------------------------------------------------------ */
 
-for (const name in baselayers) {
-  const layer = baselayers[name]
-  const maxZoom = layer.options.maxZoom
-  layer.name = name
+const DEM_SOURCE = "heatflask-dem"
 
-  if (maxZoom) {
-    layer.options.maxNativeZoom = maxZoom
-    layer.options.maxZoom = 22
-    layer.options.minZoom = 3
+/* Mapterhorn: open global terrain in Terrarium encoding, served with CORS.
+ * (The AWS Terrain Tiles bucket has the data too, but sends no CORS header,
+ * so WebGL cannot read it.) */
+const DEM_TILEJSON = "https://tiles.mapterhorn.com/tilejson.json"
+
+const TERRAIN_EXAGGERATION = 1.5
+/** The pitch terrain is shown at when it is switched on over a flat view */
+const TERRAIN_PITCH = 60
+
+function addTerrainSource(map: MLMap): void {
+  if (map.getSource(DEM_SOURCE)) return
+  map.addSource(DEM_SOURCE, {
+    type: "raster-dem",
+    url: DEM_TILEJSON,
+    encoding: "terrarium",
+    tileSize: 512,
+  })
+}
+
+/* Whether the current style has finished loading, so sources can be added.
+ * Not map.isStyleLoaded(): that is also false while any tile is loading, which
+ * during "style.load" is always -- so waiting on it waited for a "style.load"
+ * that had already happened. */
+let styleReady = false
+
+export function setTerrain(map: MLMap, on: boolean, tilt = true): void {
+  if (!styleReady) return // BindMap's style.load handler applies visual.terrain
+  if (on) {
+    addTerrainSource(map)
+    map.setTerrain({ source: DEM_SOURCE, exaggeration: TERRAIN_EXAGGERATION })
+    map.setSky({
+      "sky-color": "#1d3a66",
+      "horizon-color": "#8fb4d9",
+      "fog-color": "#cfd9e3",
+      "sky-horizon-blend": 0.6,
+      "horizon-fog-blend": 0.5,
+      "fog-ground-blend": 0.8,
+    })
+    if (tilt && map.getPitch() < 10) map.easeTo({ pitch: TERRAIN_PITCH })
+  } else {
+    map.setTerrain(null)
   }
 }
 
-// Instantiate the map
-interface myMap extends Map {
-  controlWindow: Control.Window
-  zoomControl: Control.Zoom
-  showInfoBox: (yes?: boolean) => void
-  areaSelect: AreaSelect
-  _getMapPanePos: () => Point
-}
+/* ------------------------------------------------------------------ *
+ * The map
+ * ------------------------------------------------------------------ */
 
-type latlng = { lat: number; lng: number } | [number, number]
+type latlng = { lat: number; lng: number }
+
+/* Leaflet counted zoom on 256px tiles and MapLibre counts it on 512px ones,
+ * so the same scale is one level lower here. Links, geohashes and the dot
+ * scaling all speak Leaflet's zoom, so it is converted at the map's edge. */
+export const toMapZoom = (leafletZoom: number) => leafletZoom - 1
+export const fromMapZoom = (mapZoom: number) => mapZoom + 1
 
 export function CreateMap(
-  divOrID: HTMLDivElement | string = "map",
-  center: latlng = [0, 0],
+  container: HTMLElement | string = "map",
+  center: latlng = { lat: 0, lng: 0 },
   zoom = 3
-) {
-  const map = <myMap>new Map(divOrID, {
-    center: center,
-    zoom: zoom,
-    zoomAnimation: MOBILE,
-    fadeAnimation: false,
-    zoomSnap: 1,
-    zoomDelta: 1,
-    zoomAnimationThreshold: 8,
-    wheelPxPerZoomLevel: 60,
-    worldCopyJump: true,
-    preferCanvas: true,
+): MLMap {
+  const map = new MLMap({
+    container,
+    style: <StyleSpecification>baselayers.None,
+    center: [center.lng, center.lat],
+    zoom: toMapZoom(zoom),
+    maxPitch: 85,
+    attributionControl: { compact: true },
   })
 
-  const infoBox = new Control.InfoViewer()
-  map.showInfoBox = (yes: boolean) => {
-    if (yes) infoBox.addTo(map)
-    else infoBox.remove()
-  }
-  // Add zoom Control
-  map.zoomControl.setPosition("bottomright")
-
-  // Add baselayer selection control to map
-  const layers_control = new Control.Layers(baselayers, null, {
-    position: "topleft",
-  })
-  layers_control.addTo(map)
-
-  // Add Watermarks to map
-  new Control.Watermark({
-    image: strava_logo,
-    width: "20%",
-    opacity: "0.5",
-    position: "bottomleft",
-  }).addTo(map)
-
-  new Control.Watermark({
-    image: heatflask_logo,
-    opacity: "0.5",
-    width: "20%",
-    position: "bottomleft",
-  }).addTo(map)
-
-  // Make control window accessible as a method
-  map.controlWindow = new Control.Window(map, {
-    visible: false,
-    position: "top",
-  })
-  map.areaSelect = new AreaSelect()
+  map.addControl(
+    new NavigationControl({ visualizePitch: true }),
+    "bottom-right"
+  )
+  map.addControl(new Watermarks(), "bottom-left")
   return map
 }
 
-export function BindMap(map: myMap, appState: State) {
+class Watermarks implements IControl {
+  private el: HTMLDivElement
+
+  onAdd(): HTMLElement {
+    this.el = document.createElement("div")
+    this.el.className = "maplibregl-ctrl heatflask-watermarks"
+    for (const src of [strava_logo, heatflask_logo]) {
+      const img = document.createElement("img")
+      img.src = src
+      this.el.appendChild(img)
+    }
+    return this.el
+  }
+
+  onRemove(): void {
+    this.el.remove()
+  }
+}
+
+/** Every "style.load" -- the first, and each basemap change -- runs these,
+ * since a new style arrives without anything the old one had added. */
+const styleLoadHooks: ((map: MLMap) => void)[] = []
+
+export function onStyleLoad(map: MLMap, hook: (map: MLMap) => void): void {
+  styleLoadHooks.push(hook)
+  if (styleReady) hook(map)
+}
+
+let currentBaselayer: string
+
+export function setBaselayer(map: MLMap, name: string): void {
+  const style = baselayers[name]
+  if (!style || name === currentBaselayer) return
+  currentBaselayer = name
+  styleReady = false
+  map.setStyle(style, { diff: false })
+}
+
+export function BindMap(map: MLMap, appState: State): void {
   const { query, visual } = appState
 
-  /* A link or saved setting can name a layer that no longer exists. Indexing
-   * straight into baselayers then threw on .addTo, which stopped app startup
-   * before the map or the dots were set up. */
+  map.on("style.load", () => {
+    styleReady = true
+    for (const hook of styleLoadHooks) hook(map)
+    if (visual.terrain) setTerrain(map, true, false)
+  })
+
+  /* A link or saved setting can name a layer that no longer exists */
   if (!(visual.baselayer in baselayers)) {
     console.warn(`unknown baselayer "${visual.baselayer}"; using the default`)
     visual.baselayer = DefaultVisual.baselayer
   }
 
-  // initialize map with visual params
-  baselayers[visual.baselayer].addTo(map)
-  map.setView(visual.center, visual.zoom)
+  map.jumpTo({
+    center: [visual.center.lng, visual.center.lat],
+    zoom: toMapZoom(visual.zoom),
+    pitch: visual.pitch || 0,
+    bearing: visual.bearing || 0,
+  })
+  setBaselayer(map, visual.baselayer)
+
+  visual.onChange(
+    "baselayer",
+    (name: string) => {
+      setBaselayer(map, name)
+      setURLfromQV({ visual, query })
+    },
+    false
+  )
+
+  visual.onChange(
+    "terrain",
+    (on: boolean) => {
+      setTerrain(map, !!on)
+      setURLfromQV({ visual, query })
+    },
+    false
+  )
+
+  warnWhenBlocked(map)
 
   map.on("move", () => {
-    const center = map.getCenter()
-    const zoom = map.getZoom()
-    visual.center = center
+    const c = map.getCenter()
+    const zoom = fromMapZoom(map.getZoom())
+    visual.center = { lat: c.lat, lng: c.lng }
     visual.zoom = zoom
-    visual.geohash = Geohash.encode(center.lat, center.lng, zoom)
+    visual.pitch = Math.round(map.getPitch())
+    visual.bearing = Math.round(map.getBearing())
+    visual.geohash = Geohash.encode(c.lat, c.lng, Math.round(zoom))
     setURLfromQV({ visual, query })
   })
+}
 
-  map.on("baselayerchange", (e) => {
-    /* Leaflet's Control.Layers fires this via map.fire(type, obj) where obj is
-     * the layer record {layer, name, overlay}. Nothing propagates, so there is
-     * no e.propagatedFrom -- reading .name off it threw
-     *   TypeError: Cannot read properties of undefined (reading 'name')
-     * synchronously inside addTo() on line 154, which aborted BindMap and with
-     * it the rest of app startup, including the DotLayer. */
-    const ev = <{ name?: string; layer?: TileLayer }>(<unknown>e)
-    const name = ev.name ?? ev.layer?.name
-    if (!name) return
-    visual.baselayer = name
-    setURLfromQV({ visual, query })
+/**
+ * Say so when the map cannot reach one of the sites its data comes from.
+ *
+ * Basemaps, fonts and terrain all load from other sites, and a script or
+ * content blocker -- NoScript, uBlock and the like -- can refuse any of them.
+ * What the viewer sees then is a blank basemap, or terrain that silently stays
+ * flat, with nothing to say why.
+ *
+ * A request that never got an HTTP response has status 0: blocked, offline,
+ * or refused by CORS. Each such site is named once, in one notice.
+ */
+function warnWhenBlocked(map: MLMap): void {
+  const hosts = new Set<string>()
+  let notice: Dialog
+
+  map.on("error", (e) => {
+    const err = <{ status?: number; url?: string }>e.error
+    if (!err || err.status !== 0 || !err.url) return
+
+    let host: string
+    try {
+      host = new URL(err.url, location.href).host
+    } catch {
+      return
+    }
+    if (host === location.host || hosts.has(host)) return
+    hosts.add(host)
+
+    const list = [...hosts].map((h) => `<code>${escapeHTML(h)}</code>`)
+    notice = notice || new Dialog(map.getContainer(), { position: "top" })
+    notice
+      .title("Some map data could not be loaded")
+      .content(
+        `<p>The map could not reach ${list.join(", ")}.</p>` +
+          "<p>If you use NoScript, uBlock or another blocker, allow " +
+          `${hosts.size > 1 ? "these sites" : "this site"} to see the ` +
+          "basemap and 3D terrain.</p>"
+      )
+      .show()
   })
 }

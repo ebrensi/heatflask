@@ -58,9 +58,8 @@
  * Add a left side offset to map controls to make up
  *   for the lost margin, so that the (top-left) controls
  *   won't overlap with the sidebar
- *   (this is technically a leaflet mod, but it is specific to the sidebar )
  */
-.leaflet-left {
+.maplibregl-ctrl-top-left {
   left: 40px;
 }
 
@@ -68,13 +67,13 @@
  * Let the bottom-left controls (watermarks) stay close to
  * the left edge of the screen, since we shortened the sidebar
  */
-.leaflet-bottom.leaflet-left {
+.maplibregl-ctrl-bottom-left {
   left: 0px;
 }
 
 /* same but on larger displays (desktop & some tablets) */
 @media (min-width: 768px) {
-  .sidebar-left.collapsed ~ .sidebar-map .leaflet-bottom.leaflet-left {
+  .sidebar-left.collapsed ~ .sidebar-map .maplibregl-ctrl-bottom-left {
     left: 0px;
   }
 }
@@ -129,20 +128,33 @@
   transition: width 0s;
 }
 
-.sidebar-left ~ .sidebar-map .leaflet-left {
+.sidebar-left ~ .sidebar-map .maplibregl-ctrl-top-left {
   transition: left 0s;
+}
+
+/* sidebar-v2's stylesheet moves Leaflet's .leaflet-left controls clear of the
+ * open sidebar at each breakpoint; the same, for MapLibre's */
+@media (min-width: 768px) and (max-width: 991px) {
+  .sidebar-left ~ .sidebar-map .maplibregl-ctrl-top-left {
+    left: 315px;
+  }
+}
+@media (min-width: 992px) and (max-width: 1199px) {
+  .sidebar-left ~ .sidebar-map .maplibregl-ctrl-top-left {
+    left: 400px;
+  }
+}
+@media (min-width: 1200px) {
+  .sidebar-left ~ .sidebar-map .maplibregl-ctrl-top-left {
+    left: 470px;
+  }
+}
+@media (min-width: 768px) {
+  .sidebar-left.collapsed ~ .sidebar-map .maplibregl-ctrl-top-left {
+    left: 50px;
+  }
 }
 
 .sidebar-pane {
   padding: 10px 10px;
-}
-
-.leaflet-bar button {
-  background: rgba(0, 0, 0, 0.5);
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.leaflet-bar a {
-  background: rgba(0, 0, 0, 0.5);
-  color: rgba(255, 255, 255, 0.9);
 }

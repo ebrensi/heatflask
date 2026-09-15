@@ -2,13 +2,13 @@
  * This module contains definitions for the Activity and ActivityCollection
  *  classes.
  */
-import { LatLngBounds } from "leaflet"
+import { LngLatBounds } from "maplibre-gl"
 import { simplify as simplifyPath } from "./Simplifier"
-import { latLng2pxBounds, latLng2px } from "./ViewBox"
+import { makePT, pxPerMeter } from "./CRS"
+import { Bounds } from "../Bounds"
 import { RunningStatsCalculator } from "./stats"
 import { BitSet } from "../BitSet"
 
-import type { Bounds } from "../Bounds"
 import { ImportedActivity, ACTIVITY_FIELDNAMES as A } from "../DataImport"
 import { ActivityType, activity_pathcolor } from "../Strava"
 
@@ -17,12 +17,17 @@ interface SegMask extends BitSet {
 }
 
 type tuple2 = [number, number] | Float32Array
-type segFunc = (x0: number, y0: number, x1: number, y1: number) => void
 
 /** Seconds since the UNIX epoch. Mirrors the backend's Types.epoch. It was
  * referenced by timeAt() and update_dotlocs() without ever being declared,
  * which tsc reports as "Cannot find name 'epoch'". */
 type epoch = number
+
+/** [lat, lng] -> zoom-0 world pixels, in place. Typed loosely because the
+ * tracks are converted through Float32Array windows. */
+const latLng2px = <(p: [number, number] | Float32Array) => void>(
+  (<unknown>makePT(0))
+)
 
 /**
  * We detect anomalous gaps in data by simple statistical analysis of
@@ -52,8 +57,17 @@ export class Activity {
   selected: boolean
   ts: number
   tsLocal: Date
-  llBounds: LatLngBounds
+  llBounds: LngLatBounds
   pxBounds: Bounds
+
+  /** World pixels per metre of height, at this activity's latitude */
+  zScale: number
+  /** Metres added to the recorded altitude so the track sits on the terrain
+   * model rather than wherever the GPS or barometer put it. See
+   * HeatflaskLayer.calibrateAltitudes. */
+  altOffset: number
+  /** The zoom level altOffset was measured at, or undefined if never */
+  altCalibratedZoom?: number
   colors: { path: string; dot: string }
 
   streams: {
@@ -96,8 +110,19 @@ export class Activity {
      * milliseconds -- without the factor every activity dated to
      * 21 January 1970. */
     this.tsLocal = new Date((this.ts + offset) * 1000)
-    this.llBounds = new LatLngBounds(bounds.SW, bounds.NE)
-    this.pxBounds = latLng2pxBounds(this.llBounds)
+    /* The backend sends corners as [lat, lng]; MapLibre wants [lng, lat] */
+    this.llBounds = new LngLatBounds(
+      [bounds.SW[1], bounds.SW[0]],
+      [bounds.NE[1], bounds.NE[0]]
+    )
+    this.pxBounds = new Bounds()
+    for (const corner of [bounds.SW, bounds.NE]) {
+      const p = <[number, number]>[corner[0], corner[1]]
+      latLng2px(p)
+      this.pxBounds.update(p[0], p[1])
+    }
+    this.zScale = pxPerMeter(this.llBounds.getCenter().lat)
+    this.altOffset = 0
 
     this.colors = {
       // path color is determined by activity type
@@ -330,36 +355,6 @@ export class Activity {
     return this.segMask
   }
 
-  /** Execute a function func(x1, y1, x2, y2) on each currently in-view
-   * segment (x1,y1) -> (x2, y2) of this Activity.
-   */
-  forEachSegment(func: segFunc): number {
-    const segMask = this.segMask
-    if (!segMask) return 0
-
-    let count = 0
-    const zoom = segMask.zoom
-    const idx = this.idxSet[zoom].iterator()
-    let lasti: number
-    let lastidx2: number
-    let lastp2: Float32Array
-
-    for (const i of segMask) {
-      const reuse = i === lasti + 1
-      lasti = i
-
-      const idx1 = reuse ? lastidx2 : idx(i)
-      const idx2 = (lastidx2 = idx(i + 1))
-
-      const p1 = reuse ? lastp2 : this.pointAt(idx1)
-      const p2 = (lastp2 = this.pointAt(idx2))
-      if (p2[0] || p2[1]) func(p1[0], p1[1], p2[0], p2[1])
-      count++
-    }
-
-    return count
-  }
-
   /** timestamp at the ith data-point */
   timeAt(i: number): epoch {
     return this.streams.time[i] + this.ts
@@ -372,88 +367,41 @@ export class Activity {
     return this.streams.altitude[i]
   }
 
-  /** Given a Float32Array dotlocs, we update it with locations of all the dots
-   * for a given now and looping-period T.  The number of dots may vary, so make sure
-   * your buffer is large enough to hold all of them!
+  /** Height of the i-th point, in world pixels, the same units as z above */
+  zAt(i: number): number {
+    return (this.streams.altitude[i] + this.altOffset) * this.heightScale()
+  }
+
+  /** zScale once the altitude has been anchored to the terrain model, and 0
+   * until then. Recorded altitude is metres above sea level, so applied raw
+   * over terrain that has not loaded -- which reads as flat, at sea level --
+   * a track floats kilometres above the map. On the ground is the better
+   * guess. */
+  heightScale(): number {
+    return this.altCalibratedZoom === undefined ? 0 : this.zScale
+  }
+
+  /**
+   * Call func(start, end) for each run of consecutive in-view segments, where
+   * start and end are indices into the current zoom's index array: the run
+   * is the polyline through points idxArray[start] .. idxArray[end].
    */
-  update_dotlocs(
-    now: epoch,
-    T: number, // loop-length in seconds
-    dotlocs: Float32Array
-  ): number {
+  forEachSegmentRun(func: (start: number, end: number) => void): number {
     const segMask = this.segMask
     if (!segMask) return 0
 
-    /* This runs for every in-view activity on every frame, over every
-     * in-view segment, so it is written for speed: the segMask words are
-     * scanned inline rather than through its generator, the index set is read
-     * from a flat array, and the streams are indexed directly -- pointAt()
-     * allocates a typed-array view per call, and destructuring one goes through
-     * the iterator protocol. */
-    const idxArray = this.idxArray[segMask.zoom]
-    const nPoints = idxArray.length
-    const words = segMask.words
-    const nWords = words.length
-    const px = this.streams.px
-    const time = this.streams.time
-    const t0 = this.ts
-
+    let runStart = -1
+    let last = -2
     let count = 0
-
-    // each set bit i of segMask is the segment from point i to point i+1
-    for (let w = 0; w < nWords; w++) {
-      let word = words[w]
-      while (word !== 0) {
-        const bit = word & -word
-        word ^= bit
-        const i = (w << 5) + (31 - Math.clz32(bit))
-
-        if (i + 1 >= nPoints) return count
-
-        const idx0 = idxArray[i]
-        const idx1 = idxArray[i + 1]
-        const ta = time[idx0] + t0
-        const tb = time[idx1] + t0
-
-        const kLow = Math.ceil((now - tb) / T)
-        const kHigh = Math.floor((now - ta) / T)
-
-        /* This segment contributes no dots, so skip it. This was `return`,
-         * which abandoned every remaining segment and handed back undefined
-         * instead of a count. */
-        if (kLow > kHigh) continue
-
-        const pax = px[2 * idx0]
-        const pay = px[2 * idx0 + 1]
-        const tab = tb - ta
-        const vx = (px[2 * idx1] - pax) / tab
-        const vy = (px[2 * idx1 + 1] - pay) / tab
-
-        for (let k = kLow; k <= kHigh; k++) {
-          const t = now - k * T
-          const dt = t - ta
-
-          /* Master's _DotLayer.js guards this same loop with `if (dt > 0)`.
-           * Without it a dot at dt === 0 lands exactly on the boundary this
-           * segment shares with the previous one, which emits a dot there
-           * too -- a duplicate at every segment join. */
-          if (dt <= 0) continue
-
-          /* Stride 2: [x, y] per dot. Altitude is not interpolated because
-           * nothing uses it yet; it is the hook for rendering over a 3D
-           * vector map. Going 3D means stride 3 here:
-           *     const alt = this.streams.altitude
-           *     const va = (alt[idx1] - alt[idx0]) / tab   // above the loop
-           *     dotlocs[count * 3 + 2] = alt[idx0] + va * dt
-           * and widening the buffer in ActivityCollection.drawDots, which
-           * sizes and grows it as 2 * maxDots. */
-          const loc = count * 2
-          dotlocs[loc] = pax + vx * dt
-          dotlocs[loc + 1] = pay + vy * dt
-          count++
-        }
+    for (const i of segMask) {
+      if (i !== last + 1) {
+        if (runStart >= 0) func(runStart, last + 1)
+        runStart = i
       }
+      last = i
+      count++
     }
+    if (runStart >= 0) func(runStart, last + 1)
     return count
   }
 }

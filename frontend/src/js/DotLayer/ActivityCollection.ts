@@ -10,14 +10,13 @@ import { options } from "./Defaults"
 import { BitSet } from "../BitSet"
 import { queueTask, nextTask } from "../appUtil"
 
-import { LatLngBounds } from "leaflet"
+import { LngLatBounds } from "maplibre-gl"
 import type { Bounds } from "../Bounds"
-import type { PixelGraphics } from "./PixelGraphics"
 import type { ImportedActivity } from "../DataImport"
 
 export const items: Map<number, Activity> = new Map()
 
-let itemsArray: Activity[]
+let _itemsArray: Activity[]
 
 export function add(specs: ImportedActivity): void {
   const A = new Activity(specs)
@@ -31,7 +30,7 @@ export function remove(id: number): void {
 /** Drop every activity. Used when a new query replaces the current set. */
 export function clear(): void {
   items.clear()
-  itemsArray = []
+  _itemsArray = []
   inView.clear()
   lastInView.clear()
 }
@@ -42,10 +41,10 @@ export function clear(): void {
 export function reset(): void {
   setDotColors()
 
-  itemsArray = [...items.values()]
+  _itemsArray = [...items.values()]
 
-  for (let i = 0; i < itemsArray.length; i++) {
-    itemsArray[i].idx = i
+  for (let i = 0; i < _itemsArray.length; i++) {
+    _itemsArray[i].idx = i
   }
 
   /*
@@ -57,8 +56,8 @@ export function reset(): void {
     alt: 0,
   }
 
-  for (let i = 0; i < itemsArray.length; i++) {
-    const A = itemsArray[i]
+  for (let i = 0; i < _itemsArray.length; i++) {
+    const A = _itemsArray[i]
     nbytes.px += A.streams.px.byteLength
     nbytes.time += A.streams.time.byteLength
     nbytes.alt += A.streams.altitude.byteLength
@@ -79,8 +78,8 @@ export function reset(): void {
   let timeLoc = 0
   let altLoc = 0
 
-  for (let i = 0; i < itemsArray.length; i++) {
-    const s = itemsArray[i].streams
+  for (let i = 0; i < _itemsArray.length; i++) {
+    const s = _itemsArray[i].streams
     pxView.set(s.px, pxLoc)
     s.px = pxView.subarray(pxLoc, (pxLoc += s.px.length))
 
@@ -91,8 +90,8 @@ export function reset(): void {
     s.altitude = altView.subarray(altLoc, (altLoc += s.altitude.length))
   }
 
-  inView.resize(itemsArray.length)
-  lastInView.resize(itemsArray.length)
+  inView.resize(_itemsArray.length)
+  lastInView.resize(_itemsArray.length)
 }
 
 /** assign a dot-color to each item of _items */
@@ -105,7 +104,7 @@ function setDotColors(): void {
 }
 
 /** The set indicating which activities are currently in view. It is actually
- * a set of indices of Activities in itemsArray.*/
+ * a set of indices of Activities in _itemsArray.*/
 const inView = new BitSet(1)
 const lastInView = new BitSet(1)
 
@@ -116,13 +115,14 @@ export async function updateContext(
   viewportPxBounds: Bounds,
   zoom: number
 ): Promise<void> {
+  if (!_itemsArray) return
   inView.clear()
 
   let queuedTasks
 
   // update which items are in the current view
-  for (let i = 0, len = itemsArray.length; i < len; i++) {
-    const A = itemsArray[i]
+  for (let i = 0, len = _itemsArray.length; i < len; i++) {
+    const A = _itemsArray[i]
 
     if (viewportPxBounds.overlaps(A.pxBounds)) {
       inView.add(i)
@@ -140,7 +140,7 @@ export async function updateContext(
 
   const newlyInView = inView.difference(lastInView, lastInView)
   newlyInView.forEach((i) => {
-    const A = itemsArray[i]
+    const A = _itemsArray[i]
     if (A.segMask) A.segMask.clear()
     A._containedInMapBounds = false
   })
@@ -148,7 +148,7 @@ export async function updateContext(
 
   // Make segMasks (this is usually very fast)
   inView.forEach((i) => {
-    const A = itemsArray[i]
+    const A = _itemsArray[i]
     if (!A.idxSet[zoom]) {
       throw `idxSet[${zoom}] didn't get made`
     }
@@ -159,47 +159,43 @@ export async function updateContext(
   })
 }
 
-/**
- * Returns an array of activities given a selection region
- * in screen-ccordinates
- */
-export function* inPxBounds(pxBounds: Bounds): IterableIterator<Activity> {
-  for (const idx of inView) {
-    const A = itemsArray[idx]
-    for (let j = 0; j < A.streams.time.length; j++) {
-      // was A.pointAccessor(j), which does not exist on Activity
-      const p = A.pointAt(j)
-      if (pxBounds.contains(p[0], p[1])) {
-        yield A
-        break
-      }
-    }
-  }
+/** Every activity, in index order: itemsArray()[A.idx] === A */
+export function itemsArray(): Activity[] {
+  return _itemsArray || []
+}
+
+/** The activities currently in view, in no particular order */
+export function* inViewItems(): IterableIterator<Activity> {
+  for (const idx of inView) yield _itemsArray[idx]
 }
 
 export async function getLatLngBounds(
   ids?: Iterable<number>,
   only_selected?: boolean
-): Promise<LatLngBounds> {
-  /* An empty bounds to extend into. @types/leaflet requires an argument, so
-   * pass an empty corner list: Leaflet loops over it and extends nothing,
-   * leaving exactly the empty, not-yet-valid bounds the no-arg call gives. */
-  const bounds = new LatLngBounds([])
-  ids = ids || items.keys()
-  if (ids) {
-    for (const id of ids) {
-      const A = items.get(id)
-      if (!only_selected || A.selected) bounds.extend(A.llBounds)
-    }
-  }
-  if (bounds.isValid()) return bounds
+): Promise<LngLatBounds | undefined> {
+  return boundsOf(
+    [...(ids || items.keys())]
+      .map((id) => items.get(id))
+      .filter((A) => A && (!only_selected || A.selected))
+  )
 }
 
-/*
- * Methods for drawing to imageData objects
- */
+/** The bounds enclosing these activities, or undefined if there are none */
+export function boundsOf(activities: Iterable<Activity>): LngLatBounds {
+  /* A fresh bounds: extend() mutates in place, so extending the first
+   * activity's own llBounds would grow that activity's bounds. */
+  let bounds: LngLatBounds
+  for (const A of activities) {
+    if (!bounds)
+      bounds = new LngLatBounds(
+        A.llBounds.getSouthWest(),
+        A.llBounds.getNorthEast()
+      )
+    else bounds.extend(A.llBounds)
+  }
+  return bounds
+}
 
-type drawOutput = { pxg: PixelGraphics; count: number }
 type DrawStyle = typeof options.normal
 
 /**
@@ -209,7 +205,7 @@ type DrawStyle = typeof options.normal
  * selection it is two: everything else first, faded, then the selection on
  * top of it -- so selected paths and dots are never buried under the rest.
  */
-function forEachInViewLayered(
+export function forEachInViewLayered(
   draw: (A: Activity, style: DrawStyle) => void
 ): void {
   let anySelected = false
@@ -221,72 +217,13 @@ function forEachInViewLayered(
   }
 
   if (!anySelected) {
-    inView.forEach((i) => draw(itemsArray[i], options.normal))
+    inView.forEach((i) => draw(_itemsArray[i], options.normal))
     return
   }
   inView.forEach((i) => {
-    if (!itemsArray[i].selected) draw(itemsArray[i], options.unselected)
+    if (!_itemsArray[i].selected) draw(_itemsArray[i], options.unselected)
   })
   inView.forEach((i) => {
-    if (itemsArray[i].selected) draw(itemsArray[i], options.selected)
+    if (_itemsArray[i].selected) draw(_itemsArray[i], options.selected)
   })
-}
-
-export async function drawPaths(pxg: PixelGraphics): Promise<drawOutput> {
-  const drawSegFunc = (x0: number, y0: number, x1: number, y1: number) => {
-    pxg.drawSegment(x0, y0, x1, y1)
-  }
-
-  let count = 0
-  forEachInViewLayered((A, style) => {
-    pxg.setAlpha(style.pathOpacity)
-    pxg.setColor(A.colors.path)
-    pxg.setLineWidth(style.pathWidth)
-    count += A.forEachSegment(drawSegFunc)
-  })
-
-  return { count, pxg }
-}
-
-/* Scratch buffer for dot positions, reused across activities and frames.
- * Activity.update_dotlocs fills it with consecutive [x, y] pairs. */
-let dotlocs = new Float32Array(2048)
-
-export async function drawDots(
-  pxg: PixelGraphics,
-  dotSize: number,
-  T: number,
-  tsecs: number
-): Promise<drawOutput> {
-  let count = 0
-  // not rounded: Canvas 2D draws fractional sizes
-  const sz = dotSize
-
-  forEachInViewLayered((A, style) => {
-    if (!A.segMask) return
-
-    /* Upper bound on this activity's dots: each segment yields at most
-     * (its time span)/T + 1, and those spans sum to at most the activity's
-     * elapsed time. update_dotlocs does not bounds-check the buffer. */
-    const maxDots = A.segMask.size() + Math.ceil(A.elapsed_time / T) + 2
-    if (dotlocs.length < 2 * maxDots) dotlocs = new Float32Array(2 * maxDots)
-
-    const n = A.update_dotlocs(tsecs, T, dotlocs)
-    if (!n) return
-
-    pxg.setAlpha(style.dotOpacity)
-    pxg.setColor(A.colors.dot)
-    if (A.selected) {
-      for (let j = 0; j < n; j++) {
-        pxg.drawCircle(dotlocs[2 * j], dotlocs[2 * j + 1], sz)
-      }
-    } else {
-      for (let j = 0; j < n; j++) {
-        pxg.drawSquare(dotlocs[2 * j], dotlocs[2 * j + 1], sz)
-      }
-    }
-    count += n
-  })
-
-  return { count, pxg }
 }

@@ -173,7 +173,7 @@ export function SETUP(state: State) {
 
   bindCheckbox(visual, "showPaths", "paths", (on) => {
     dotLayer.options.showPaths = on
-    dotLayer.redraw(true)
+    dotLayer.updateDotSettings()
   })
 }
 
