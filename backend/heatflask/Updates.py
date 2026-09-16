@@ -116,9 +116,10 @@ async def handle_update_callback(update: Strava.WebhookUpdate) -> None:
         )
         return
 
-    if update.get("object_type") == "athlete" and str(
-        update.get("updates", {}).get("authorized")
-    ).lower() == "false":
+    if (
+        update.get("object_type") == "athlete"
+        and str(update.get("updates", {}).get("authorized")).lower() == "false"
+    ):
         # The athlete revoked Heatflask in their Strava settings. Our token is
         # dead, so there is nothing to deauthorize; just forget them.
         uid = update["object_id"]
