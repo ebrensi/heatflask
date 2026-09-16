@@ -44,6 +44,7 @@ const urlArgNames: Record<URLParameter, string[]> = {
   T: ["T", "period"],
   sz: ["sz"],
   paused: ["paused", "pu"],
+  pw: ["pw", "pathwidth"],
   paths: ["pa", "paths"],
   alpha: ["alpha"],
 }
@@ -53,6 +54,8 @@ const boolVal = (val: string): boolean => {
   return val !== "0" && val != "null" && !!val
 }
 const str = (v: unknown) => v && String(v)
+/** str() drops a zero, which for path width is a real setting: paths off */
+const numStr = (v: number): string => (v === undefined ? undefined : String(v))
 
 /*
  * Convert Query and Visual Parameters to URL parameters
@@ -79,7 +82,7 @@ function QVtoURL({ query, visual }: QVParams): URLParameters {
     sz: str(visual.sz),
     geohash: visual.geohash,
     paused: boolString(visual.paused),
-    paths: boolString(visual.paths),
+    pw: numStr(visual.pw),
     alpha: str(visual.alpha),
     baselayer: visual.baselayer,
     pitch: str(visual.pitch),
@@ -189,14 +192,21 @@ export function parseURL(urlString: string) {
     "alpha",
     "pitch",
     "bearing",
+    "pw",
   ] as URLParameter[]) {
     if (urlParams[p]) vparams[p] = +urlParams[p]
   }
 
   // boolean params
-  for (const p of ["paths", "paused", "terrain"] as URLParameter[]) {
+  for (const p of ["paused", "terrain"] as URLParameter[]) {
     if (urlParams[p]) vparams[p] = boolVal(urlParams[p])
   }
+
+  /* Paths were on or off before they had a width. An old link that turned
+   * them off means a width of zero; one that turned them on means the
+   * default width, which is what we already have. */
+  if (urlParams.paths && !urlParams.pw && !boolVal(urlParams.paths))
+    vparams.pw = 0
 
   // GeoHash takes precedence over lat, lng if both are there
   if (urlParams.geohash) {

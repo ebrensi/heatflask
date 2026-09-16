@@ -60,7 +60,8 @@ export type VisualParameters = {
   T?: number // s: timestep between successive dots, in activity-seconds
   sz?: number // Dot Size
   alpha?: number // global alpha for all rendering
-  paths?: boolean // show paths
+  pw?: number // path width in px, as an unselected activity draws with
+  //             nothing selected; 0 draws no paths at all
   paused?: boolean // start in paused state
 }
 
@@ -88,7 +89,7 @@ export const DefaultVisual: VisualParameters = {
   T: 60, // s: spacing between dots, in activity-seconds
   sz: 3,
   alpha: 0.8,
-  paths: true,
+  pw: 2,
   paused: false,
 }
 
@@ -120,6 +121,8 @@ export type URLParameters = {
   T?: string
   sz?: string
   paused?: string
+  pw?: string
+  /** Not written any more: "paths=0" in an old link becomes pw=0 */
   paths?: string
   alpha?: string
 }

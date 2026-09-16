@@ -56,14 +56,27 @@
   opacity: 0.55;
 }
 
-.dot-const-info {
-  font-size: 0.85rem;
-  opacity: 0.8;
-  margin-bottom: 0.5rem;
-  min-height: 1.2em;
+/* Two values that move together, side by side. They wrap rather than spill
+ * out of the pane in the longest case ("60 min ~ 120 min"). */
+.dial-pair {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.4em;
+  white-space: normal;
 }
 
-.dot-const-info code {
-  font-family: monospace;
-  font-variant-numeric: tabular-nums;
+.dial-pair > span {
+  white-space: nowrap;
+}
+
+/* the second value is the same number seen another way, not a second setting */
+.dial-alt {
+  font-size: 0.95rem;
+  opacity: 0.75;
+}
+
+.dial-rel {
+  font-size: 1rem;
+  opacity: 0.5;
 }

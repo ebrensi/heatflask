@@ -1,6 +1,6 @@
 <!-- Controls Tab -->
 
-<h4>System Constants</h4>
+<h4>Model Parameters</h4>
 
 <div class="dial-stack">
   <div class="dial">
@@ -16,8 +16,14 @@
     <span id="sepConst" class="dial-knob"></span>
     <div class="dial-text">
       <div class="dial-name">Period <i>T</i></div>
-      <div class="dial-value" id="TValue">&mdash;</div>
-      <div class="dial-hint">activity time between dots</div>
+      <!-- T beside the real time one loop of it takes: T/tau, which moves
+           with this dial and with the timescale dial above -->
+      <div class="dial-value dial-pair" title="T ~ T/&tau;">
+        <span id="TValue">&mdash;</span>
+        <span class="dial-rel">~</span>
+        <span class="dial-alt" id="cycleValue">&mdash;</span>
+      </div>
+      <div class="dial-hint">activity ~ model</div>
     </div>
   </div>
 
@@ -28,18 +34,13 @@
       <div class="dial-value" id="szValue">&mdash;</div>
     </div>
   </div>
+
+  <div class="dial">
+    <span id="widthConst" class="dial-knob"></span>
+    <div class="dial-text">
+      <div class="dial-name">Path width</div>
+      <div class="dial-value" id="pwValue">&mdash;</div>
+      <div class="dial-hint">zero hides the paths</div>
+    </div>
+  </div>
 </div>
-
-<div class="dot-const-info" id="cycleInfo"></div>
-
-<hr />
-<span>
-  <input
-    type="checkbox"
-    id="showPaths"
-    data-bind="paths"
-    data-prop="checked"
-    data-class="visual"
-  />
-  <label for="showPaths">Show Paths</label>
-</span>

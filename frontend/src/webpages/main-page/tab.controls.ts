@@ -37,6 +37,7 @@ const knobSpec = {
   speedConst: Knob(dialSpec),
   sepConst: Knob(dialSpec),
   sizeConst: Knob(dialSpec),
+  widthConst: Knob(dialSpec),
 }
 
 /* tau spans 0.5 .. 3600 -- a factor of 7200 -- so the dial cannot carry it
@@ -68,6 +69,13 @@ const SZ_LOW = 0.25
 const SZ_HIGH = 7.5
 const SZ_RATIO = SZ_HIGH / SZ_LOW
 
+/* Path width in px, linear rather than exponential like the dials above,
+ * because this one has to reach 0: at the bottom of its travel it turns the
+ * paths off, which is what the "Show Paths" checkbox used to do. The width
+ * is the one an unselected activity draws with when nothing is selected;
+ * selected and unselected activities scale with it (see Defaults.ts). */
+const PW_HIGH = 8
+
 /** A duration in seconds, at a length people can read at a glance. */
 function fmtSecs(s: number): string {
   if (s < 10) return `${s.toFixed(1)} s`
@@ -79,7 +87,7 @@ function fmtSecs(s: number): string {
 
 type DialBinding = {
   id: keyof typeof knobSpec
-  param: "tau" | "T" | "sz"
+  param: "tau" | "T" | "sz" | "pw"
   /** dial position -> parameter value */
   toParam?: (dial: number) => number
   /** parameter value -> dial position */
@@ -90,6 +98,8 @@ type DialBinding = {
   format: (value: number) => string
   /** values outside this are clamped into it */
   range?: { min: number; max: number }
+  /** what the layer has to do about the new value; a repaint by default */
+  apply?: () => void
 }
 
 const dialBindings: DialBinding[] = [
@@ -123,6 +133,17 @@ const dialBindings: DialBinding[] = [
      * with the dial at its stop. */
     range: { min: SZ_LOW, max: SZ_HIGH },
   },
+  {
+    id: "widthConst",
+    param: "pw",
+    toParam: (v) => (PW_HIGH * v) / 100,
+    toDial: (pw) => (100 * pw) / PW_HIGH,
+    readout: "pwValue",
+    format: (pw) => (pw > 0 ? `${pw.toFixed(1)} px` : "off"),
+    range: { min: 0, max: PW_HIGH },
+    // the width is baked into the path geometry, so it has to be rebuilt
+    apply: () => dotLayer.updatePathWidth(),
+  },
 ]
 
 /**
@@ -141,7 +162,8 @@ export function SETUP(state: State) {
   }
 
   for (const binding of dialBindings) {
-    const { id, param, toParam, toDial, readout, format, range } = binding
+    const { id, param, toParam, toDial, readout, format, range, apply } =
+      binding
     const knob = knobSpec[id]
     const fromDial = toParam || ((v: number) => v)
     const fromValue = toDial || ((v: number) => v)
@@ -167,57 +189,27 @@ export function SETUP(state: State) {
       if (Math.abs(knob.getValue() - dialValue) > 1e-9) knob.setValue(dialValue)
       if (readoutEl) readoutEl.textContent = format(value)
       updateCycleInfo(visual)
-      dotLayer.updateDotSettings()
+      if (apply) apply()
+      else dotLayer.updateDotSettings()
     })
   }
-
-  bindCheckbox(visual, "showPaths", "paths", (on) => {
-    dotLayer.options.showPaths = on
-    dotLayer.updateDotSettings()
-  })
 }
 
 /**
- * The one number that follows from the other two.
+ * The one number that follows from the other two, shown beside T as "T ~ T/tau"
+ * so the two read as one quantity in two units rather than two settings.
  *
  * T is the spacing between successive dots in activity-seconds, and the dot
  * pattern repeats every T of activity time -- so T is the period of the cycle.
  * tau converts activity time to real time, which puts the loop the viewer
  * actually sees at T/tau real seconds. That is also exactly what a capture
- * records: one loop.
+ * records: one loop. It moves with either dial, so both of them call this.
  */
 function updateCycleInfo(visual: State["visual"]): void {
-  const el = document.getElementById("cycleInfo")
+  const el = document.getElementById("cycleValue")
   if (!el) return
 
   const tau = +visual.tau
   const T = +visual.T
-  if (!(tau > 0) || !(T > 0)) {
-    el.textContent = ""
-    return
-  }
-
-  el.innerHTML =
-    `one loop = <code>T/&tau;</code> = ` +
-    `<code>${fmtSecs(T / tau)}</code> of real time`
-}
-
-/** Two-way bind a checkbox to a boolean on appState.visual. */
-function bindCheckbox(
-  visual: State["visual"],
-  elementId: string,
-  param: "paths",
-  apply: (on: boolean) => void
-) {
-  const el = <HTMLInputElement>document.getElementById(elementId)
-  if (!el) return
-
-  el.addEventListener("change", () => {
-    visual[param] = el.checked
-  })
-
-  visual.onChange(param, (on: boolean) => {
-    el.checked = on
-    apply(on)
-  })
+  el.textContent = tau > 0 && T > 0 ? fmtSecs(T / tau) : "—"
 }

@@ -530,6 +530,20 @@ export class HeatflaskLayer implements CustomLayerInterface {
     this.map?.triggerRepaint()
   }
 
+  /**
+   * The path width (visual.pw) changed. The width is baked into the path
+   * geometry, so that has to be rebuilt -- but only the geometry: what is in
+   * view and how it is simplified are unaffected, so this skips the culling
+   * and index-set work of a full redraw() and stays cheap enough to run on
+   * every step of the dial.
+   */
+  updatePathWidth(): void {
+    if (!this.ready) return
+    this.options.showPaths = +this.visual.pw > 0
+    this.buildPaths()
+    this.map?.triggerRepaint()
+  }
+
   /** Length of one loop, in real seconds. The dot pattern repeats every T
    * activity-seconds, which is T/tau of real time. */
   periodInSecs(): number {
@@ -701,11 +715,15 @@ export class HeatflaskLayer implements CustomLayerInterface {
     const oy = this.oy
     let n = 0
 
+    /* The three styles (normal, selected, unselected) keep their widths in
+     * proportion; the dial scales all of them together. */
+    const widthScale = +this.visual.pw / defaultOptions.normal.pathWidth
+
     ActivityCollection.forEachInViewLayered((A: Activity, style: Style) => {
       const segMask = A.segMask
       if (!segMask) return
       const color = packColor(A.colors.path, style.pathOpacity)
-      const width = style.pathWidth
+      const width = style.pathWidth * widthScale
       const idxArray = A.idxArray[segMask.zoom]
       const px = A.streams.px
 

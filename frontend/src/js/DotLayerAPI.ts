@@ -17,7 +17,7 @@ export function createDotLayer(map: MLMap, appState: State): HeatflaskLayer {
   dotLayer = new HeatflaskLayer({
     // The animation settings (tau, T, sz, paused) are read from here
     visual,
-    showPaths: visual.paths,
+    showPaths: +visual.pw > 0,
     startPaused: visual.paused,
   })
 
