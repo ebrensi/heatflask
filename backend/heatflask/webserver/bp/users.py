@@ -10,7 +10,7 @@ import sanic
 from logging import getLogger
 from ... import Users
 
-from ..config import APP_NAME
+from ..config import APP_BASE_NAME
 from ..sessions import session_cookie
 
 log = getLogger(__name__)
@@ -59,7 +59,7 @@ async def directory(request):
     # called JSON.parse("${runtime_json}") at module scope, outside its own
     # try/catch, and died before it ever ran.
     params = {
-        "app_name": APP_NAME,
+        "app_name": APP_BASE_NAME,
         "runtime_json": {"admin": bool(admin), "url": query_url},
     }
     html = request.ctx.render_template("users-page.html", **params)

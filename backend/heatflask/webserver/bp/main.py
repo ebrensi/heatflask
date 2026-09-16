@@ -13,7 +13,7 @@ from logging import getLogger
 from ... import Users
 from ... import Index
 
-from ..config import APP_VERSION, APP_NAME, OFFLINE
+from ..config import APP_VERSION, APP_BASE_NAME, OFFLINE
 from ..sessions import session_cookie
 
 log = getLogger("heatflask.webserver.main")
@@ -46,7 +46,7 @@ async def splash_page(request: Request):
         return Response.redirect(app.url_for("main.user_page", target_user_id=uid))
 
     params = {
-        "app_name": APP_NAME,
+        "app_name": APP_BASE_NAME,
         "app_env": os.environ.get("APP_ENV"),
         "runtime_json": {
             "urls": {
@@ -97,7 +97,7 @@ async def user_page(request: Request, target_user_id=None):
     app = request.app
     params = {
         # These will be imbedded in the served html as text
-        "APP_NAME": APP_NAME,
+        "APP_NAME": APP_BASE_NAME,
         "runtime_json": {
             # These will be available to the client as a JSON string
             # at non-visible element "#runtime_json"

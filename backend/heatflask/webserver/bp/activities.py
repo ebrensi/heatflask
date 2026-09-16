@@ -17,7 +17,7 @@ from ... import Streams
 from ... import Utility
 from ... import Strava
 
-from ..config import APP_NAME
+from ..config import APP_BASE_NAME
 from ..sessions import session_cookie, SessionRequest
 from ..files import render_template
 
@@ -243,7 +243,7 @@ async def activities_page(request: SessionRequest):
     query_obj = Utility.cleandict(query)
 
     params = {
-        "app_name": APP_NAME,
+        "app_name": APP_BASE_NAME,
         "runtime_json": {
             "query_url": query_url,
             "query_obj": query_obj,
