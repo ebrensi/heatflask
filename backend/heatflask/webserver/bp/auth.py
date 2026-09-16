@@ -2,13 +2,14 @@
 Defines /auth/* webserver endpoints
 used for authenticating (logging in/out) Strava users
 """
+
 import sanic
 
 from logging import getLogger
 from ... import Users
 from ... import Strava
 from ... import Index
-from ... import Events
+from ... import History
 
 from ..sessions import session_cookie, SessionRequest
 
@@ -100,8 +101,14 @@ async def auth_callback(request: SessionRequest):
         user[U.LOGIN_COUNT],
         has_index,
     )
-    if user[U.LOGIN_COUNT] == 1:
-        await Events.new_event(msg=f"Authenicated new user {user[U.ID]}")
+    new_user = user[U.LOGIN_COUNT] == 1
+    History.record_soon(
+        History.Kind.ACCOUNT,
+        f"authenticated {'new ' if new_user else ''}user {user[U.ID]}",
+        user=user[U.ID],
+        new_user=new_user,
+        logins=user[U.LOGIN_COUNT],
+    )
     return sanic.response.redirect(state)
 
 
@@ -118,6 +125,9 @@ async def logout(request):
     request.ctx.current_user = None
     if cuser:
         request.ctx.flash(f"User {cuser_id} logged out.")
+        History.record_soon(
+            History.Kind.ACCOUNT, f"user {cuser_id} logged out", user=cuser_id
+        )
     splash_page_url = request.app.url_for("main.splash_page")
     state = request.args.get("state", splash_page_url)
     return (

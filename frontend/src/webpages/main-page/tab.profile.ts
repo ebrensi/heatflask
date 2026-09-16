@@ -123,6 +123,8 @@ export function SETUP(_state: State): void {
     const box = el("profile-admin")
     const link = el<HTMLAnchorElement>("profile-admin-link")
     if (link) link.href = URLS.admin
+    const historyLink = el<HTMLAnchorElement>("profile-history-link")
+    if (historyLink && URLS.history) historyLink.href = URLS.history
     if (box) box.hidden = false
   }
 }

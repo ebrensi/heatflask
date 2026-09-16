@@ -15,6 +15,7 @@ from pymongo.errors import BulkWriteError
 from typing import TypedDict, AsyncGenerator
 
 from . import DataAPIs
+from . import History
 from . import Strava
 from . import StreamCodecs
 from . import Users
@@ -152,6 +153,8 @@ async def strava_import(
 
     unsaved: list[StreamsDoc] = []
     now = datetime.datetime.now(datetime.timezone.utc)
+    imported = 0
+    cost = History.ReadCost()
 
     def pack(aid: int, streams: Strava.Streams) -> PackedStreams | None:
         try:
@@ -160,12 +163,18 @@ async def strava_import(
             # an activity with a time stream but no GPS or altitude
             log.info("activity %d has no %s stream", aid, e)
             return None
-        except Exception:
+        except Exception as e:
             # One unencodable activity used to raise out of the generator in
             # the middle of a response that was already partly sent, so the
             # client got a truncated body and no error. Drop the activity
             # instead: the rest of the query still arrives.
             log.exception("could not encode streams for activity %d", aid)
+            History.record_soon(
+                History.Kind.ERROR,
+                f"could not encode streams for activity {aid}: {e}",
+                user=user.get(Users.UserField.ID),
+                activity=aid,
+            )
             return None
         unsaved.append(mongo_doc(aid, packed, ts=now))
         return packed
@@ -175,6 +184,7 @@ async def strava_import(
             packed = pack(aid, streams)
             if packed is None:
                 continue
+            imported += 1
 
             if len(unsaved) >= INSERT_BATCH:
                 batch, unsaved = unsaved, []
@@ -185,11 +195,25 @@ async def strava_import(
         await aiterator.aclose()
         for aid, streams in leftovers:
             pack(aid, streams)
+            imported += 1
         if leftovers:
             log.info("saving %d streams fetched but not sent", len(leftovers))
         # shielded, so a cancellation (the client disconnecting) cannot
         # interrupt the write of streams we have already paid for
         await asyncio.shield(save(unsaved))
+
+        # Recorded here rather than in the route, so an import that was
+        # abandoned half way still says what it fetched and what it cost
+        if imported:
+            History.record_soon(
+                History.Kind.IMPORT,
+                f"imported {imported} of {len(activity_ids)} streams"
+                f" ({cost.reads} Strava reads)",
+                user=user.get(Users.UserField.ID),
+                streams=imported,
+                requested=len(activity_ids),
+                reads=cost.reads,
+            )
 
 
 async def aiter_query(

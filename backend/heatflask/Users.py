@@ -12,6 +12,7 @@ from typing import Final, TypedDict
 import asyncio
 from aiohttp import ClientResponseError
 from . import DataAPIs
+from . import History
 from . import Utility
 from . import Strava
 
@@ -293,6 +294,12 @@ async def delete(user_id, deauthenticate=True):
         log.exception("error deleting user %d", user_id)
     else:
         log.info("deleted user %s", user_id)
+        History.record_soon(
+            History.Kind.ACCOUNT,
+            f"deleted user {user_id}",
+            user=user_id,
+            deauthenticated=deauthenticate,
+        )
 
 
 async def deauthorize(user: dict) -> str:
@@ -316,7 +323,9 @@ async def deauthorize(user: dict) -> str:
     except ClientResponseError as e:
         if e.status in (400, 401, 403):
             return "refused"
-        log.info("user %s deauthorization failed: %s %s", user[U.ID], e.status, e.message)
+        log.info(
+            "user %s deauthorization failed: %s %s", user[U.ID], e.status, e.message
+        )
         return "error"
     except Exception:
         log.exception("user %s deauthorization failed", user[U.ID])
@@ -373,6 +382,15 @@ async def triage(*_app, only_find=False):
         if outcome == "limited":
             break
     log.info("user triage of %d: %s", len(ids), counts)
+    # The summary rather than an entry per user: the first run retired about
+    # 2,900 of them, which would have been the whole log
+    if counts:
+        History.record_soon(
+            History.Kind.ACCOUNT,
+            f"triaged {len(ids)} inactive users: {counts}",
+            considered=len(ids),
+            **counts,
+        )
     return counts
 
 

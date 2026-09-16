@@ -26,6 +26,7 @@ from .config import (
 from . import files
 
 from .bp import auth
+from .bp import history
 from .bp import users
 from .bp import activities
 from .bp import updates
@@ -59,6 +60,7 @@ app.blueprint(auth.bp)
 app.blueprint(users.bp)
 app.blueprint(activities.bp)
 app.blueprint(updates.bp)
+app.blueprint(history.bp)
 
 
 async def cancel_background_tasks(*args):

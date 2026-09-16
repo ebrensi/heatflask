@@ -29,6 +29,8 @@ export type RuntimeJson = {
     directory: string
     /** The same directory with the admin columns; only sent to admins */
     admin: string
+    /** The internal history log; only useful to admins */
+    history: string
   }
 }
 

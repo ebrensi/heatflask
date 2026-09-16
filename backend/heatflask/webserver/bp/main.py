@@ -119,6 +119,8 @@ async def user_page(request: Request, target_user_id=None):
                 # Same page with the admin columns; the frontend only offers
                 # this when ADMIN is set, and the route checks again anyway
                 "admin": app.url_for("users.directory", admin=1),
+                # The internal log, also admin-only and checked again there
+                "history": app.url_for("history.page"),
             },
         },
     }

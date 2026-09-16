@@ -11,6 +11,7 @@ from contextlib import aclosing
 
 from logging import getLogger
 
+from ... import History
 from ... import Index
 from ... import Users
 from ... import Streams
@@ -32,6 +33,7 @@ U = Users.UserField
 
 @bp.post("/")
 @session_cookie(get=True)
+@History.logged
 async def query(request: SessionRequest):
     """
     Get the activity list JSON for currently logged-in user

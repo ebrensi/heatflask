@@ -16,6 +16,7 @@ from aiohttp import ClientResponseError
 from typing import TypedDict
 
 from . import DataAPIs
+from . import History
 from . import Strava
 from . import Utility
 from . import Users
@@ -250,6 +251,7 @@ async def import_user_entries(**user):
         return
 
     t0 = time.perf_counter()
+    cost = History.ReadCost()
     await set_import_flag(uid, "Building index...")
 
     strava = Users.strava_client(user)
@@ -293,6 +295,12 @@ async def import_user_entries(**user):
             error.status,
             error.message,
         )
+        History.record_soon(
+            History.Kind.ERROR,
+            f"index import aborted: Strava {error.status} {error.message}",
+            user=uid,
+            status=error.status,
+        )
         await set_import_error(uid, error)
         return
 
@@ -314,6 +322,14 @@ async def import_user_entries(**user):
     insert_time = (time.perf_counter() - t1) * 1000
     count = len(insert_result.inserted_ids)
 
+    History.record_soon(
+        History.Kind.IMPORT,
+        f"imported index of {count} activities ({cost.reads} Strava reads)",
+        user=uid,
+        activities=count,
+        reads=cost.reads,
+        ms=round(fetch_time),
+    )
     await clear_import_flag(uid)
     log.debug(
         "fetched %s entries in %dms, insert_many %dms", count, fetch_time, insert_time
