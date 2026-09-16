@@ -32,6 +32,7 @@ import ES_JSON from "../locales/es.json"
 import FR_JSON from "../locales/fr.json"
 import IT_JSON from "../locales/it.json"
 import JA_JSON from "../locales/ja.json"
+import NB_JSON from "../locales/nb.json"
 import PT_BR_JSON from "../locales/pt-BR.json"
 import PT_PT_JSON from "../locales/pt-PT.json"
 import RU_JSON from "../locales/ru.json"
@@ -60,6 +61,7 @@ const CATALOGS: Record<string, Catalog> = {
   fr: <Catalog>FR_JSON,
   it: <Catalog>IT_JSON,
   ja: <Catalog>JA_JSON,
+  nb: <Catalog>NB_JSON,
   "pt-BR": <Catalog>PT_BR_JSON,
   "pt-PT": <Catalog>PT_PT_JSON,
   ru: <Catalog>RU_JSON,
@@ -78,6 +80,12 @@ const CATALOGS: Record<string, Catalog> = {
  *
  * Portuguese needs it only to break a tie: both catalogs are real, and
  * somebody asking for plain pt is likelier to be in Brazil.
+ *
+ * Norwegian has two written standards and a macrolanguage tag over both. The
+ * catalog is Bokmål (nb), which most Norwegians write; a browser may send `no`
+ * instead, and a Nynorsk (nn) reader reads Bokmål far more easily than
+ * English. Neither shares a base subtag with nb, so neither would get there
+ * on its own.
  */
 const ALIASES: Record<string, string> = {
   zh: "zh-Hans",
@@ -88,6 +96,8 @@ const ALIASES: Record<string, string> = {
   "zh-hk": "zh-Hant",
   "zh-mo": "zh-Hant",
   pt: "pt-BR",
+  no: "nb",
+  nn: "nb",
 }
 
 /** Language tags a reader can actually be given. */
