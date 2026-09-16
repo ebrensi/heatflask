@@ -74,6 +74,10 @@
   "tab.info.languageAuto": "自動",
   "tab.info.contributeHeading": "參與貢獻",
   "tab.info.translateNote": "<a id=\"translate-link\" target=\"_blank\" rel=\"noopener\">歡迎幫我們修正或新增翻譯！</a>",
+  "tab.info.textSizeHeading": "文字大小",
+  "tab.info.textSmaller": "更小",
+  "tab.info.textReset": "標準",
+  "tab.info.textLarger": "更大",
   "tab.info.sponsor": "<i class=\"hf-github\"></i> 在 GitHub 上贊助",
   "tab.info.contactsHeading": "聯絡方式",
 

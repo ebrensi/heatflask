@@ -18,6 +18,7 @@ import type { Map as MLMap } from "maplibre-gl"
 import { nextAnimationFrame } from "./appUtil"
 import { icon } from "./Icons"
 import { applyTranslations } from "./i18n"
+import { TEXT_SCALE_CHANGE, getTextScale } from "./TextScale"
 import { State } from "./Model"
 
 /** The event a sidebar pane gets when it is opened */
@@ -34,15 +35,20 @@ const WIDTH_KEY = "sidebarWidth"
  * so cannot give, beside "Abspielgeschwindigkeit". Re-measure if the dials
  * change size or a longer-winded language arrives. */
 const MIN_WIDTH = 320
+
+/** The floor, at whatever size the reader has set the text to. */
+function minWidth(): number {
+  return Math.round(MIN_WIDTH * getTextScale())
+}
 /** Always leave this much map showing, however hard the handle is pulled. */
 const MAP_MIN = 160
 
 function widthLimit(): number {
-  return Math.max(MIN_WIDTH, window.innerWidth - MAP_MIN)
+  return Math.max(minWidth(), window.innerWidth - MAP_MIN)
 }
 
 function applyWidth(px: number): void {
-  const w = Math.round(Math.min(Math.max(px, MIN_WIDTH), widthLimit()))
+  const w = Math.round(Math.min(Math.max(px, minWidth()), widthLimit()))
   document.documentElement.style.setProperty("--sidebar-width", `${w}px`)
 }
 
@@ -119,11 +125,11 @@ function addResizeHandle(el: HTMLElement): void {
     clearWidth()
   })
 
-  /* A width chosen on a wider window would otherwise leave no map on this one */
-  window.addEventListener("resize", () => {
-    const current = el.getBoundingClientRect().width
-    if (current > widthLimit()) applyWidth(current)
-  })
+  /* A width chosen on a wider window would otherwise leave no map on this
+   * one; bigger text can likewise outgrow a width chosen for smaller. */
+  const reclamp = () => applyWidth(el.getBoundingClientRect().width)
+  window.addEventListener("resize", reclamp)
+  document.addEventListener(TEXT_SCALE_CHANGE, reclamp)
 }
 
 /**

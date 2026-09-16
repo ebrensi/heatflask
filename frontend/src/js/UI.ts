@@ -12,6 +12,7 @@ import {
   CAPTURE_DURATION_MAX,
 } from "./Env"
 import { initI18n, applyTranslations, setGlobalParams } from "./i18n"
+import { initTextScale } from "./TextScale"
 import {
   DefaultVisual,
   DefaultQuery,
@@ -48,6 +49,7 @@ export async function start() {
   /* First: everything below this line puts words on the screen, and the
    * catalog for a language other than English arrives over the network. */
   initI18n()
+  initTextScale()
   setGlobalParams({ max: CAPTURE_DURATION_MAX })
   applyTranslations(document)
 

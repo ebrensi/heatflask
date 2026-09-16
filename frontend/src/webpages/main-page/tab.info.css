@@ -74,8 +74,11 @@
  * Narrow enough and the two columns stop working: the key column is sized to
  * its longest label and refuses to wrap, which in Russian is most of the pane
  * before the description gets any. Stacked, each key sits above what it does.
+ *
+ * In em rather than px so that it follows the text size: a pane wide enough
+ * for two columns at the default is not wide enough at 1.6x.
  */
-@container pane (max-width: 340px) {
+@container pane (max-width: 20em) {
   .info-controls {
     grid-template-columns: minmax(0, 1fr);
     gap: 0 0;
@@ -105,6 +108,47 @@
  * which is wider than the pane once it is dragged narrow */
 #language-select {
   max-width: 100%;
+}
+
+/*
+ * The size control keeps its own size whatever it is set to: dividing the
+ * scale back out means shrinking the text does not also shrink the button you
+ * need to undo it with.
+ */
+.text-size {
+  display: flex;
+  gap: 0.5em;
+  margin: 0.25em 0 1em;
+  font-size: calc(1em / var(--text-scale));
+}
+
+.text-size button {
+  flex: none;
+  min-width: 2.8em;
+  padding: 0.35em 0.7em;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.35);
+  color: rgba(255, 255, 255, 0.95);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+/* the middle one is the label as much as a button, so it takes the slack */
+#text-reset {
+  flex: 1;
+}
+
+.text-size button:hover:not(:disabled),
+.text-size button:focus-visible:not(:disabled) {
+  border-color: #fc4c02;
+  background: rgba(252, 76, 2, 0.2);
+}
+
+.text-size button:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 /* badges on info tab */
@@ -139,13 +183,13 @@ i.icon-button:hover {
   display: inline-flex;
   align-items: center;
   gap: 0.5em;
-  margin: 0.25rem 0 0.75rem;
+  margin: 0.25em 0 0.75em;
   padding: 0.45em 1em;
   border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 6px;
   background: rgba(0, 0, 0, 0.35);
   color: rgba(255, 255, 255, 0.95);
-  font-size: 0.95rem;
+  font-size: 0.95em;
   text-decoration: none;
   transition: border-color 0.2s, background-color 0.2s;
 }

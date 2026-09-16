@@ -11,15 +11,15 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.25rem;
-  margin: 0.5rem 0 1rem;
-  max-width: 22rem;
+  gap: 1.25em;
+  margin: 0.5em 0 1em;
+  max-width: 22em;
 }
 
 .dial {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 1em;
 }
 
 /* knob renders a canvas; keep it from picking up stray inline spacing */
@@ -38,8 +38,13 @@
   overflow-wrap: break-word;
 }
 
+/* em throughout, not rem: rem is root-relative, so the sizes in this tab
+ * ignored .sidebar-content's font-size and the dials stayed at one size
+ * however wide the sidebar got -- and would have ignored the text-size
+ * control too. The two inside .dial-value are relative to it rather than to
+ * the pane, since em compounds where rem did not. */
 .dial-name {
-  font-size: 1rem;
+  font-size: 1em;
   letter-spacing: 0.02em;
   opacity: 0.75;
 }
@@ -50,13 +55,13 @@
 
 .dial-value {
   font-family: monospace;
-  font-size: 1.3rem;
+  font-size: 1.3em;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
 .dial-hint {
-  font-size: 0.75rem;
+  font-size: 0.75em;
   opacity: 0.55;
 }
 
@@ -76,11 +81,11 @@
 
 /* the second value is the same number seen another way, not a second setting */
 .dial-alt {
-  font-size: 0.95rem;
+  font-size: 0.73em;
   opacity: 0.75;
 }
 
 .dial-rel {
-  font-size: 1rem;
+  font-size: 0.77em;
   opacity: 0.5;
 }

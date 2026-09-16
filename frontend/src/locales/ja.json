@@ -74,6 +74,10 @@
   "tab.info.languageAuto": "自動",
   "tab.info.contributeHeading": "貢献する",
   "tab.info.translateNote": "<a id=\"translate-link\" target=\"_blank\" rel=\"noopener\">翻訳の修正・追加にご協力ください！</a>",
+  "tab.info.textSizeHeading": "文字の大きさ",
+  "tab.info.textSmaller": "小さく",
+  "tab.info.textReset": "標準",
+  "tab.info.textLarger": "大きく",
   "tab.info.sponsor": "<i class=\"hf-github\"></i> GitHub でスポンサーになる",
   "tab.info.contactsHeading": "連絡先",
 

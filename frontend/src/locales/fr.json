@@ -74,6 +74,10 @@
   "tab.info.languageAuto": "Automatique",
   "tab.info.contributeHeading": "Contribuer",
   "tab.info.translateNote": "<a id=\"translate-link\" target=\"_blank\" rel=\"noopener\">Aidez-nous à corriger ou à ajouter des traductions !</a>",
+  "tab.info.textSizeHeading": "Taille du texte",
+  "tab.info.textSmaller": "Plus petit",
+  "tab.info.textReset": "Normale",
+  "tab.info.textLarger": "Plus grand",
   "tab.info.sponsor": "<i class=\"hf-github\"></i> Devenir sponsor sur GitHub",
   "tab.info.contactsHeading": "Contacts",
 
