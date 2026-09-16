@@ -193,6 +193,28 @@ export function SETUP(state: State) {
       else dotLayer.updateDotSettings()
     })
   }
+
+  bindCheckbox(visual, "showIcons", "icons", (on) => dotLayer.setIcons(on))
+}
+
+/** Two-way bind a checkbox to a boolean on appState.visual. */
+function bindCheckbox(
+  visual: State["visual"],
+  elementId: string,
+  param: "icons",
+  apply: (on: boolean) => void
+) {
+  const el = <HTMLInputElement>document.getElementById(elementId)
+  if (!el) return
+
+  el.addEventListener("change", () => {
+    visual[param] = el.checked
+  })
+
+  visual.onChange(param, (on: boolean) => {
+    el.checked = on
+    apply(on)
+  })
 }
 
 /**

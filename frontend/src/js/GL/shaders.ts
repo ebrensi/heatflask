@@ -127,6 +127,8 @@ uniform float u_blur;      // CSS px of soft edge, for the shadow pass
 uniform vec2 u_shift;      // CSS px screen offset, for the shadow pass
 uniform float u_T;
 uniform float u_phase;     // now mod T
+uniform float u_icons;     // 1 when dots are drawn as activity-type icons
+uniform float u_iconSize;  // CSS px: the side of an icon
 uniform sampler2D u_streams;
 uniform sampler2D u_meta;
 
@@ -136,6 +138,7 @@ out vec4 v_color;
 out float v_pointSize;
 out float v_halfSize;
 flat out float v_circle;
+flat out float v_cell;     // icon atlas cell, -1 for an activity with no icon
 
 vec4 fetch(sampler2D tex, int i) {
   int w = textureSize(tex, 0).x;
@@ -173,7 +176,13 @@ void main() {
   gl_Position = c;
 
   v_circle = m3.x;
-  float size = m3.x > 0.5 ? 2.0 * u_size : u_size;
+  v_cell = m3.z;
+
+  /* An icon needs room to be recognised, so icon mode has its own size (the
+   * dot-size dial still scales it). A selected dot is drawn at twice the
+   * size either way. */
+  float unit = u_icons > 0.5 && m3.z >= 0.0 ? u_iconSize : u_size;
+  float size = m3.x > 0.5 ? 2.0 * unit : unit;
   v_halfSize = 0.5 * size * u_pixelRatio;
   v_pointSize = (size + 2.0 * u_blur) * u_pixelRatio + 2.0;
   gl_PointSize = v_pointSize;
@@ -188,17 +197,63 @@ uniform float u_blur;
 uniform float u_pixelRatio;
 uniform float u_shadow;    // 1 on the shadow pass
 uniform float u_shadowAlpha;
+uniform float u_icons;
+uniform sampler2D u_atlas; // the icons, one per cell (see IconAtlas.ts)
+uniform vec2 u_atlasGrid;  // cells across, cells down
+uniform float u_outline;   // outline around a selected icon, in cell fractions
 
 in vec4 v_color;
 in float v_pointSize;
 in float v_halfSize;
 flat in float v_circle;
+flat in float v_cell;
 out vec4 fragColor;
+
+/* The icon's coverage at q (0..1 within its cell), and, for a selected dot,
+ * the same dilated by u_outline -- a ring around the glyph in the shape of
+ * the glyph, which is what marks a selected icon. */
+vec2 iconAlpha(vec2 q) {
+  vec2 cell = vec2(mod(v_cell, u_atlasGrid.x), floor(v_cell / u_atlasGrid.x));
+  vec2 scale = 1.0 / u_atlasGrid;
+  float a = texture(u_atlas, (cell + clamp(q, 0.0, 1.0)) * scale).a;
+  if (v_circle < 0.5) return vec2(a, a);
+
+  /* eight taps around the point: cheap, and enough for an even ring at the
+   * sizes an icon is drawn at */
+  float halo = a;
+  for (int i = 0; i < 8; i++) {
+    float t = float(i) * 0.7853981634;  // 2pi/8
+    vec2 o = vec2(cos(t), sin(t)) * u_outline;
+    halo = max(halo, texture(u_atlas, (cell + clamp(q + o, 0.0, 1.0)) * scale).a);
+  }
+  return vec2(a, halo);
+}
 
 void main() {
   // distance from the centre, in device pixels
   vec2 p = (gl_PointCoord - 0.5) * v_pointSize;
   float d = v_circle > 0.5 ? length(p) : max(abs(p.x), abs(p.y));
+
+  if (u_icons > 0.5 && v_cell >= 0.0) {
+    // the point sprite is the icon's box, plus whatever blur padding it has
+    vec2 q = p / (2.0 * v_halfSize) + 0.5;
+    vec2 a = iconAlpha(q);
+
+    if (u_shadow > 0.5) {
+      float s = a.y * u_shadowAlpha * v_color.a;
+      if (s <= 0.0) discard;
+      fragColor = vec4(0.0, 0.0, 0.0, s);
+      return;
+    }
+
+    /* the glyph in the activity's colour; around a selected one, the ring,
+     * in white so it reads against both the icon and the map */
+    float alpha = max(a.x, a.y) * v_color.a;
+    if (alpha <= 0.0) discard;
+    vec3 rgb = mix(vec3(1.0), v_color.rgb, a.x);
+    fragColor = vec4(rgb * alpha, alpha);  // premultiplied
+    return;
+  }
 
   if (u_shadow > 0.5) {
     float blur = max(u_blur * u_pixelRatio, 1.0);

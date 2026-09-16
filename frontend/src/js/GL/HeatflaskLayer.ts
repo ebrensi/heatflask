@@ -40,6 +40,7 @@ import { makePT, px2lngLat, WORLD_PX } from "../DotLayer/CRS"
 import { Bounds } from "../Bounds"
 import { ADMIN } from "../Env"
 import { PATH_VS, PATH_FS, DOT_VS, DOT_FS } from "./shaders"
+import { iconAtlas } from "../IconAtlas"
 import {
   compileProgram,
   uniformLocations,
@@ -50,6 +51,7 @@ import {
 
 import type { VisualParameters } from "../Model"
 import type { Activity } from "../DotLayer/Activity"
+import type { ActivityType } from "../Strava"
 
 /* Dot size grows with zoom, so dots read as objects sitting in space rather
  * than decoration painted on the screen -- but only partly. Map scale is
@@ -64,6 +66,15 @@ function dotSizeForZoom(dotScale: number, zoomLevel: number): number {
   const zoomFactor = 2 ** (DOT_ZOOM_SCALING * (zoomLevel - DOT_ZOOM_REF))
   return Math.max(MIN_DOT_SIZE, dotScale * zoomFactor)
 }
+
+/* An icon has to be big enough to tell apart from the other icons, which a
+ * 3px dot is not, so icon mode draws bigger. The dot-size dial still scales
+ * it, and a selected icon is still twice the size. */
+const ICON_SIZE_SCALE = 5
+const MIN_ICON_SIZE = 12
+
+/** The ring around a selected icon, as a fraction of the icon's box */
+const ICON_OUTLINE = 0.06
 
 /** How often, at most, to re-cull and rebuild the path buffer mid-gesture */
 const REBUILD_INTERVAL_MS = 120
@@ -123,6 +134,8 @@ export type LayerOptions = {
   visual: VisualParameters
   showPaths: boolean
   startPaused: boolean
+  /** draw each dot as its activity type's icon, rather than a dot */
+  icons: boolean
 }
 
 export class HeatflaskLayer implements CustomLayerInterface {
@@ -165,6 +178,10 @@ export class HeatflaskLayer implements CustomLayerInterface {
   private streamTexture: WebGLTexture
   private metaTexture: WebGLTexture
   private meta = new Float32Array(0)
+  /* the activity-type icons, built the first time they are switched on */
+  private atlasTexture?: WebGLTexture
+  private atlasGrid: [number, number] = [1, 1]
+  private atlasCell?: Map<ActivityType, number>
   /* what the slot buffer and the metadata were built for */
   private slotsT = NaN
   private slotsDirty = true
@@ -238,6 +255,11 @@ export class HeatflaskLayer implements CustomLayerInterface {
       "u_phase",
       "u_streams",
       "u_meta",
+      "u_icons",
+      "u_iconSize",
+      "u_atlas",
+      "u_atlasGrid",
+      "u_outline",
     ])
 
     this.setupPathVAO(gl)
@@ -271,6 +293,8 @@ export class HeatflaskLayer implements CustomLayerInterface {
     gl.deleteBuffer(this.slotBuffer)
     gl.deleteTexture(this.streamTexture)
     gl.deleteTexture(this.metaTexture)
+    if (this.atlasTexture) gl.deleteTexture(this.atlasTexture)
+    this.atlasTexture = undefined
     gl.deleteVertexArray(this.pathVAO)
     gl.deleteVertexArray(this.dotVAO)
     this.pathProgram = undefined
@@ -431,9 +455,19 @@ export class HeatflaskLayer implements CustomLayerInterface {
       gl.activeTexture(gl.TEXTURE1)
       gl.bindTexture(gl.TEXTURE_2D, this.metaTexture)
 
+      /* icons, if they are on and the atlas has been built */
+      const icons = this.options.icons && !!this.atlasTexture
+      gl.activeTexture(gl.TEXTURE2)
+      gl.bindTexture(gl.TEXTURE_2D, icons ? this.atlasTexture : null)
+
       const u = this.dotU
       gl.uniform1i(u.u_streams, 0)
       gl.uniform1i(u.u_meta, 1)
+      gl.uniform1i(u.u_atlas, 2)
+      gl.uniform1f(u.u_icons, icons ? 1 : 0)
+      gl.uniform1f(u.u_iconSize, this.iconSize())
+      gl.uniform2f(u.u_atlasGrid, this.atlasGrid[0], this.atlasGrid[1])
+      gl.uniform1f(u.u_outline, ICON_OUTLINE)
       gl.uniformMatrix4fv(u.u_matrix, false, this.matrix32)
       gl.uniform2f(u.u_viewport, vw, vh)
       gl.uniform1f(u.u_pixelRatio, pixelRatio)
@@ -458,6 +492,8 @@ export class HeatflaskLayer implements CustomLayerInterface {
       gl.uniform2f(u.u_shift, 0, 0)
       gl.drawArrays(gl.POINTS, 0, this.slotCount)
 
+      gl.activeTexture(gl.TEXTURE2)
+      gl.bindTexture(gl.TEXTURE_2D, null)
       gl.activeTexture(gl.TEXTURE1)
       gl.bindTexture(gl.TEXTURE_2D, null)
       gl.activeTexture(gl.TEXTURE0)
@@ -528,6 +564,50 @@ export class HeatflaskLayer implements CustomLayerInterface {
   /** The animation settings changed; a paused frame needs redrawing */
   updateDotSettings(): void {
     this.map?.triggerRepaint()
+  }
+
+  /**
+   * Draw dots as their activity type's icon, or as plain dots.
+   *
+   * The atlas is built the first time icons are asked for -- it needs the
+   * icon font, which may still be loading -- and kept after that, so this is
+   * only slow once. Turning them off leaves the texture in place; nothing
+   * samples it while u_icons is 0.
+   */
+  async setIcons(on: boolean): Promise<void> {
+    this.options.icons = on
+    if (on && !this.atlasTexture) await this.buildAtlas()
+    /* the cell indices live in the metadata, which was built without them */
+    this.metaDirty = true
+    this.map?.triggerRepaint()
+  }
+
+  private async buildAtlas(): Promise<void> {
+    const { canvas, grid, cell } = await iconAtlas()
+    const gl = this.gl
+    if (!gl) return // the layer went away while the font loaded
+
+    const tex = gl.createTexture()
+    gl.bindTexture(gl.TEXTURE_2D, tex)
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas)
+    /* Dots are small and always moving, so the atlas is sampled well below
+     * its own resolution; mipmaps keep that from crawling. The glyphs are
+     * drawn with a margin inside their cells, which keeps neighbours from
+     * bleeding into each other in the smaller levels. */
+    gl.generateMipmap(gl.TEXTURE_2D)
+    gl.texParameteri(
+      gl.TEXTURE_2D,
+      gl.TEXTURE_MIN_FILTER,
+      gl.LINEAR_MIPMAP_LINEAR
+    )
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+    gl.bindTexture(gl.TEXTURE_2D, null)
+
+    this.atlasTexture = tex
+    this.atlasGrid = grid
+    this.atlasCell = cell
   }
 
   /**
@@ -623,6 +703,12 @@ export class HeatflaskLayer implements CustomLayerInterface {
    * the sz dial means what it did */
   private dotSize(): number {
     return dotSizeForZoom(+this.visual.sz, this.map.getZoom() + 1)
+  }
+
+  /** The side of an icon in CSS px: the dot size, but never too small to
+   * make out which icon it is */
+  private iconSize(): number {
+    return Math.max(MIN_ICON_SIZE, this.dotSize() * ICON_SIZE_SCALE)
   }
 
   private zScale(): number {
@@ -912,7 +998,8 @@ export class HeatflaskLayer implements CustomLayerInterface {
 
       m[o + 12] = A.selected ? 1 : 0
       m[o + 13] = this.duration[a]
-      m[o + 14] = 0
+      // -1: no icon for this type, so it draws as a dot even in icon mode
+      m[o + 14] = this.atlasCell?.get(A.type) ?? -1
       m[o + 15] = 0
     }
     this.uploadTexels(this.metaTexture, m)

@@ -78,6 +78,18 @@ export function activity_icon(atype: ActivityType) {
   return spec(atype)[2] || atype
 }
 
+/** Every type this table knows, for anything that enumerates them */
+export const activity_types = <ActivityType[]>Object.keys(atype_specs)
+
+/**
+ * The icon-font class for a type's icon, e.g. "hf-running" -- the icon the
+ * activity list shows, without the markup around it. A type missing from the
+ * table gets the fallback icon, as it does everywhere else.
+ */
+export function activity_icon_class(atype: ActivityType): string {
+  return /hf-[\w-]+/.exec(spec(atype)[2])?.[0] || "hf-activity"
+}
+
 export function activity_pathcolor(atype: ActivityType) {
   return spec(atype)[1] || defaultSpec[1]
 }

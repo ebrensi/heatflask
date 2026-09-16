@@ -62,6 +62,7 @@ export type VisualParameters = {
   alpha?: number // global alpha for all rendering
   pw?: number // path width in px, as an unselected activity draws with
   //             nothing selected; 0 draws no paths at all
+  icons?: boolean // draw each dot as its activity type's icon
   paused?: boolean // start in paused state
 }
 
@@ -90,6 +91,7 @@ export const DefaultVisual: VisualParameters = {
   sz: 3,
   alpha: 0.8,
   pw: 2,
+  icons: false,
   paused: false,
 }
 
@@ -122,6 +124,7 @@ export type URLParameters = {
   sz?: string
   paused?: string
   pw?: string
+  icons?: string
   /** Not written any more: "paths=0" in an old link becomes pw=0 */
   paths?: string
   alpha?: string
