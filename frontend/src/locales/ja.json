@@ -30,7 +30,6 @@
   "tab.activities.zoomToSelection": "<i class=\"fas fa-search-plus\"></i> <i class=\"far fa-object-group\"></i> <i class=\"fas fa-search-minus\"></i> 選択範囲にズーム",
 
   "tab.controls.title": "レイヤー設定",
-  "tab.controls.heading": "モデルパラメータ",
   "tab.controls.timescale": "時間スケール <i>&tau;</i>",
   "tab.controls.timescaleHint": "再生速度",
   "tab.controls.period": "周期 <i>T</i>",
@@ -38,6 +37,8 @@
   "tab.controls.dotSize": "ドットの大きさ",
   "tab.controls.pathWidth": "軌跡の太さ",
   "tab.controls.pathWidthHint": "0 で軌跡を隠す",
+  "tab.controls.colors": "配色",
+  "tab.controls.colorsHint": "パレットを回転",
 
   "tab.profile.loginTitle": "ログイン",
   "tab.profile.anonNote": "Strava でログインすると、自分のアクティビティを表示し、Heatflask アカウントを管理できます。",

@@ -4,6 +4,7 @@ import type { KnobElement } from "knob"
 import { icon } from "~/src/js/Icons"
 import { State } from "~/src/js/Model"
 import { dotLayer } from "~/src/js/DotLayerAPI"
+import * as Table from "~/src/js/Table"
 
 import CONTENT from "bundle-text:./tab.controls.html"
 export { CONTENT }
@@ -15,29 +16,36 @@ export const ICON = icon("equalizer")
 const DIAL_FG = "rgba(0,255,255,0.8)"
 const DIAL_BG = "rgba(255,255,255,0.2)"
 
-/* One dial per row now (see tab.controls.css), so they have room to be bigger.
+/* One dial per row (see tab.controls.css), so they have room to be bigger.
  * 140px leaves space for the readout beside it in a 305px sidebar. The knob
- * draws its canvas at this size once, so it cannot follow CSS. */
-const DIAL_PX = 140
+ * draws its canvas at this size once, so it cannot follow CSS.
+ *
+ * They are not all one size any more: five 140px dials and a heading did not
+ * fit the pane, and timescale and period, which set the shape of the
+ * animation, are the ones worth the most travel. The other three are a step
+ * down. Removing the "Model Parameters" heading paid for most of it. */
+const DIAL_LG = 140
+const DIAL_MD = 120
 
 /* Every dial reports 0..100; each binding maps that onto its parameter */
 const dialSpec = {
   min: 0,
   max: 100,
   step: 0.1,
-  width: DIAL_PX,
-  height: DIAL_PX,
   cursor: 20,
   displayInput: false,
   fgColor: DIAL_FG,
   bgColor: DIAL_BG,
 }
 
+const sized = (px: number) => ({ ...dialSpec, width: px, height: px })
+
 const knobSpec = {
-  speedConst: Knob(dialSpec),
-  sepConst: Knob(dialSpec),
-  sizeConst: Knob(dialSpec),
-  widthConst: Knob(dialSpec),
+  speedConst: Knob(sized(DIAL_LG)),
+  sepConst: Knob(sized(DIAL_LG)),
+  sizeConst: Knob(sized(DIAL_MD)),
+  widthConst: Knob(sized(DIAL_MD)),
+  colorConst: Knob(sized(DIAL_MD)),
 }
 
 /* tau spans 0.5 .. 3600 -- a factor of 7200 -- so the dial cannot carry it
@@ -74,7 +82,15 @@ const SZ_RATIO = SZ_HIGH / SZ_LOW
  * paths off, which is what the "Show Paths" checkbox used to do. The width
  * is the one an unselected activity draws with when nothing is selected;
  * selected and unselected activities scale with it (see Defaults.ts). */
-const PW_HIGH = 8
+const PW_HIGH = 10
+
+/* Colour rotation, in degrees of one turn of the palette. The knob sweeps a
+ * full circle from the top, so the dial's angle is the rotation itself, and
+ * its rest position -- 12 o'clock, 0 degrees -- is the palette as it has
+ * always been dealt out. A full turn comes back to the same colours, which is
+ * why this dial is linear where the others are exponential: there is nothing
+ * at either end of it to reach. */
+const CR_HIGH = 360
 
 /** A duration in seconds, at a length people can read at a glance. */
 function fmtSecs(s: number): string {
@@ -87,7 +103,7 @@ function fmtSecs(s: number): string {
 
 type DialBinding = {
   id: keyof typeof knobSpec
-  param: "tau" | "T" | "sz" | "pw"
+  param: "tau" | "T" | "sz" | "pw" | "cr"
   /** dial position -> parameter value */
   toParam?: (dial: number) => number
   /** parameter value -> dial position */
@@ -143,6 +159,21 @@ const dialBindings: DialBinding[] = [
     range: { min: 0, max: PW_HIGH },
     // the width is baked into the path geometry, so it has to be rebuilt
     apply: () => dotLayer.updatePathWidth(),
+  },
+  {
+    id: "colorConst",
+    param: "cr",
+    toParam: (v) => (CR_HIGH * v) / 100,
+    toDial: (cr) => (100 * cr) / CR_HIGH,
+    readout: "crValue",
+    format: (cr) => `${Math.round(cr)}\u00b0`,
+    range: { min: 0, max: CR_HIGH },
+    /* The dots take their colour from the meta texture and the list from the
+     * same Activity objects, so both have to be told. */
+    apply: () => {
+      dotLayer.updateColors()
+      Table.updateSwatches()
+    },
   },
 ]
 

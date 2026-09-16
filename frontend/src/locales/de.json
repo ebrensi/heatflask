@@ -30,7 +30,6 @@
   "tab.activities.zoomToSelection": "<i class=\"fas fa-search-plus\"></i> <i class=\"far fa-object-group\"></i> <i class=\"fas fa-search-minus\"></i> Auf Auswahl zoomen",
 
   "tab.controls.title": "Ebeneneinstellungen",
-  "tab.controls.heading": "Modellparameter",
   "tab.controls.timescale": "Zeitskala <i>&tau;</i>",
   "tab.controls.timescaleHint": "Abspielgeschwindigkeit",
   "tab.controls.period": "Periode <i>T</i>",
@@ -38,6 +37,8 @@
   "tab.controls.dotSize": "Punktgröße",
   "tab.controls.pathWidth": "Linienbreite",
   "tab.controls.pathWidthHint": "null blendet die Linien aus",
+  "tab.controls.colors": "Farben",
+  "tab.controls.colorsHint": "Palette drehen",
 
   "tab.profile.loginTitle": "Anmelden",
   "tab.profile.anonNote": "Melde dich mit Strava an, um deine eigenen Aktivitäten zu sehen und dein Heatflask-Konto zu verwalten.",

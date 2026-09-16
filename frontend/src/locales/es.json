@@ -30,7 +30,6 @@
   "tab.activities.zoomToSelection": "<i class=\"fas fa-search-plus\"></i> <i class=\"far fa-object-group\"></i> <i class=\"fas fa-search-minus\"></i> Zoom a la selección",
 
   "tab.controls.title": "Ajustes de capa",
-  "tab.controls.heading": "Parámetros del modelo",
   "tab.controls.timescale": "Escala de tiempo <i>&tau;</i>",
   "tab.controls.timescaleHint": "velocidad de reproducción",
   "tab.controls.period": "Periodo <i>T</i>",
@@ -38,6 +37,8 @@
   "tab.controls.dotSize": "Tamaño del punto",
   "tab.controls.pathWidth": "Grosor del trazo",
   "tab.controls.pathWidthHint": "cero oculta los trazos",
+  "tab.controls.colors": "Colores",
+  "tab.controls.colorsHint": "girar la paleta",
 
   "tab.profile.loginTitle": "Iniciar sesión",
   "tab.profile.anonNote": "Inicia sesión con Strava para ver tus propias actividades y gestionar tu cuenta de Heatflask.",

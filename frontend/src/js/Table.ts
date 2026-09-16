@@ -231,6 +231,23 @@ function makeRow(A: Activity): string {
   )
 }
 
+/**
+ * Re-colour the swatches without rebuilding the table.
+ *
+ * The colour dial runs this on every step, and update() replaces the whole
+ * tbody -- which would throw away the scroll position and re-parse every row
+ * for a change of one CSS property.
+ */
+export function updateSwatches(): void {
+  if (!tableEl) return
+  const rows = Array.from(tableEl.querySelectorAll<HTMLElement>("tr[data-id]"))
+  for (const row of rows) {
+    const A = ActivityCollection.items.get(+row.dataset.id)
+    const swatch = row.querySelector<HTMLElement>(".dot-swatch")
+    if (A && swatch) swatch.style.background = A.colors.dot || A.colors.path
+  }
+}
+
 /** Rebuild the table from whatever the collection currently holds. */
 export function update(): void {
   if (!tableEl) tableEl = <HTMLTableElement>document.getElementById("items")

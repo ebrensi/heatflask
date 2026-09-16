@@ -45,6 +45,7 @@ const urlArgNames: Record<URLParameter, string[]> = {
   sz: ["sz"],
   paused: ["paused", "pu"],
   pw: ["pw", "pathwidth"],
+  cr: ["cr", "colors"],
   paths: ["pa", "paths"],
   alpha: ["alpha"],
 }
@@ -83,6 +84,7 @@ function QVtoURL({ query, visual }: QVParams): URLParameters {
     geohash: visual.geohash,
     paused: boolString(visual.paused),
     pw: numStr(visual.pw),
+    cr: numStr(visual.cr),
     alpha: str(visual.alpha),
     baselayer: visual.baselayer,
     pitch: str(visual.pitch),
@@ -193,6 +195,7 @@ export function parseURL(urlString: string) {
     "pitch",
     "bearing",
     "pw",
+    "cr",
   ] as URLParameter[]) {
     if (urlParams[p]) vparams[p] = +urlParams[p]
   }

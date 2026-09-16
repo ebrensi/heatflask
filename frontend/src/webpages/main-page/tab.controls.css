@@ -22,9 +22,19 @@
   gap: 1em;
 }
 
-/* knob renders a canvas; keep it from picking up stray inline spacing */
+/* knob renders a canvas; keep it from picking up stray inline spacing.
+ *
+ * The knobs are not all one size (see DIAL_LG/MD/SM in tab.controls.ts), so
+ * each one is centred in a slot as wide as the biggest. Without the slot,
+ * .dial-stack centres each row on its own width and the smaller dials sit
+ * indented from the bigger ones, with every readout starting somewhere
+ * different. */
 .dial-knob {
-  display: block;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* DIAL_LG in tab.controls.ts */
+  width: 140px;
   flex: none;
   line-height: 0;
 }

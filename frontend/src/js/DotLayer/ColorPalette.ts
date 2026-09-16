@@ -30,10 +30,35 @@ function makeColorGradient(
   return palette
 }
 
-export function makePalette(n: number) {
+/**
+ * `n` colours from the gradient, the i-th going to the i-th activity.
+ *
+ * The gradient has a period of `steps` items whatever `n` is -- `n` is only
+ * the length of the array -- so the eleventh activity gets the first colour
+ * again. Which activity gets which is therefore a function of its index, and
+ * the only way to change one used to be to change the query, since that
+ * renumbers everything.
+ *
+ * `rotation` turns the whole cycle instead. It is an angle in degrees, added
+ * equally to all three channels, so 360 comes back to where it started and
+ * anything between puts every activity on a different colour while keeping
+ * them the same distance apart.
+ */
+export function makePalette(n: number, rotation = 0) {
   const center = 128
   const width = 127
   const steps = 10
   const freq = (2 * Math.PI) / steps
-  return makeColorGradient(freq, freq, freq, 0, 2, 4, center, width, n)
+  const phase = (2 * Math.PI * rotation) / 360
+  return makeColorGradient(
+    freq,
+    freq,
+    freq,
+    phase,
+    2 + phase,
+    4 + phase,
+    center,
+    width,
+    n
+  )
 }

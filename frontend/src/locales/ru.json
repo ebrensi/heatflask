@@ -30,7 +30,6 @@
   "tab.activities.zoomToSelection": "<i class=\"fas fa-search-plus\"></i> <i class=\"far fa-object-group\"></i> <i class=\"fas fa-search-minus\"></i> Приблизить к выделению",
 
   "tab.controls.title": "Настройки слоя",
-  "tab.controls.heading": "Параметры модели",
   "tab.controls.timescale": "Масштаб времени <i>&tau;</i>",
   "tab.controls.timescaleHint": "скорость воспроизведения",
   "tab.controls.period": "Период <i>T</i>",
@@ -38,6 +37,8 @@
   "tab.controls.dotSize": "Размер точек",
   "tab.controls.pathWidth": "Толщина линий",
   "tab.controls.pathWidthHint": "ноль скрывает линии",
+  "tab.controls.colors": "Цвета",
+  "tab.controls.colorsHint": "сдвиг палитры",
 
   "tab.profile.loginTitle": "Вход",
   "tab.profile.anonNote": "Войдите через Strava, чтобы видеть свои активности и управлять аккаунтом Heatflask.",

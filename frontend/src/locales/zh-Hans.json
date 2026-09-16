@@ -30,7 +30,6 @@
   "tab.activities.zoomToSelection": "<i class=\"fas fa-search-plus\"></i> <i class=\"far fa-object-group\"></i> <i class=\"fas fa-search-minus\"></i> 缩放到所选范围",
 
   "tab.controls.title": "图层设置",
-  "tab.controls.heading": "模型参数",
   "tab.controls.timescale": "时间尺度 <i>&tau;</i>",
   "tab.controls.timescaleHint": "播放速度",
   "tab.controls.period": "周期 <i>T</i>",
@@ -38,6 +37,8 @@
   "tab.controls.dotSize": "圆点大小",
   "tab.controls.pathWidth": "轨迹宽度",
   "tab.controls.pathWidthHint": "设为 0 可隐藏轨迹",
+  "tab.controls.colors": "配色",
+  "tab.controls.colorsHint": "旋转调色板",
 
   "tab.profile.loginTitle": "登录",
   "tab.profile.anonNote": "使用 Strava 登录即可查看自己的活动，并管理你的 Heatflask 账号。",

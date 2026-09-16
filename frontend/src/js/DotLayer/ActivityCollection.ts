@@ -94,13 +94,27 @@ export function reset(): void {
   lastInView.resize(_itemsArray.length)
 }
 
+/** How far the palette is turned before it is dealt out. See makePalette. */
+let colorRotation = 0
+
 /** assign a dot-color to each item of _items */
 function setDotColors(): void {
-  const colorPalette = ColorPalette.makePalette(items.size)
+  const colorPalette = ColorPalette.makePalette(items.size, colorRotation)
   let i = 0
   for (const A of items.values()) {
     A.colors.dot = colorPalette[i++]
   }
+}
+
+/**
+ * Turn the palette, in degrees, and deal it out again.
+ *
+ * Kept here rather than read from the model because this module is written to
+ * run inside a worker, where there is no model to read.
+ */
+export function setColorRotation(degrees: number): void {
+  colorRotation = degrees
+  setDotColors()
 }
 
 /** The set indicating which activities are currently in view. It is actually

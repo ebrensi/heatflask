@@ -544,6 +544,18 @@ export class HeatflaskLayer implements CustomLayerInterface {
     this.map?.triggerRepaint()
   }
 
+  /**
+   * The colour rotation (visual.cr) changed. The dot colour lives in the meta
+   * texture, so re-dealing the palette and marking that dirty is the whole of
+   * it: no geometry, culling or index-set work, which is what makes this
+   * cheap enough to run on every step of the dial.
+   */
+  updateColors(): void {
+    ActivityCollection.setColorRotation(+this.visual.cr || 0)
+    this.metaDirty = true
+    this.map?.triggerRepaint()
+  }
+
   /** Length of one loop, in real seconds. The dot pattern repeats every T
    * activity-seconds, which is T/tau of real time. */
   periodInSecs(): number {
