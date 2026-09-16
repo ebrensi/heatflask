@@ -29,6 +29,7 @@
  * statically, and those are erased. */
 import { dotLayer } from "./DotLayerAPI"
 import { CAPTURE_DURATION_MAX } from "./Env"
+import { t } from "./i18n"
 
 import heatflaskImgSrc from "url:../images/logo.png"
 import stravaImgSrc from "url:../images/pbs4.png"
@@ -138,7 +139,7 @@ export async function captureVideo(
   const duration = Math.min(period, CAPTURE_DURATION_MAX)
   const numFrames = Math.max(1, Math.round(duration * FPS))
 
-  onProgress(0, "loading encoder…")
+  onProgress(0, t("capture.loadingEncoder"))
   const {
     Output,
     Mp4OutputFormat,
@@ -191,7 +192,7 @@ export async function captureVideo(
   try {
     await output.start()
 
-    onProgress(0, "waiting for the map to load…")
+    onProgress(0, t("capture.waitingForMap"))
     await mapSettled(map)
 
     for (let i = 0; i < numFrames; i++) {
@@ -226,11 +227,11 @@ export async function captureVideo(
 
       onProgress(
         (i + 1) / numFrames,
-        `encoding… ${~~(((i + 1) / numFrames) * 100)}%`
+        t("capture.encoding", { percent: ~~(((i + 1) / numFrames) * 100) })
       )
     }
 
-    onProgress(1, "finalizing…")
+    onProgress(1, t("capture.finalizing"))
     await output.finalize()
 
     return new Blob([target.buffer], { type: "video/mp4" })

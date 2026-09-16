@@ -15,6 +15,7 @@ import { dotLayer } from "./DotLayerAPI"
 import { fitTo } from "./Render"
 import { closePopupIfUnselected } from "./ActivityPopup"
 import { PANE_OPEN } from "./Sidebar"
+import { t, getLocale } from "./i18n"
 
 import type { Map as MLMap } from "maplibre-gl"
 import type { Activity } from "./DotLayer/Activity"
@@ -197,13 +198,13 @@ const DATE_FORMAT: Intl.DateTimeFormatOptions = {
  * across. Title on its own line, the small stuff underneath. */
 function makeRow(A: Activity): string {
   const date = A.tsLocal
-    ? A.tsLocal.toLocaleDateString(undefined, DATE_FORMAT)
+    ? A.tsLocal.toLocaleDateString(getLocale(), DATE_FORMAT)
     : ""
   const dist = ((A.total_distance || 0) * DIST_SCALE).toFixed(1)
   const elapsed = HHMMSS(A.elapsed_time || 0)
   const aicon = activity_icon(<ActivityType>A.type) || String(A.type)
   // the title is whatever its owner typed, so it goes into the HTML escaped
-  const title = escapeHTML(A.name || "(untitled)")
+  const title = escapeHTML(A.name || t("table.untitled"))
 
   // dot colour is assigned during ActivityCollection.reset(); fall back to the
   // path colour so the indicator is never invisible
@@ -240,7 +241,9 @@ export function update(): void {
   )
 
   if (!activities.length) {
-    tableEl.innerHTML = `<tbody><tr><td>no activities</td></tr></tbody>`
+    tableEl.innerHTML = `<tbody><tr><td>${t(
+      "table.noActivities"
+    )}</td></tr></tbody>`
     return
   }
 

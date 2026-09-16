@@ -17,6 +17,7 @@ import type { Map as MLMap } from "maplibre-gl"
 
 import { nextAnimationFrame } from "./appUtil"
 import { icon } from "./Icons"
+import { applyTranslations } from "./i18n"
 import { State } from "./Model"
 
 /** The event a sidebar pane gets when it is opened */
@@ -160,6 +161,12 @@ export async function renderTabs(map: MLMap, state: State, tabIds?: string[]) {
 
   sidebar_tablist_el.innerHTML = tabs.join("\n")
   sidebar_content_el.innerHTML = contents.join("")
+
+  /* Before the SETUP functions below, which look elements up by id: a
+   * translated string can carry its own <a id="..."> so that the link falls
+   * where the sentence needs it, and that replaces what was there. */
+  applyTranslations(sidebar_tablist_el)
+  applyTranslations(sidebar_content_el)
 
   const S = new Sidebar(document.getElementById("sidebar"))
   S.tabNames = tabIds

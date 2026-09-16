@@ -1,36 +1,47 @@
 <!-- Controls Tab -->
 
-<h4>Model Parameters</h4>
+<h4 data-i18n="tab.controls.heading">Model Parameters</h4>
 
 <div class="dial-stack">
   <div class="dial">
     <span id="speedConst" class="dial-knob"></span>
     <div class="dial-text">
-      <div class="dial-name">Timescale <i>&tau;</i></div>
+      <!-- tau and T name numeric model parameters, so they stay in the Latin
+           alphabet in every language; only the words around them translate. -->
+      <div class="dial-name" data-i18n="tab.controls.timescale">
+        Timescale <i>&tau;</i>
+      </div>
       <div class="dial-value" id="tauValue">&mdash;</div>
-      <div class="dial-hint">playback speed</div>
+      <div class="dial-hint" data-i18n="tab.controls.timescaleHint">
+        playback speed
+      </div>
     </div>
   </div>
 
   <div class="dial">
     <span id="sepConst" class="dial-knob"></span>
     <div class="dial-text">
-      <div class="dial-name">Period <i>T</i></div>
+      <div class="dial-name" data-i18n="tab.controls.period">
+        Period <i>T</i>
+      </div>
       <!-- T beside the real time one loop of it takes: T/tau, which moves
-           with this dial and with the timescale dial above -->
+           with this dial and with the timescale dial above. The title is the
+           formula itself, so there is nothing in it to translate. -->
       <div class="dial-value dial-pair" title="T ~ T/&tau;">
         <span class="dial-alt" id="TValue">&mdash;</span>
         <span class="dial-rel">~</span>
         <span id="cycleValue">&mdash;</span>
       </div>
-      <div class="dial-hint">activity ~ model</div>
+      <div class="dial-hint" data-i18n="tab.controls.periodHint">
+        activity ~ model
+      </div>
     </div>
   </div>
 
   <div class="dial">
     <span id="sizeConst" class="dial-knob"></span>
     <div class="dial-text">
-      <div class="dial-name">Dot size</div>
+      <div class="dial-name" data-i18n="tab.controls.dotSize">Dot size</div>
       <div class="dial-value" id="szValue">&mdash;</div>
     </div>
   </div>
@@ -38,9 +49,11 @@
   <div class="dial">
     <span id="widthConst" class="dial-knob"></span>
     <div class="dial-text">
-      <div class="dial-name">Path width</div>
+      <div class="dial-name" data-i18n="tab.controls.pathWidth">Path width</div>
       <div class="dial-value" id="pwValue">&mdash;</div>
-      <div class="dial-hint">zero hides the paths</div>
+      <div class="dial-hint" data-i18n="tab.controls.pathWidthHint">
+        zero hides the paths
+      </div>
     </div>
   </div>
 </div>

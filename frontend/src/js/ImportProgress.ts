@@ -17,6 +17,7 @@
 
 import { icon } from "./Icons"
 import { Dialog } from "./Dialog"
+import { t } from "./i18n"
 
 import type { Map as MLMap } from "maplibre-gl"
 
@@ -37,14 +38,14 @@ const LINGER_ERROR_MS = 6000
 export function initImportProgress(map: MLMap): void {
   win = new Dialog(map.getContainer(), {
     position: "center",
-    title: `${icon("cloud-download")} Importing`,
+    title: `${icon("cloud-download")} ${t("import.title")}`,
     content: `
       <div class="import-progress">
         <div class="info-message"></div>
         <progress class="progbar"></progress>
         <div class="import-count"></div>
         <button type="button" class="btn btn-c btn-sm smooth import-stop">
-          <i class="hf hf-cancel-circle"></i> Stop
+          <i class="hf hf-cancel-circle"></i> ${t("import.stop")}
         </button>
       </div>`,
   })
@@ -56,7 +57,7 @@ export function initImportProgress(map: MLMap): void {
   stopEl = root.querySelector(".import-stop")
   stopEl.addEventListener("click", () => {
     stopEl.disabled = true
-    if (msgEl) msgEl.textContent = "stopping…"
+    if (msgEl) msgEl.textContent = t("import.stopping")
     if (stopHandler) stopHandler()
   })
 }
@@ -67,7 +68,7 @@ export function onStop(handler: () => void): void {
 }
 
 /** Open the dialog at the start of a query. */
-export function start(message = "contacting Strava…"): void {
+export function start(message = t("import.contacting")): void {
   if (!win) return
   /* A previous render's dialog may still be lingering on its final message;
    * without this its timer would close the one we are opening. */
@@ -103,8 +104,8 @@ export function progress(received: number, total?: number): void {
 
   if (countEl) {
     countEl.textContent = total
-      ? `${received} of ${total} activities`
-      : `${received} activities`
+      ? t("import.countOf", { received, total })
+      : t("import.count", { received })
   }
 
   if (barEl) {

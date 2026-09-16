@@ -16,6 +16,7 @@
 import { img, sleep, escapeHTML } from "~/src/js/appUtil"
 import { icon } from "~/src/js/Icons"
 import { USER_FIELDNAMES as U } from "~/src/js/DataImport"
+import { initI18n, applyTranslations, t, getLocale } from "~/src/js/i18n"
 
 const status_el = document.getElementById("status")
 
@@ -34,7 +35,7 @@ let url: string
 try {
   ;({ admin, url } = JSON.parse(jsonString) as { admin: boolean; url: string })
 } catch (e) {
-  status_el.textContent = `could not read page parameters: ${jsonString}`
+  status_el.textContent = t("users.errParams", { details: jsonString })
   throw e
 }
 
@@ -50,18 +51,20 @@ function user_thumbnail(id: number | string, img_url: string): string {
 function ts_to_dt(ts: number, time = false): string {
   if (!ts) return ""
   const dt = new Date(1000 * ts)
-  return time ? dt.toLocaleString() : dt.toLocaleDateString()
+  return time
+    ? dt.toLocaleString(getLocale())
+    : dt.toLocaleDateString(getLocale())
 }
 
 /** "3 days ago", for the last-active column. */
 function since(ts: number): string {
   if (!ts) return ""
   const days = (Date.now() / 1000 - ts) / 86400
-  if (days < 1) return "today"
-  if (days < 2) return "yesterday"
-  if (days < 31) return `${Math.floor(days)} days ago`
-  if (days < 365) return `${Math.floor(days / 30)} mo ago`
-  return `${(days / 365).toFixed(1)} yr ago`
+  if (days < 1) return t("users.today")
+  if (days < 2) return t("users.yesterday")
+  if (days < 31) return t("users.daysAgo", { count: Math.floor(days) })
+  if (days < 365) return t("users.monthsAgo", { count: Math.floor(days / 30) })
+  return t("users.yearsAgo", { count: (days / 365).toFixed(1) })
 }
 
 const priv_icon = icon("eye-blocked")
@@ -74,8 +77,10 @@ const pub_icon = icon("eye")
 type Row = Record<string, string | number>
 
 type Column = {
-  /** Header text, or an icon */
-  title: string
+  /** Header markup for a column whose heading is an icon, not words */
+  title?: string
+  /** Catalog key, for a heading that is words */
+  titleKey?: string
   /** The field this column reads */
   field: string
   /** Cell content */
@@ -99,12 +104,17 @@ const publicColumns: Column[] = [
     render: (r) => user_thumbnail(r[U.ID], <string>r[U.PROFILE]),
     sortKey: () => 0,
   },
-  { title: "Name", field: U.FIRSTNAME, render: nameHTML, sortKey: nameOf },
-  { title: "City", field: U.CITY },
-  { title: "Region", field: U.STATE },
-  { title: "Country", field: U.COUNTRY },
   {
-    title: "Last active",
+    titleKey: "users.col.name",
+    field: U.FIRSTNAME,
+    render: nameHTML,
+    sortKey: nameOf,
+  },
+  { titleKey: "users.col.city", field: U.CITY },
+  { titleKey: "users.col.region", field: U.STATE },
+  { titleKey: "users.col.country", field: U.COUNTRY },
+  {
+    titleKey: "users.col.lastActive",
     field: U.LAST_LOGIN,
     render: (r) => since(<number>r[U.LAST_LOGIN]),
   },
@@ -117,27 +127,32 @@ const adminColumns: Column[] = [
     render: (r) => user_thumbnail(r[U.ID], <string>r[U.PROFILE]),
     sortKey: () => 0,
   },
-  { title: "ID", field: U.ID, numeric: true },
-  { title: "Name", field: U.FIRSTNAME, render: nameHTML, sortKey: nameOf },
+  { titleKey: "users.col.id", field: U.ID, numeric: true },
+  {
+    titleKey: "users.col.name",
+    field: U.FIRSTNAME,
+    render: nameHTML,
+    sortKey: nameOf,
+  },
   {
     title: icon("eye"),
     field: U.PRIVATE,
     render: (r) => (r[U.PRIVATE] ? priv_icon : pub_icon),
   },
-  { title: "Logins", field: U.LOGIN_COUNT, numeric: true },
+  { titleKey: "users.col.logins", field: U.LOGIN_COUNT, numeric: true },
   {
-    title: "Last login",
+    titleKey: "users.col.lastLogin",
     field: U.LAST_LOGIN,
     render: (r) => ts_to_dt(<number>r[U.LAST_LOGIN]),
   },
   {
-    title: "Index access",
+    titleKey: "users.col.indexAccess",
     field: U.LAST_INDEX_ACCESS,
     render: (r) => ts_to_dt(<number>r[U.LAST_INDEX_ACCESS]),
   },
-  { title: "City", field: U.CITY },
-  { title: "Region", field: U.STATE },
-  { title: "Country", field: U.COUNTRY },
+  { titleKey: "users.col.city", field: U.CITY },
+  { titleKey: "users.col.region", field: U.STATE },
+  { titleKey: "users.col.country", field: U.COUNTRY },
 ]
 
 /* ------------------------------------------------------------------ *
@@ -165,7 +180,7 @@ function renderTable(): void {
       const cmp =
         typeof x === "number" && typeof y === "number"
           ? x - y
-          : String(x).localeCompare(String(y))
+          : String(x).localeCompare(String(y), getLocale())
       return sortAsc ? cmp : -cmp
     })
   }
@@ -174,7 +189,8 @@ function renderTable(): void {
     .map((c, i) => {
       const arrow = i === sortCol ? (sortAsc ? " ▲" : " ▼") : ""
       const cls = c.numeric ? ' class="num"' : ""
-      return `<th${cls} data-col="${i}">${c.title}${arrow}</th>`
+      const head = c.titleKey ? t(c.titleKey) : c.title
+      return `<th${cls} data-col="${i}">${head}${arrow}</th>`
     })
     .join("")
 
@@ -237,18 +253,16 @@ async function run() {
 
   const heading = document.getElementById("heading")
   if (heading) {
-    heading.textContent = admin
-      ? `Registered Users (${rows.length})`
-      : `Public User Directory (${rows.length})`
+    heading.textContent = t(
+      admin ? "users.headingAdmin" : "users.headingPublic",
+      { count: rows.length }
+    )
   }
 
   if (!rows.length) {
     table_element.innerHTML = ""
     status_el.classList.remove("spinner")
-    status_el.innerHTML = admin
-      ? "No registered users."
-      : `No one has a public profile yet. You can make yours public from the
-         User tab on your map, and you will be listed here.`
+    status_el.innerHTML = t(admin ? "users.emptyAdmin" : "users.emptyPublic")
     return
   }
 
@@ -259,10 +273,13 @@ async function run() {
 
 ;(async () => {
   try {
+    initI18n()
+    document.title = t("users.pageTitle", { app: document.title })
+    applyTranslations(document)
     await run()
   } catch (e) {
     console.error(e)
     status_el.classList.remove("spinner")
-    status_el.textContent = `could not load the directory: ${e}`
+    status_el.textContent = t("users.errLoad", { error: String(e) })
   }
 })()

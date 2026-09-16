@@ -3,7 +3,15 @@
  *  Here we initialize the DOM/user interface
  */
 
-import { CURRENT_USER, TARGET_USER, FLASHES, ADMIN, URLS } from "./Env"
+import {
+  CURRENT_USER,
+  TARGET_USER,
+  FLASHES,
+  ADMIN,
+  URLS,
+  CAPTURE_DURATION_MAX,
+} from "./Env"
+import { initI18n, applyTranslations, setGlobalParams } from "./i18n"
 import {
   DefaultVisual,
   DefaultQuery,
@@ -33,17 +41,23 @@ import * as StreamCache from "./StreamCache"
 
 const map = MapAPI.CreateMap()
 
-if (!!FLASHES && FLASHES.length) {
-  // escaped: a flash can quote a URL parameter or an athlete's name
-  new Dialog(map.getContainer(), { position: "top" })
-    .title(FLASHES.map(escapeHTML).join("<br>"))
-    .show()
-}
-
 // The query/render pipeline lives in Render.ts, so the query tab can drive it
 export { renderFromQuery }
 
 export async function start() {
+  /* First: everything below this line puts words on the screen, and the
+   * catalog for a language other than English arrives over the network. */
+  initI18n()
+  setGlobalParams({ max: CAPTURE_DURATION_MAX })
+  applyTranslations(document)
+
+  if (!!FLASHES && FLASHES.length) {
+    // escaped: a flash can quote a URL parameter or an athlete's name
+    new Dialog(map.getContainer(), { position: "top" })
+      .title(FLASHES.map(escapeHTML).join("<br>"))
+      .show()
+  }
+
   // Get model parameters from the current URL
   const init = parseURL(window.location.href)
   const appState: State = {

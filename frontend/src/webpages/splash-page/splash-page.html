@@ -8,7 +8,10 @@
                    maximum-scale=1.0, user-scalable=no"
     />
 
-    <title>${app_name} - Animated Activity Visualization</title>
+    <!-- The descriptive half of the title is added by the script, so that the
+         app name the backend substitutes here stays out of the catalog and a
+         translation can put the two in whatever order reads right. -->
+    <title>${app_name}</title>
 
     <link rel="shortcut icon" href="~/src/images/favicon.ico" />
     <link rel="apple-touch-icon" href="~/src/images/logo.png" />
@@ -19,12 +22,20 @@
       <div class="msg" id="flashes">${flashes}</div>
 
       <img class="logo" src="~/src/images/logo.png" />
-      <h2>Motion Mapping for Your Strava&nbspData</h2>
+      <h2 data-i18n="splash.tagline">
+        Motion Mapping for Your Strava&nbsp;Data
+      </h2>
 
       <br />
 
       <div class="splash">
-        <input class="action btn btn-a" id="demo" type="submit" value="Demo" />
+        <input
+          class="action btn btn-a"
+          id="demo"
+          type="submit"
+          data-i18n-value="splash.demo"
+          value="Demo"
+        />
       </div>
 
       <br /><br />
@@ -34,6 +45,7 @@
           class="action btn btn-b"
           id="directory"
           type="submit"
+          data-i18n-value="splash.publicUsers"
           value="Public Users"
         />
       </div>

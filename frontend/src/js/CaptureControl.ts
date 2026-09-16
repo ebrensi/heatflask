@@ -19,6 +19,7 @@ import { CAPTURE_DURATION_MAX, OFFLINE, SPONSOR_URL } from "./Env"
 import { dotLayer } from "./DotLayerAPI"
 import { ButtonControl } from "./MapControls"
 import { AreaSelect } from "./AreaSelect"
+import { t } from "./i18n"
 
 import type { Map as MLMap } from "maplibre-gl"
 
@@ -78,15 +79,16 @@ export function addCaptureControl(map: MLMap): void {
       control.set(
         RECORD_ICON,
         period > CAPTURE_DURATION_MAX
-          ? `Record video (one cycle is ${period.toFixed(
-              1
-            )}s; only the first ${CAPTURE_DURATION_MAX}s will be recorded)`
-          : `Record video (${period.toFixed(1)}s loop)`
+          ? t("capture.recordTruncated", {
+              period: period.toFixed(1),
+              max: CAPTURE_DURATION_MAX,
+            })
+          : t("capture.record", { period: period.toFixed(1) })
       )
     } else if (state === "selecting") {
-      control.set(APPLY_ICON, "Record the area inside the box")
+      control.set(APPLY_ICON, t("capture.recordArea"))
     } else {
-      control.set(STOP_ICON, "Stop recording")
+      control.set(STOP_ICON, t("capture.stop"))
     }
   }
 
@@ -96,7 +98,7 @@ export function addCaptureControl(map: MLMap): void {
     areaSelect = undefined
 
     if (sel.width < 16 || sel.height < 16) {
-      showProgress("selection is too small")
+      showProgress(t("capture.selectionTooSmall"))
       hideProgress(3000)
       state = "idle"
       render()
@@ -114,14 +116,14 @@ export function addCaptureControl(map: MLMap): void {
       if (blob) {
         const name = filename()
         saveBlob(blob, name)
-        showSaved(`saved ${name} (${fileSize(blob.size)})`)
+        showSaved(t("capture.saved", { name, size: fileSize(blob.size) }))
         if (!OFFLINE) hideAfter = 12000
       } else {
-        showProgress("capture cancelled")
+        showProgress(t("capture.cancelled"))
       }
     } catch (e) {
       console.error(e)
-      showProgress(`capture failed: ${(<Error>e).message}`)
+      showProgress(t("capture.failed", { error: (<Error>e).message }))
     } finally {
       hideProgress(hideAfter)
       state = "idle"

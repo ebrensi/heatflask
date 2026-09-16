@@ -3,6 +3,7 @@ import { State } from "~/src/js/Model"
 import type { QueryParameters } from "~/src/js/Model"
 import { renderFromQuery, abortRender } from "~/src/js/Render"
 import { STRAVA_USER_URL } from "~/src/js/Env"
+import { t } from "~/src/js/i18n"
 import CONTENT from "bundle-text:./tab.query.html"
 export { CONTENT }
 
@@ -18,15 +19,16 @@ export const TITLE = `
   <a id="query-user-link" href="#" target="_blank" rel="noopener">
     <img id="query-user-avatar" class="tab-avatar" alt="" />
   </a>
-  <span id="query-user-name"></span>'s map
+  <span id="query-user-title"></span>
 `
 /** Put the target user's name and avatar into the tab header. */
 function fillHeader(appState: State): void {
   const user = appState.targetUser
   if (!user) return
 
-  const name = document.getElementById("query-user-name")
-  if (name) name.textContent = user.name || `athlete ${user.id}`
+  const displayName = user.name || t("common.athleteFallback", { id: user.id })
+  const title = document.getElementById("query-user-title")
+  if (title) title.textContent = t("tab.query.title", { name: displayName })
 
   const avatar = <HTMLImageElement>document.getElementById("query-user-avatar")
   if (avatar && user.profile) {

@@ -5,6 +5,7 @@
 
 import { icon } from "./Icons"
 import { baselayers } from "./MapAPI"
+import { t } from "./i18n"
 
 import type { IControl, Map as MLMap } from "maplibre-gl"
 import type { State } from "./Model"
@@ -58,7 +59,7 @@ export class LayerPicker implements IControl {
     const toggle = document.createElement("button")
     toggle.type = "button"
     toggle.innerHTML = icon("stack")
-    toggle.title = "Basemap and terrain"
+    toggle.title = t("map.basemapAndTerrain")
     c.appendChild(toggle)
 
     const panel = document.createElement("div")

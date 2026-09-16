@@ -1,3 +1,5 @@
+import { initI18n, applyTranslations, t } from "~/src/js/i18n"
+
 console.log(`Environment: ${process.env.NODE_ENV}`)
 
 const runtime_json = JSON.parse(
@@ -11,6 +13,12 @@ if (flashes && flashes.length) {
   flashes_el.innerText = flashes_str
   flashes_el.style.display = "block"
 }
+
+/* The backend puts the app name in <title>; the rest of it is ours, and in
+ * a language that may want the two the other way round. */
+initI18n()
+document.title = t("splash.title", { app: document.title })
+applyTranslations(document)
 
 document.querySelector("#bubbler").addEventListener("click", (e) => {
   const url = urls[(<HTMLElement>e.target).id]

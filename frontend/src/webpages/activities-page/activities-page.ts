@@ -10,6 +10,7 @@ import {
   ACTIVITY_FIELDNAMES as F,
 } from "~/src/js/DataImport"
 import { icon } from "~/src/js/Icons"
+import { initI18n, applyTranslations, t, getLocale } from "~/src/js/i18n"
 import * as StreamCache from "~/src/js/StreamCache"
 import type { ActivityQuery, ImportedActivity } from "~/src/js/DataImport"
 import type { ActivityType } from "~/src/js/Strava"
@@ -71,10 +72,12 @@ function makeHeaderRow() {
     /* Where this activity's track is held. Two separate caches: ours in
      * Mongo, and this browser's IndexedDB. A track in neither has to be
      * re-fetched from Strava, which is the slow, rate-limited path. */
-    `<span title="Track cached on the server (Mongo)">${icon(
+    `<span title="${t("activities.colServerCache")}">${icon(
       "database1"
     )}</span>`,
-    `<span title="Track cached in this browser">${icon("download2")}</span>`,
+    `<span title="${t("activities.colBrowserCache")}">${icon(
+      "download2"
+    )}</span>`,
     icon("pencil"), // title
   ]
 
@@ -87,10 +90,16 @@ function makeHeaderRow() {
 
 /* A filled marker means the track is held there, a faint dash means it is not
  * and would have to come from Strava. */
-function cacheCell(present: boolean, where: string, aid: number): string {
+function cacheCell(
+  present: boolean,
+  yes: string,
+  no: string,
+  aid: number
+): string {
+  const title = t(present ? yes : no, { id: aid })
   return present
-    ? `<span class="cached yes" title="Track for ${aid} is cached ${where}">●</span>`
-    : `<span class="cached no" title="Track for ${aid} is not cached ${where}">–</span>`
+    ? `<span class="cached yes" title="${title}">●</span>`
+    : `<span class="cached no" title="${title}">–</span>`
 }
 
 const priv_icon = icon("eye-blocked")
@@ -123,16 +132,16 @@ async function main() {
       n_total = obj.count
       data[n_total - 1] = undefined
       data.fill(undefined, count, n_total)
-      status_msg_el.innerText = "Fetching activities..."
+      status_msg_el.innerText = t("activities.fetching")
     } else if ("cached" in obj) {
       /* Sent ahead of the summaries, so every row can be built knowing it */
       serverCached = new Set(<number[]>obj.cached)
     } else if ("wait" in obj) {
-      const at = new Date(obj.wait * 1000).toLocaleTimeString([], {
+      const at = new Date(obj.wait * 1000).toLocaleTimeString(getLocale(), {
         hour: "numeric",
         minute: "2-digit",
       })
-      status_msg_el.innerText = `Strava rate limit reached; resuming at ${at}`
+      status_msg_el.innerText = t("activities.rateLimit", { time: at })
     } else if ("error" in obj) {
       errors.push(obj.error)
       status_msg_el.innerText = obj.error
@@ -165,7 +174,7 @@ function makeRow(A: ImportedActivity): string[] {
   const strava_link = href(`${activityURL(aid)}`, STRAVA_BUTTON)
   const date = new Date(
     (A[F.UTC_START_TIME] + A[F.UTC_LOCAL_OFFSET]) * 1000
-  ).toLocaleString()
+  ).toLocaleString(getLocale())
   const dist = (A[F.DISTANCE_METERS] * DIST_SCALE).toFixed(2)
   const elapsed = HHMMSS(A[F.TIME_SECONDS])
   const elev_gain = (A[F.ELEVATION_GAIN] * ELEV_SCALE).toFixed(2)
@@ -173,8 +182,18 @@ function makeRow(A: ImportedActivity): string[] {
   const aicon = activity_icon(<ActivityType>atype) || `${atype}*`
   const picon = A[F.FLAG_PRIVATE] ? priv_icon : pub_icon
 
-  const onServer = cacheCell(serverCached.has(aid), "on the server", aid)
-  const inBrowser = cacheCell(locallyCached.has(aid), "in this browser", aid)
+  const onServer = cacheCell(
+    serverCached.has(aid),
+    "activities.cachedServer",
+    "activities.notCachedServer",
+    aid
+  )
+  const inBrowser = cacheCell(
+    locallyCached.has(aid),
+    "activities.cachedBrowser",
+    "activities.notCachedBrowser",
+    aid
+  )
 
   const cells = [
     href(heatflask_link, date),
@@ -209,13 +228,16 @@ function buildTableWithInnerHTML(el: HTMLElement, data: string[][]) {
 
     el.innerHTML = thead_str + tbody_str
   } else {
-    el.innerHTML = thead_str + "<tr>Sorry no data &#128577</tr>"
+    el.innerHTML = thead_str + `<tr>${t("activities.noData")}</tr>`
   }
 }
 
 // Run the main async function
 ;(async () => {
   try {
+    initI18n()
+    document.title = t("activities.pageTitle", { app: document.title })
+    applyTranslations(document)
     await main()
   } catch (e) {
     console.log("oops. ", e)

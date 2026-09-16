@@ -6,7 +6,7 @@ import CONTENT from "bundle-text:./tab.activities.html"
 export { CONTENT }
 
 export const ID = "ActivitiesTab"
-export const TITLE = "Rendered Activities"
+export const TITLE = `<span data-i18n="tab.activities.title">Rendered Activities</span>`
 export const ICON = icon("list2")
 
 /** The markup tags these buttons with data-action; nothing consumed it. */

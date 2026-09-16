@@ -3,64 +3,95 @@
 <!-- Shown instead to a visitor who is not logged in: someone viewing a shared
      map can browse it, but has no account to manage -->
 <div id="profile-anon" hidden>
-  <p class="profile-note">
-    Log in with Strava to see your own activities, and to manage your
-    Heatflask account.
+  <p class="profile-note" data-i18n="tab.profile.anonNote">
+    Log in with Strava to see your own activities, and to manage your Heatflask
+    account.
   </p>
-  <a id="profile-login-link" class="btn btn-a btn-sm" href="#">Log in with Strava</a>
+  <a
+    id="profile-login-link"
+    class="btn btn-a btn-sm"
+    href="#"
+    data-i18n="tab.profile.loginLink"
+    >Log in with Strava</a
+  >
 </div>
 
 <div id="profile-authed" hidden>
-<div class="profile-head">
-  <a
-    id="profile-strava-link"
-    href="https://www.strava.com/settings/profile"
-    target="_blank"
-    rel="noopener"
-    title="Edit your profile on Strava"
-  >
-    <img id="profile-avatar" class="profile-avatar" alt="" />
-  </a>
-  <h3 id="profile-name">&nbsp;</h3>
-</div>
-
-<p class="profile-note">We index your activity summaries for fast access.</p>
-
-<button type="button" class="btn btn-a btn-sm" data-action="view-index">
-  View index
-</button>
-
-<hr />
-
-<div>
-  <label>
-    <input type="checkbox" id="profile-public" />
-    Public profile
-  </label>
-  <div class="profile-note">
-    Public profiles are listed in the
-    <a id="profile-directory-link" href="#" target="_blank" rel="noopener"
-      >public user directory</a
-    >, so other people can find and browse your map.
+  <div class="profile-head">
+    <a
+      id="profile-strava-link"
+      href="https://www.strava.com/settings/profile"
+      target="_blank"
+      rel="noopener"
+      data-i18n-title="tab.profile.editOnStrava"
+      title="Edit your profile on Strava"
+    >
+      <img id="profile-avatar" class="profile-avatar" alt="" />
+    </a>
+    <h3 id="profile-name">&nbsp;</h3>
   </div>
-</div>
 
-<div id="profile-admin" hidden>
-  <hr />
-  <a id="profile-admin-link" href="#" target="_blank" rel="noopener"
-    >User directory (admin)</a
+  <p class="profile-note" data-i18n="tab.profile.indexNote">
+    We index your activity summaries for fast access.
+  </p>
+
+  <button
+    type="button"
+    class="btn btn-a btn-sm"
+    data-action="view-index"
+    data-i18n="tab.profile.viewIndex"
   >
-</div>
+    View index
+  </button>
 
-<hr />
+  <hr />
 
-<button type="button" data-action="logout" class="btn btn-c btn-sm">
-  Log Out
-</button>
+  <div>
+    <label>
+      <input type="checkbox" id="profile-public" />
+      <span data-i18n="tab.profile.publicProfile">Public profile</span>
+    </label>
+    <!-- The directory link is inside the string so a translation can put it
+       where the sentence needs it; SETUP finds it by id afterwards. -->
+    <div class="profile-note" data-i18n="tab.profile.publicNote">
+      Public profiles are listed in the
+      <a id="profile-directory-link" href="#" target="_blank" rel="noopener"
+        >public user directory</a
+      >, so other people can find and browse your map.
+    </div>
+  </div>
 
-<br /><br />
+  <div id="profile-admin" hidden>
+    <hr />
+    <a
+      id="profile-admin-link"
+      href="#"
+      target="_blank"
+      rel="noopener"
+      data-i18n="tab.profile.adminDirectory"
+      >User directory (admin)</a
+    >
+  </div>
 
-<button type="button" data-action="delete" class="btn btn-c btn-sm">
-  Delete Account
-</button>
+  <hr />
+
+  <button
+    type="button"
+    data-action="logout"
+    class="btn btn-c btn-sm"
+    data-i18n="tab.profile.logout"
+  >
+    Log Out
+  </button>
+
+  <br /><br />
+
+  <button
+    type="button"
+    data-action="delete"
+    class="btn btn-c btn-sm"
+    data-i18n="tab.profile.deleteAccount"
+  >
+    Delete Account
+  </button>
 </div>

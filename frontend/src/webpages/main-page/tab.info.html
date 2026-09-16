@@ -1,45 +1,49 @@
 <!-- App Info Tab -->
 
-<h3>Controls</h3>
+<h3 data-i18n="tab.info.controlsHeading">Controls</h3>
 
 <dl class="info-controls">
-  <dt><kbd>Ctrl</kbd> + drag</dt>
-  <dd>
+  <dt data-i18n="tab.info.ctrlDragKey"><kbd>Ctrl</kbd> + drag</dt>
+  <dd data-i18n="tab.info.ctrlDragDesc">
     Select activities in a box. On a touchscreen, tap
     <i class="hf-object-group"></i> first, then drag with one finger. The last
     activity selected shows its details, and the activity list scrolls to it.
   </dd>
 
-  <dt><kbd>Shift</kbd> + drag</dt>
-  <dd>Zoom to a box</dd>
+  <dt data-i18n="tab.info.shiftDragKey"><kbd>Shift</kbd> + drag</dt>
+  <dd data-i18n="tab.info.shiftDragDesc">Zoom to a box</dd>
 
-  <dt><kbd>Alt</kbd> + drag</dt>
-  <dd>Rotate and tilt the map in 3D, or use two fingers</dd>
+  <dt data-i18n="tab.info.altDragKey"><kbd>Alt</kbd> + drag</dt>
+  <dd data-i18n="tab.info.altDragDesc">
+    Rotate and tilt the map in 3D, or use two fingers
+  </dd>
 
-  <dt><kbd>Space</kbd></dt>
-  <dd>Open or close the sidebar</dd>
+  <dt data-i18n="tab.info.spaceKey"><kbd>Space</kbd></dt>
+  <dd data-i18n="tab.info.spaceDesc">Open or close the sidebar</dd>
 
-  <dt><kbd>↑</kbd> <kbd>↓</kbd></dt>
-  <dd>Previous or next sidebar tab</dd>
+  <dt data-i18n="tab.info.arrowsKey"><kbd>&uarr;</kbd> <kbd>&darr;</kbd></dt>
+  <dd data-i18n="tab.info.arrowsDesc">Previous or next sidebar tab</dd>
 
-  <dt><kbd>Esc</kbd></dt>
-  <dd>Close the sidebar</dd>
+  <dt data-i18n="tab.info.escKey"><kbd>Esc</kbd></dt>
+  <dd data-i18n="tab.info.escDesc">Close the sidebar</dd>
 </dl>
 
 <hr />
 
-<h3>Live URL</h3>
+<h3 data-i18n="tab.info.liveUrlHeading">Live URL</h3>
 
-<p>
+<p data-i18n="tab.info.liveUrlDesc">
   The map view and the animation settings are kept in the page's URL, so anyone
   you share it with sees the same view.
 </p>
 
 <hr />
 
-<h3>Video Export</h3>
+<h3 data-i18n="tab.info.videoHeading">Video Export</h3>
 
-<p>
+<!-- {max} is CAPTURE_DURATION_MAX, registered as a global i18n param in UI.ts
+     so the limit is not written out by hand in each language. -->
+<p data-i18n="tab.info.videoDesc">
   The <i class="hf-video-camera"></i> button records the animation as an MP4:
   tap it, size the box over the part of the map you want, and tap again to
   record. One full loop of the animation is recorded, so the video repeats
@@ -49,19 +53,40 @@
 
 <hr />
 
+<h3 data-i18n="tab.info.languageHeading">Language</h3>
+
+<!-- Options are built in tab.info.ts from the catalogs that exist, named in
+     their own language, so adding a catalog adds its option. -->
+<select id="language-select"></select>
+
+<p id="translate-note" data-i18n="tab.info.translateNote">
+  <a id="translate-link" target="_blank" rel="noopener"
+    >Help us fix or add new translations!</a
+  >
+</p>
+
+<hr />
+
 <div id="support">
-  <h3>Support Heatflask</h3>
+  <h3 data-i18n="tab.info.contributeHeading">Contribute</h3>
+
   <!-- A plain link rather than GitHub's embeddable sponsor card: the card is
        GitHub-styled, and a click inside it navigated this whole page away to
        GitHub instead of opening a tab. GitHub refuses to be framed, so a new
        tab is the only way to show the sponsor page itself. -->
-  <a id="sponsor-link" class="sponsor-button" target="_blank" rel="noopener">
+  <a
+    id="sponsor-link"
+    class="sponsor-button"
+    target="_blank"
+    rel="noopener"
+    data-i18n="tab.info.sponsor"
+  >
     <i class="hf-github"></i> Sponsor on GitHub
   </a>
   <hr />
 </div>
 
-<h3>Contacts</h3>
+<h3 data-i18n="tab.info.contactsHeading">Contacts</h3>
 <div id="contacts"></div>
 
 <script type="module" src="./tab.info.ts"></script>

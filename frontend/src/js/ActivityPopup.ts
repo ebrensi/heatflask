@@ -15,6 +15,7 @@ import { Popup } from "maplibre-gl"
 import { href, HHMMSS, escapeHTML } from "./appUtil"
 import { activityURL, activity_vtype } from "./Strava"
 import { heatflaskURL } from "./Table"
+import { getLocale } from "./i18n"
 
 import type { Map as MLMap, LngLatLike } from "maplibre-gl"
 import type { Activity } from "./DotLayer/Activity"
@@ -57,7 +58,7 @@ export function activityPopup(map: MLMap, A: Activity, at?: LngLatLike): void {
   const d = A.total_distance || 0
   const dkm = +(d / KM).toFixed(2)
   const dmi = +(d / MI).toFixed(2)
-  const when = A.tsLocal ? A.tsLocal.toLocaleString() : ""
+  const when = A.tsLocal ? A.tsLocal.toLocaleString(getLocale()) : ""
   const speed = speedText(A)
 
   const content =

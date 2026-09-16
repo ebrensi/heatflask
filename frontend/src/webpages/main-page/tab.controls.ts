@@ -9,7 +9,7 @@ import CONTENT from "bundle-text:./tab.controls.html"
 export { CONTENT }
 
 export const ID = "ControlsTab"
-export const TITLE = "Layer Settings"
+export const TITLE = `<span data-i18n="tab.controls.title">Layer Settings</span>`
 export const ICON = icon("equalizer")
 
 const DIAL_FG = "rgba(0,255,255,0.8)"

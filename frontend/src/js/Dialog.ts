@@ -5,6 +5,8 @@
  * messages used. Same shape: a title bar with a close button, and content.
  */
 
+import { t } from "./i18n"
+
 export class Dialog {
   readonly el: HTMLDivElement
   private titleEl: HTMLDivElement
@@ -28,7 +30,7 @@ export class Dialog {
     close.type = "button"
     close.className = "close"
     close.innerHTML = "&times;"
-    close.title = "Close"
+    close.title = t("common.close")
     close.addEventListener("click", () => this.hide())
     bar.append(this.titleEl, close)
 

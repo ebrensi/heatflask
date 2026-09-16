@@ -62,8 +62,14 @@ export const CARTO_API_KEY = "cb1_3iuf_1_b5f01624a165546780866afc"
 // Strava accepts videos of up to 30 seconds
 export const CAPTURE_DURATION_MAX = 30
 
-// Where the "support Heatflask" links point
+// Where the "contribute" links point
 export const SPONSOR_URL = "https://github.com/sponsors/ebrensi"
+
+/* The catalogs and the instructions for adding one live together, so the
+ * "help fix it" link goes to the README next to them rather than to the repo
+ * root, where someone would have to go looking. */
+export const TRANSLATE_URL =
+  "https://github.com/ebrensi/heatflask/blob/main/frontend/src/locales/README.md"
 
 // Courtesy of TwoFuckingDevelopers (@2fdevs, @elecash and @qmarcos)
 function isMobileDevice() {

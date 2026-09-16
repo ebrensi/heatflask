@@ -1,6 +1,6 @@
 <!-- Main Query tab -->
 
-<h3>Activities Query:</h3>
+<h3 data-i18n="tab.query.heading">Activities Query:</h3>
 
 <span data-qshow="days,activities">
   <input
@@ -14,11 +14,13 @@
 </span>
 
 <select id="queryType" data-bind="query.type:value">
-  <option value="days">recent days</option>
-  <option value="activities" selected>recent activities</option>
-  <option value="ids">Activity IDs</option>
-  <option value="dates">Date-Range</option>
-  <option value="key">Key</option>
+  <option value="days" data-i18n="tab.query.optDays">recent days</option>
+  <option value="activities" selected data-i18n="tab.query.optActivities">
+    recent activities
+  </option>
+  <option value="ids" data-i18n="tab.query.optIds">Activity IDs</option>
+  <option value="dates" data-i18n="tab.query.optDates">Date-Range</option>
+  <option value="key" data-i18n="tab.query.optKey">Key</option>
 </select>
 
 <br />
@@ -30,6 +32,7 @@
 <div data-qshow="ids">
   <textarea
     autocomplete="on"
+    data-i18n-placeholder="tab.query.idsPlaceholder"
     placeholder="enter activity ids here"
     spellcheck="false"
     data-bind="query.ids:value"
@@ -38,10 +41,10 @@
 </div>
 
 <div data-qshow="dates">
-  After:
+  <span data-i18n="tab.query.after">After:</span>
   <input type="date" id="date-after" data-bind="query.after:value" />
   <br />
-  Before:
+  <span data-i18n="tab.query.before">Before:</span>
   <input type="date" id="date-before" data-bind="query.before:value" />
 </div>
 
@@ -49,9 +52,9 @@
 
 <label>
   <input type="checkbox" id="autozoom" data-bind="visual.autozoom:checked" />
-  Auto-Zoom
-  <i class="hf hf-bullseye"></i>
-  to query after import
+  <span data-i18n="tab.query.autozoom">
+    Auto-Zoom <i class="hf hf-bullseye"></i> to query after import
+  </span>
 </label>
 
 <br />
@@ -65,6 +68,7 @@
   type="button"
   data-mshow="!importing"
   class="btn btn-a btn-sm smooth"
+  data-i18n="tab.query.queryButton"
 >
   <i class="hf hf-cloud-download"></i>
   Query
@@ -78,7 +82,12 @@
     <progress class="progbar"></progress>
   </div>
   <br />
-  <button type="button" class="btn btn-c btn-sm smooth" id="button:abort">
+  <button
+    type="button"
+    class="btn btn-c btn-sm smooth"
+    id="button:abort"
+    data-i18n="tab.query.abortImport"
+  >
     <i class="hf hf-cancel-circle"></i>
     Abort Import
   </button>
@@ -88,7 +97,7 @@
 
 <!-- Displayed only if current-user's id is set (logged-in) -->
 <div data-fshow="authenticated">
-  You are authenticated as
+  <span data-i18n="tab.query.authenticatedAs">You are authenticated as</span>
   <a href="#" target="_blank" data-bind="currentUser.stravaUrl:href">
     <span data-bind="currentUser.name:innerText"
       ><button
@@ -101,7 +110,12 @@
   </a>
   <br /><br />
 
-  <button type="button" class="btn btn-c btn-sm" id="button:logout">
+  <button
+    type="button"
+    class="btn btn-c btn-sm"
+    id="button:logout"
+    data-i18n="tab.query.logout"
+  >
     <i class="hf hf-sign-out"></i>
     Log Out
   </button>
@@ -111,7 +125,9 @@
 
 <!-- Displayed only if current-user id is not set (not logged-in) -->
 <div data-fshow="!authenticated">
-  Create an account and/or log in.<br />
+  <span data-i18n="tab.query.createAccount"
+    >Create an account and/or log in.</span
+  ><br />
   <button class="strava-auth" id="button:login"></button>
 </div>
 

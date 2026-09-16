@@ -15,6 +15,7 @@
 import { icon } from "~/src/js/Icons"
 import { State } from "~/src/js/Model"
 import { CURRENT_USER, URLS, ADMIN, STRAVA_PROFILE_URL } from "~/src/js/Env"
+import { t } from "~/src/js/i18n"
 
 import CONTENT from "bundle-text:./tab.profile.html"
 export { CONTENT }
@@ -34,7 +35,7 @@ export function SETUP(_state: State): void {
      * to this same map, instead of account controls they have no account for.
      * (The server refuses /visibility and /delete without a session anyway.) */
     const title = el("profile-tab-title")
-    if (title) title.textContent = "Log in"
+    if (title) title.textContent = t("tab.profile.loginTitle")
     const login = el<HTMLAnchorElement>("profile-login-link")
     if (login) {
       const here = window.location.pathname + window.location.search
@@ -48,7 +49,8 @@ export function SETUP(_state: State): void {
   /* --- identity -------------------------------------------------------- */
 
   const name = el("profile-name")
-  if (name) name.textContent = user.name || `athlete ${user.id}`
+  if (name)
+    name.textContent = user.name || t("common.athleteFallback", { id: user.id })
 
   const title = el("profile-tab-title")
   if (title) title.textContent = user.name || ""
@@ -74,11 +76,7 @@ export function SETUP(_state: State): void {
   })
 
   onAction("delete", () => {
-    const ok = window.confirm(
-      "Delete your Heatflask account?\n\n" +
-        "This removes your indexed activities and revokes Heatflask's access " +
-        "to your Strava data. It cannot be undone."
-    )
+    const ok = window.confirm(t("tab.profile.deleteConfirm"))
     if (!ok) return
     /* A form POST rather than navigating to the URL: /delete only accepts POST,
      * so a link on some other site cannot delete a logged-in visitor's

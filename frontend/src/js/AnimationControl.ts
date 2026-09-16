@@ -3,6 +3,7 @@
  */
 
 import { icon } from "./Icons"
+import { t } from "./i18n"
 import { dotLayer } from "./DotLayerAPI"
 import { ButtonControl } from "./MapControls"
 
@@ -27,7 +28,7 @@ export function addAnimationControl(map: MLMap, appState: State): void {
     else dotLayer.animate()
     control.set(
       paused ? PLAY_ICON : PAUSE_ICON,
-      paused ? "Resume animation" : "Pause animation"
+      t(paused ? "map.resumeAnimation" : "map.pauseAnimation")
     )
   })
 
