@@ -1,4 +1,4 @@
-type DiffArray = Uint8Array | Int8Array | Int16Array
+type DiffArray = Uint8Array | Int8Array | Int16Array | Int32Array
 
 function decoded_length(enc: DiffArray, rl_marker: number) {
   let L = 1
@@ -31,32 +31,48 @@ export function rld_decode(enc: Uint8Array, ArrayConstructor) {
   // First byte is ntype as Int8
   const ntype = enc[0]
 
-  // next two bytes are start value as Int16
-  const start_val = new DataView(enc.buffer, enc.byteOffset + 1, 2).getInt16(
-    0,
-    true
-  )
+  /* Then the start value: Int16, except in type 3 where it is Int32, so the
+   * diffs begin at byte 3 or byte 5. */
+  const header = new DataView(enc.buffer, enc.byteOffset)
+  const start_val =
+    ntype === 3 ? header.getInt32(1, true) : header.getInt16(1, true)
+  const headerBytes = ntype === 3 ? 5 : 3
 
   /* The rest is the encoded diffs. ntype says how wide they are:
    *   0 = signed 8-bit
    *   1 = unsigned 8-bit (the values never decrease)
    *   2 = signed 16-bit
+   *   3 = signed 32-bit
    * Type 2 exists because a pause in recording can leave hundreds of metres
-   * between consecutive altitude samples, which does not fit in a byte. */
+   * between consecutive altitude samples, which does not fit in a byte. Type 3
+   * is for what does not fit in an int16 either: an activity left recording
+   * after it ended leaves a gap of hours in the time stream. */
   let enc_diffs: DiffArray
   let rl_marker: number
 
-  if (ntype === 2) {
-    /* A 16-bit view needs a 2-byte-aligned offset and the payload starts at
-     * byte 3, so copy it out: slice() returns a fresh buffer at offset 0. */
-    const bytes = enc.slice(3)
+  if (ntype === 3) {
+    /* A wide view needs an aligned offset and the payload starts at an odd
+     * byte, so copy it out: slice() returns a fresh buffer at offset 0. */
+    const bytes = enc.slice(headerBytes)
+    enc_diffs = new Int32Array(bytes.buffer, 0, bytes.length >> 2)
+    rl_marker = -2147483648
+  } else if (ntype === 2) {
+    const bytes = enc.slice(headerBytes)
     enc_diffs = new Int16Array(bytes.buffer, 0, bytes.length >> 1)
     rl_marker = -32768
   } else if (ntype === 1) {
-    enc_diffs = new Uint8Array(enc.buffer, enc.byteOffset + 3, enc.length - 3)
+    enc_diffs = new Uint8Array(
+      enc.buffer,
+      enc.byteOffset + headerBytes,
+      enc.length - headerBytes
+    )
     rl_marker = 255
   } else {
-    enc_diffs = new Int8Array(enc.buffer, enc.byteOffset + 3, enc.length - 3)
+    enc_diffs = new Int8Array(
+      enc.buffer,
+      enc.byteOffset + headerBytes,
+      enc.length - headerBytes
+    )
     rl_marker = -128
   }
   const L = decoded_length(enc_diffs, rl_marker)
