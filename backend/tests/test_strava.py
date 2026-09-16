@@ -1,6 +1,7 @@
 """The Strava client's import paths: index paging and streams"""
 
 import asyncio
+import gc
 
 from heatflask import Strava
 
@@ -76,6 +77,25 @@ async def test_requests_already_sent_are_allowed_to_finish(limiter, strava_serve
 
     assert fake.requests == 10
     assert len(leftovers) == 10
+
+
+async def test_streams_import_holds_only_a_window_of_results(limiter, strava_server):
+    # Every request used to start up front, and every finished task kept its
+    # parsed streams until the import ended: a few hundred activities took
+    # the dyno past 1GB on 2026-09-16.
+    fake = await strava_server(latency=0)
+    it = make_client().get_many_streams(list(range(300)))
+
+    await anext(it)
+    await asyncio.sleep(0.5)  # a slow consumer: everything that can finish does
+    assert fake.requests <= Strava.STREAMS_WINDOW + 1
+
+    for _ in range(100):
+        await anext(it)
+    gc.collect()
+    held = [o for o in gc.get_objects() if isinstance(o, dict) and "latlng" in o]
+    assert len(held) <= Strava.STREAMS_WINDOW + 1
+    await it.aclose()
 
 
 async def test_activities_without_streams_are_skipped(limiter, strava_server):

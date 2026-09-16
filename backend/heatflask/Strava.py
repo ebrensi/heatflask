@@ -241,9 +241,19 @@ async def get_many_streams(
     """
     Yield streams for these activities in whatever order they arrive.
 
-    Stop early with aclose(). Every request is its own task, started up front,
-    and those tasks do not stop just because nobody is reading their results,
-    so the finally clause deals with them:
+    Stop early with aclose(). Requests run as tasks, at most STREAMS_WINDOW
+    of them at a time counting the ones finished but not yet taken, and a
+    new one starts only as a result is taken. Each result is let go once it
+    has been yielded.
+
+    All of them used to be started up front and kept until the import ended,
+    and each finished task held on to its parsed streams -- a couple of MB of
+    Python lists for a long ride. An import of a few hundred activities held
+    every one of them at once, which took the 512MB dyno past 1GB and got it
+    killed, over and over, on 2026-09-16.
+
+    Tasks do not stop just because nobody is reading their results, so the
+    finally clause deals with the ones still in the window:
 
       * Requests still waiting on the rate limit are cancelled. They have cost
         nothing yet, and now never will.
@@ -259,38 +269,80 @@ async def get_many_streams(
     Raises RateLimitExceeded when Strava's daily budget is spent.
     """
     sent: set[int] = set()
-    yielded: set[int] = set()
 
     def request(aid: int):
         return get_streams(session, aid, on_sent=lambda: sent.add(aid))
 
-    request_tasks = {asyncio.create_task(request(aid)): aid for aid in activity_ids}
+    remaining = iter(activity_ids)
+    # started and not yet taken, whether finished or not
+    window: dict[asyncio.Task, int] = {}
+
+    def fill_window():
+        while len(window) < STREAMS_WINDOW:
+            aid = next(remaining, None)
+            if aid is None:
+                return
+            window[asyncio.create_task(request(aid))] = aid
+
     errors = 0
     try:
-        for next_result in asyncio.as_completed(request_tasks):
-            item = await next_result
+        fill_window()
+        while window:
+            done, _ = await asyncio.wait(window, return_when=asyncio.FIRST_COMPLETED)
+            task = next(iter(done))
+            del window[task]
+            item = task.result()
+            fill_window()
             if item[1]:
-                yielded.add(item[0])
                 yield cast(StreamsResult, item)
             else:
                 errors += 1
                 if errors > max_errors:
                     log.info("get_many_streams: too many errors, stopping")
                     return
+            del item
     finally:
-        await settle(request_tasks, sent)
+        await see_through(settle(window, sent))
 
         if leftovers is not None:
-            for task, aid in request_tasks.items():
-                if aid in yielded or task.cancelled() or task.exception():
+            for task in window:
+                if task.cancelled() or task.exception():
                     continue
                 result = task.result()
                 if result[1]:
                     leftovers.append(cast(StreamsResult, result))
 
 
+# How many stream requests are alive at once, counting those that have
+# finished but not been taken. Twice the limiter's concurrency, so a slow
+# consumer does not starve the requests of work.
+STREAMS_WINDOW = 20
+
 # How long an abandoned import waits for requests that are already out
 IN_FLIGHT_GRACE = 10
+
+
+async def see_through(coro) -> None:
+    """
+    Run coro to the end even if this task is cancelled meanwhile.
+
+    A browser that goes away gets its handler cancelled, and that can land in
+    the middle of an import's clean-up, which already has an exception on its
+    way out. Interrupted, the clean-up never collects the leftovers and the
+    streams already paid for are never saved. settle() is bounded by
+    IN_FLIGHT_GRACE, so it is waited for, and the cancellation dropped.
+    """
+    task = asyncio.ensure_future(coro)
+    while True:
+        try:
+            await asyncio.shield(task)
+            return
+        except asyncio.CancelledError:
+            if task.done():
+                raise
+            current = asyncio.current_task()
+            if current:
+                current.uncancel()
 
 
 async def settle(tasks: dict[asyncio.Task, int], sent: set[int]) -> None:
