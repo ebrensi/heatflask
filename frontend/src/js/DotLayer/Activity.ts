@@ -73,7 +73,7 @@ export class Activity {
   streams: {
     px: Float32Array
     altitude: Int16Array
-    time: Uint16Array
+    time: Uint32Array
   }
 
   // segment specs
@@ -183,7 +183,7 @@ export class Activity {
     n = included.size()
     this.streams = {
       altitude: new Int16Array(n),
-      time: new Uint16Array(n),
+      time: new Uint32Array(n),
       px: new Float32Array(2 * n),
     }
 

@@ -75,7 +75,9 @@ export type ImportedActivity = {
   mpk?: Uint8Array
 
   streams?: {
-    time: Uint16Array
+    /** seconds since the activity started. 32-bit: an activity left recording
+     * overnight runs past the 18 hours a Uint16 can hold. */
+    time: Uint32Array
     altitude: Int16Array
     latlng: Float32Array
   }
@@ -167,7 +169,7 @@ export function decodePackedStreams(
 ): ImportedActivity["streams"] {
   const mpk = <UnpackedStreams>decode(packed)
   return {
-    time: rld_decode(mpk.t, Uint16Array),
+    time: rld_decode(mpk.t, Uint32Array),
     altitude: rld_decode(mpk.a, Int16Array),
     latlng: decode2Buf(mpk.p, polylinePrecision),
   }

@@ -28,16 +28,32 @@ def positive_non_decreasing(vals: Nums) -> bool:
 #   0: signed 8-bit diffs
 #   1: unsigned 8-bit diffs (the values never decrease)
 #   2: signed 16-bit diffs, for streams whose steps do not fit in a byte
+#   3: signed 32-bit diffs, and a 32-bit first value
 NTYPE_I8 = 0
 NTYPE_U8 = 1
 NTYPE_I16 = 2
+NTYPE_I32 = 3
 
 # ntype -> (numpy dtype, run-length marker, max repeat count)
 SPECS = {
     NTYPE_I8: (np.int8, -128, 126),
     NTYPE_U8: (np.uint8, 255, 254),
     NTYPE_I16: (np.int16, -32768, 126),
+    NTYPE_I32: (np.int32, -2147483648, 126),
 }
+
+# The header is the ntype byte followed by the first value. It is 16 bits wide
+# except in type 3, which is the type for data that does not fit in 16 bits.
+FIRSTVAL_DTYPE = {
+    NTYPE_I8: np.int16,
+    NTYPE_U8: np.int16,
+    NTYPE_I16: np.int16,
+    NTYPE_I32: np.int32,
+}
+
+
+def header_len(ntype: int) -> int:
+    return 1 + np.dtype(FIRSTVAL_DTYPE[ntype]).itemsize
 
 
 def rld_encode(vals: Nums, scale: float = 1) -> RLDEncoded:
@@ -53,7 +69,16 @@ def rld_encode(vals: Nums, scale: float = 1) -> RLDEncoded:
     diffs = np.diff(vals) if len(vals) > 1 else np.zeros(0, dtype="i4")
     dmax = int(np.abs(diffs).max()) if len(diffs) else 0
 
-    if increasing and dmax <= 254:
+    fits_i16 = dmax <= 32767 and -32768 <= int(vals[0]) <= 32767
+
+    if not fits_i16:
+        # A stopped-but-still-recording activity leaves a gap of hours in the
+        # time stream (32967 seconds, in the case that brought this down), and
+        # that diff does not fit in an int16 any more than a long climb's
+        # altitude step fits in a byte. Both used to raise OverflowError
+        # mid-stream, killing a response that was already partly sent.
+        ntype = NTYPE_I32
+    elif increasing and dmax <= 254:
         ntype = NTYPE_U8
     elif dmax <= 127:
         # 127, not 128: a diff of -128 would be indistinguishable from the
@@ -61,8 +86,7 @@ def rld_encode(vals: Nums, scale: float = 1) -> RLDEncoded:
         ntype = NTYPE_I8
     else:
         # A pause in recording can leave hundreds of metres between two
-        # consecutive altitude samples. Those do not fit in a byte, and used
-        # to raise OverflowError mid-stream, killing the whole response.
+        # consecutive altitude samples. Those do not fit in a byte.
         ntype = NTYPE_I16
 
     my_dtype, rl_marker, max_reps = SPECS[ntype]
@@ -114,7 +138,7 @@ def rld_encode(vals: Nums, scale: float = 1) -> RLDEncoded:
         encoded[j + 2] = reps + 1
         j += 3
 
-    firstval = np.array(vals[0], dtype=np.int16).tobytes()
+    firstval = np.array(vals[0], dtype=FIRSTVAL_DTYPE[ntype]).tobytes()
     return bytes([ntype]) + firstval + encoded[:j].tobytes()
 
 
@@ -135,13 +159,17 @@ def decoded_length(enc: np.ndarray, rl_marker: int) -> int:
 
 def rld_decode(enc: RLDEncoded, dtype=np.int32) -> Nums:
     ntype = int(np.frombuffer(enc, dtype="i1", count=1, offset=0)[0])
-    start_val = int(np.frombuffer(enc, dtype="i2", count=1, offset=1)[0])
-
     np_dtype, rl_marker, _ = SPECS[ntype]
 
-    # The diffs start at byte 3, an odd offset, so a 16-bit view of the
-    # original buffer would be unaligned. Copy rather than view.
-    enc_diffs = np.frombuffer(bytes(memoryview(enc)[3:]), dtype=np_dtype)
+    start_val = int(
+        np.frombuffer(enc, dtype=FIRSTVAL_DTYPE[ntype], count=1, offset=1)[0]
+    )
+
+    # The diffs start at an odd offset, so a wide view of the original buffer
+    # would be unaligned. Copy rather than view.
+    enc_diffs = np.frombuffer(
+        bytes(memoryview(enc)[header_len(ntype) :]), dtype=np_dtype
+    )
 
     L = decoded_length(enc_diffs, rl_marker)
 

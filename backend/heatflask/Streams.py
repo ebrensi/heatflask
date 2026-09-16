@@ -76,13 +76,13 @@ def encode_streams(rjson: Strava.Streams) -> PackedStreams:
 
 def decode_streams(msgpacked_streams: PackedStreams):
     """de-compress stream data
-    * time: UInt16
+    * time: UInt32
     * altitude: Int16
     * latlng: float32 (Google Polyline encoded)
     """
     d: EncodedStreams = msgpack.unpackb(msgpacked_streams)
     return {
-        "time": StreamCodecs.rld_decode(d["t"], dtype="u2"),
+        "time": StreamCodecs.rld_decode(d["t"], dtype="u4"),
         "altitude": StreamCodecs.rld_decode(d["a"], dtype="i2"),
         "latlng": polyline.decode(d["p"], POLYLINE_PRECISION),
     }
@@ -159,6 +159,13 @@ async def strava_import(
         except KeyError as e:
             # an activity with a time stream but no GPS or altitude
             log.info("activity %d has no %s stream", aid, e)
+            return None
+        except Exception:
+            # One unencodable activity used to raise out of the generator in
+            # the middle of a response that was already partly sent, so the
+            # client got a truncated body and no error. Drop the activity
+            # instead: the rest of the query still arrives.
+            log.exception("could not encode streams for activity %d", aid)
             return None
         unsaved.append(mongo_doc(aid, packed, ts=now))
         return packed

@@ -71,7 +71,7 @@ export function reset(): void {
 
   const buf = new ArrayBuffer(numPages << 16)
   const pxView = new Float32Array(buf, 0, nbytes.px / 4)
-  const timeView = new Uint16Array(buf, nbytes.px, nbytes.time / 2)
+  const timeView = new Uint32Array(buf, nbytes.px, nbytes.time / 4)
   const altView = new Int16Array(buf, nbytes.px + nbytes.time, nbytes.alt / 2)
 
   let pxLoc = 0
