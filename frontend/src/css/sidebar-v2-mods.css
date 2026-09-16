@@ -6,6 +6,43 @@
     these chganges fix that.
 */
 /*
+ * How wide the sidebar is, in one place.
+ *
+ * sidebar-v2 sets it three times -- once per breakpoint -- and then repeats
+ * those same numbers to push the map controls clear of it. Every one of them
+ * had to agree, and the drag handle would have had nowhere to write to. They
+ * all read this now, so moving the sidebar moves the controls with it.
+ */
+:root {
+  /* sidebar-v2's own 305 was a little under what the dials need in German;
+   * see MIN_WIDTH in Sidebar.ts, which is where that number was measured */
+  --sidebar-width: 320px;
+  /* the pane's own horizontal padding; the header below reads it too */
+  --pane-pad: 14px;
+}
+@media (min-width: 992px) {
+  :root {
+    --sidebar-width: 390px;
+  }
+}
+@media (min-width: 1200px) {
+  :root {
+    --sidebar-width: 460px;
+  }
+}
+
+@media (min-width: 768px) {
+  .sidebar:not(.collapsed) {
+    width: var(--sidebar-width);
+  }
+  /* sidebar-v2 floors the pane at each breakpoint's width, which would stop
+   * the drag handle narrowing it below that */
+  .sidebar-pane {
+    min-width: 0;
+  }
+}
+
+/*
  * Scale the sidebar's text with the sidebar itself.
  *
  * sidebar-v2 widens the pane at each breakpoint -- 305px, then 390px, then
@@ -136,28 +173,92 @@
 }
 
 /* sidebar-v2's stylesheet moves Leaflet's .leaflet-left controls clear of the
- * open sidebar at each breakpoint; the same, for MapLibre's */
-@media (min-width: 768px) and (max-width: 991px) {
-  .sidebar-left ~ .sidebar-map .maplibregl-ctrl-top-left {
-    left: 315px;
-  }
-}
-@media (min-width: 992px) and (max-width: 1199px) {
-  .sidebar-left ~ .sidebar-map .maplibregl-ctrl-top-left {
-    left: 400px;
-  }
-}
-@media (min-width: 1200px) {
-  .sidebar-left ~ .sidebar-map .maplibregl-ctrl-top-left {
-    left: 470px;
-  }
-}
+ * open sidebar; the same for MapLibre's, off the one width above so that they
+ * keep up while it is being dragged */
 @media (min-width: 768px) {
+  .sidebar-left:not(.collapsed) ~ .sidebar-map .maplibregl-ctrl-top-left {
+    left: calc(var(--sidebar-width) + 10px);
+  }
   .sidebar-left.collapsed ~ .sidebar-map .maplibregl-ctrl-top-left {
     left: 50px;
   }
 }
 
 .sidebar-pane {
-  padding: 10px 10px;
+  padding: 10px var(--pane-pad);
+}
+
+/*
+ * sidebar-v2 pads the pane 20px and then bleeds the header back out over that
+ * padding with margin: -10px -20px. We pad the pane differently, so the
+ * header hung past the pane on the right by the difference -- which gave
+ * every pane that much phantom horizontal scroll, and clipped the prose in
+ * the info tab at its last letter. It reads the same number now.
+ */
+.sidebar-header {
+  margin: -10px calc(-1 * var(--pane-pad)) 0;
+  padding: 0 var(--pane-pad);
+}
+
+/*
+ * The panes size themselves against the sidebar now that it can be dragged,
+ * not against the window -- a media query would answer the wrong question.
+ * It is already position: absolute, so the containment this implies does not
+ * change what its panes are positioned against.
+ */
+.sidebar-content {
+  container-type: inline-size;
+  container-name: pane;
+}
+
+/* Reserve the scrollbar's width whether or not one is showing, so that the
+ * text is not laid out underneath it and does not reflow on the tabs that
+ * happen to be long enough to scroll. */
+.sidebar-content {
+  scrollbar-gutter: stable;
+}
+
+/*
+ * A grip on the open edge. No single width suits eleven languages -- a German
+ * compound runs half again as long as its English, Japanese rather shorter --
+ * so the reader gets the last word, and Sidebar.ts remembers it.
+ */
+.sidebar-resize {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -3px;
+  width: 8px;
+  cursor: col-resize;
+  z-index: 2000;
+  /* so a drag on it is not also a pan of the map underneath */
+  touch-action: none;
+}
+
+.sidebar-resize::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 3px;
+  width: 2px;
+  border-radius: 1px;
+  background-color: rgba(255, 255, 255, 0);
+  transition: background-color 120ms;
+}
+
+.sidebar-resize:hover::after,
+.sidebar-resize.dragging::after {
+  background-color: rgba(255, 255, 255, 0.45);
+}
+
+/* Nothing to drag when it is a strip of icons, or when it is the whole
+ * screen and there is no map beside it to trade width with. */
+.sidebar.collapsed .sidebar-resize {
+  display: none;
+}
+@media (max-width: 767px) {
+  .sidebar-resize {
+    display: none;
+  }
 }

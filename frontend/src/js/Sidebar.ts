@@ -23,6 +23,109 @@ import { State } from "./Model"
 /** The event a sidebar pane gets when it is opened */
 export const PANE_OPEN = "sidebar-pane-open"
 
+/* How wide the reader last dragged the sidebar. Their choice, on their
+ * machine, for their language -- so it lives beside the language choice
+ * rather than in the URL, which is for what a link should carry. */
+const WIDTH_KEY = "sidebarWidth"
+/* Narrower than this and something spills in some language. Measured across
+ * all eleven, a pane at a time: English, Spanish, French, Japanese and both
+ * Chinese are clean at 270, Portuguese wants 280, Italian and Russian 290,
+ * and German 320 -- the dials, whose knob is a 140px canvas drawn once and
+ * so cannot give, beside "Abspielgeschwindigkeit". Re-measure if the dials
+ * change size or a longer-winded language arrives. */
+const MIN_WIDTH = 320
+/** Always leave this much map showing, however hard the handle is pulled. */
+const MAP_MIN = 160
+
+function widthLimit(): number {
+  return Math.max(MIN_WIDTH, window.innerWidth - MAP_MIN)
+}
+
+function applyWidth(px: number): void {
+  const w = Math.round(Math.min(Math.max(px, MIN_WIDTH), widthLimit()))
+  document.documentElement.style.setProperty("--sidebar-width", `${w}px`)
+}
+
+/** Drop back to the width the stylesheet picks for this screen. */
+function clearWidth(): void {
+  document.documentElement.style.removeProperty("--sidebar-width")
+  try {
+    window.localStorage.removeItem(WIDTH_KEY)
+  } catch {
+    /* nothing was stored */
+  }
+}
+
+/**
+ * A grip on the sidebar's open edge.
+ *
+ * No single width suits eleven languages: a German compound runs half again
+ * as long as its English and Japanese rather shorter, and the info tab is
+ * prose either way. The stylesheet's width is a starting point; this is the
+ * last word, and it is remembered. Double-click gives the stylesheet its
+ * width back.
+ */
+function addResizeHandle(el: HTMLElement): void {
+  try {
+    const saved = parseInt(window.localStorage.getItem(WIDTH_KEY), 10)
+    /* Re-clamped rather than trusted: the window it was chosen in may have
+     * been wider than this one. */
+    if (saved > 0) applyWidth(saved)
+  } catch {
+    /* no stored width; the stylesheet's stands */
+  }
+
+  const handle = document.createElement("div")
+  handle.className = "sidebar-resize"
+  el.appendChild(handle)
+
+  handle.addEventListener("pointerdown", (e: PointerEvent) => {
+    if (e.button !== 0) return
+    e.preventDefault()
+    e.stopPropagation()
+
+    const startX = e.clientX
+    const startWidth = el.getBoundingClientRect().width
+    handle.setPointerCapture(e.pointerId)
+    handle.classList.add("dragging")
+    /* Otherwise the pointer sweeping over the panes selects their text */
+    document.body.style.userSelect = "none"
+
+    const onMove = (ev: PointerEvent) =>
+      applyWidth(startWidth + ev.clientX - startX)
+
+    const onUp = () => {
+      handle.removeEventListener("pointermove", onMove)
+      handle.removeEventListener("pointerup", onUp)
+      handle.removeEventListener("pointercancel", onUp)
+      handle.classList.remove("dragging")
+      document.body.style.userSelect = ""
+      try {
+        window.localStorage.setItem(WIDTH_KEY, String(el.offsetWidth))
+      } catch {
+        /* applied for this session, just not remembered */
+      }
+    }
+
+    /* On the captured element, so a pointer that leaves the window still
+     * reports its moves and its release */
+    handle.addEventListener("pointermove", onMove)
+    handle.addEventListener("pointerup", onUp)
+    handle.addEventListener("pointercancel", onUp)
+  })
+
+  handle.addEventListener("dblclick", (e) => {
+    e.preventDefault()
+    clearWidth()
+  })
+
+  /* A width chosen on a wider window would otherwise leave no map on this one */
+  window.addEventListener("resize", () => {
+    const current = el.getBoundingClientRect().width
+    if (current > widthLimit()) applyWidth(current)
+  })
+}
+
 /**
  * sidebar-v2's behaviour without its Leaflet control: the markup and the
  * stylesheet are the same, and all it ever did was move .active and
@@ -168,8 +271,10 @@ export async function renderTabs(map: MLMap, state: State, tabIds?: string[]) {
   applyTranslations(sidebar_tablist_el)
   applyTranslations(sidebar_content_el)
 
-  const S = new Sidebar(document.getElementById("sidebar"))
+  const sidebar_el = document.getElementById("sidebar")
+  const S = new Sidebar(sidebar_el)
   S.tabNames = tabIds
+  addResizeHandle(sidebar_el)
 
   /*
    *   space        open or close the sidebar, on the tab last shown

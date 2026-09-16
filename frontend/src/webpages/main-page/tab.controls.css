@@ -32,6 +32,10 @@
 .dial-text {
   flex: 1;
   min-width: 0;
+  /* The knob is a fixed-size canvas, so everything that gives is here. German
+   * hints ("Abspielgeschwindigkeit") are longer than what is left of a narrow
+   * pane, and a word that cannot fit is better broken than spilling out. */
+  overflow-wrap: break-word;
 }
 
 .dial-name {

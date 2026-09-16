@@ -46,10 +46,15 @@
   color: transparent;
 }
 
-/* Controls: the keys in a column of their own, what they do beside them */
+/* Controls: the keys in a column of their own, what they do beside them.
+ *
+ * minmax(0, 1fr) rather than 1fr: a grid track sized 1fr still floors at its
+ * content's minimum, so the description column refused to wrap below its
+ * longest word and pushed the pane wider than itself. That did not show while
+ * the sidebar had three fixed widths; it does now that it can be dragged. */
 .info-controls {
   display: grid;
-  grid-template-columns: max-content 1fr;
+  grid-template-columns: max-content minmax(0, 1fr);
   gap: 0.5em 1em;
   margin: 0 0 1em;
 }
@@ -60,6 +65,26 @@
 
 .info-controls dd {
   margin: 0;
+  /* Russian's "перетаскивание" is longer than a narrow pane; a word that
+   * cannot fit is better broken than spilling out of it */
+  overflow-wrap: break-word;
+}
+
+/*
+ * Narrow enough and the two columns stop working: the key column is sized to
+ * its longest label and refuses to wrap, which in Russian is most of the pane
+ * before the description gets any. Stacked, each key sits above what it does.
+ */
+@container pane (max-width: 340px) {
+  .info-controls {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0 0;
+  }
+
+  .info-controls dt {
+    margin-top: 0.6em;
+    white-space: normal;
+  }
 }
 
 .info-controls kbd {
@@ -74,6 +99,12 @@
   font-size: 0.85em;
   line-height: 1.5;
   text-align: center;
+}
+
+/* Chromium sizes a select to its longest option -- "português (Brasil)" --
+ * which is wider than the pane once it is dragged narrow */
+#language-select {
+  max-width: 100%;
 }
 
 /* badges on info tab */
