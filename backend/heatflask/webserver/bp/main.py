@@ -12,6 +12,7 @@ import sanic
 from logging import getLogger
 from ... import Users
 from ... import Index
+from ... import History
 
 from ..config import APP_VERSION, APP_BASE_NAME, OFFLINE
 from ..sessions import session_cookie
@@ -94,6 +95,18 @@ async def user_page(request: Request, target_user_id=None):
         # bare error. These are old bookmarks and shared links, whose athlete
         # triage has since retired, and the splash page is where they can
         # sign in again and get their map back.
+        #
+        # Recorded, because the redirect leaves nothing else behind: how often
+        # these arrive says how much of the old audience is still out there,
+        # and one athlete's id turning up repeatedly is someone trying to get
+        # back in. History.recent(kind="request") keeps them for a month;
+        # Heroku's log buffer holds minutes.
+        log.info("link to unregistered athlete %s", target_user_id)
+        History.log_request(
+            request,
+            f"link to unregistered athlete {target_user_id}",
+            athlete=target_user_id,
+        )
         request.ctx.flash(
             f"Strava athlete {target_user_id} is not registered with Heatflask"
         )
