@@ -14,7 +14,7 @@ from ... import Users
 from ... import Index
 from ... import History
 
-from ..config import APP_VERSION, APP_BASE_NAME, OFFLINE
+from ..config import APP_BUILD, APP_BASE_NAME, OFFLINE
 from ..sessions import session_cookie
 
 log = getLogger("heatflask.webserver.main")
@@ -135,7 +135,7 @@ async def user_page(request: Request, target_user_id=None):
         "runtime_json": {
             # These will be available to the client as a JSON string
             # at non-visible element "#runtime_json"
-            "APP_VERSION": APP_VERSION,
+            "APP_VERSION": APP_BUILD,
             "CURRENT_USER": relevant_info(request.ctx.current_user),
             "TARGET_USER": target_info(
                 target_user, request.ctx.current_user, request.ctx.is_admin

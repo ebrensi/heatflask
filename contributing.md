@@ -23,3 +23,10 @@ When you install frontend dependencies with `npm install`, TypeScript, ESLint an
 
 The code in this repo conforms to [Flake8](https://flake8.pycqa.org/en/latest/#) lint rules and is auto-formatted with [Black](https://black.readthedocs.io/en/stable).
 
+
+## Versioning
+
+The version number lives in [`/VERSION`](./VERSION) and is bumped by hand. It
+makes a promise about the parameters in a map's URL — the links people have
+saved — and about nothing else; [`docs/VERSIONING.md`](./docs/VERSIONING.md) says
+what a bump means and how to cut a release.

@@ -14,6 +14,11 @@ console.time("client_setup")
 import { APP_VERSION } from "~/src/js/Env"
 import { start } from "~/src/js/UI"
 
+/* The byline sits at the right edge of the artwork below, however long the
+ * version in front of it turns out to be. */
+const BYLINE = "(2016-2026) Efrem Rensi"
+const versionLine = `  v${APP_VERSION} `.padEnd(75 - BYLINE.length) + BYLINE
+
 start()
   .then((appState) => {
     console.log(`
@@ -24,7 +29,7 @@ start()
   ██╔══██║██╔══╝  ██╔══██║   ██║   ██╔══╝  ██║     ██╔══██║╚════██║██╔═██╗
   ██║  ██║███████╗██║  ██║   ██║   ██║     ███████╗██║  ██║███████║██║  ██╗
   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝     ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
-  v${APP_VERSION}                                           (2016-2026) Efrem Rensi
+${versionLine}
 
   Want to contribute? Check out the repo at
   https://github.com/ebrensi/heatflask

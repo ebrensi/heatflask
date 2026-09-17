@@ -1,8 +1,11 @@
 # Heatflask, as one container: the frontend is built in the first stage and
 # only its output is copied into the second, which runs the Sanic backend.
 #
-#   docker build -t heatflask .
+#   docker build -t heatflask --build-arg GIT_COMMIT=$(git rev-parse HEAD) .
 #   docker run -p 8000:8000 --env-file heatflask.env heatflask
+#
+# GIT_COMMIT is optional and only names the build in the version string the app
+# reports (see docs/VERSIONING.md); there is no .git in the build context.
 #
 # The container needs, at least:
 #   MONGODB_URL            mongodb+srv://... (the app has no other datastore)
@@ -50,6 +53,13 @@ WORKDIR /app/backend
 
 COPY backend/requirements.txt ./
 RUN pip install -r requirements.txt
+
+# The version number the app reports, and the commit it was built from. Heroku
+# builds pass no build args of their own, so there GIT_COMMIT stays empty and
+# the app falls back to naming the release instead.
+ARG GIT_COMMIT=""
+ENV GIT_COMMIT=$GIT_COMMIT
+COPY VERSION /app/VERSION
 
 COPY backend/heatflask ./heatflask
 # files.py serves templates and assets from ../frontend/dist

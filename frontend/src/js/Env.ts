@@ -13,6 +13,7 @@ export type UserInfo = {
 }
 
 export type RuntimeJson = {
+  /** The running build, e.g. "1.3.0+g1d39764" -- see /docs/VERSIONING.md */
   APP_VERSION: string
   CURRENT_USER: UserInfo
   TARGET_USER: UserInfo

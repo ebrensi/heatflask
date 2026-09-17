@@ -1,4 +1,6 @@
 import os
+import subprocess
+from pathlib import Path
 from sanic.log import LOGGING_CONFIG_DEFAULTS
 import logging
 
@@ -8,8 +10,70 @@ log.propagate = True
 
 # General app configuration
 APP_BASE_NAME = "Heatflask"
-APP_VERSION = "1.0.0"
-APP_NAME = f"{APP_BASE_NAME} v{APP_VERSION}"
+
+# The version number is kept in /VERSION at the root of the repo and bumped by
+# hand. What a bump means is in docs/VERSIONING.md: the compatibility surface
+# is the set of parameters in a map's URL, since those are what other people
+# have saved in their links.
+REPO_ROOT = Path(__file__).parents[3]
+try:
+    APP_VERSION = (REPO_ROOT / "VERSION").read_text().strip()
+except OSError:
+    log.warning("no VERSION file in %s", REPO_ROOT)
+    APP_VERSION = "0.0.0"
+
+
+def git(*args):
+    try:
+        result = subprocess.run(
+            ["git", *args],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=True,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return result.stdout.strip()
+
+
+def get_build_metadata():
+    """Name the exact build this version number was cut from.
+
+    Heroku's container builder hands the build nothing of its own -- the build
+    args in heroku.yml are static strings -- so the commit can arrive by any of
+    several routes, and we take the first one that is there.
+    """
+    for var in (
+        "GIT_COMMIT",  # docker build --build-arg, baked in by our Dockerfile
+        "SOURCE_VERSION",  # Heroku buildpack builds, and most CI
+        "HEROKU_BUILD_COMMIT",  # heroku labs:enable runtime-dyno-build-metadata
+        "HEROKU_SLUG_COMMIT",  # ...its deprecated predecessor
+    ):
+        commit = os.environ.get(var)
+        if commit:
+            return f"g{commit[:7]}"
+
+    # A development checkout can just ask git. The container has neither git
+    # nor a .git directory, so this answers only here.
+    commit = git("rev-parse", "--short=7", "HEAD")
+    if commit:
+        return f"g{commit}.dirty" if git("status", "--porcelain") else f"g{commit}"
+
+    # Heroku without the commit: the release number at least names the deploy.
+    release = os.environ.get("HEROKU_RELEASE_VERSION")
+    return f"heroku.{release.lstrip('v')}" if release else None
+
+
+# The full identity of a running build, e.g. "1.3.0+g1d39764". The part after
+# the "+" is semver build metadata: it says which build, and is ignored when
+# versions are compared. The frontend prints this to the browser console, so a
+# screenshot says what it was taken from.
+BUILD_METADATA = get_build_metadata()
+APP_BUILD = f"{APP_VERSION}+{BUILD_METADATA}" if BUILD_METADATA else APP_VERSION
+APP_NAME = f"{APP_BASE_NAME} v{APP_BUILD}"
+
 OFFLINE = os.environ.get("OFFLINE") == "1"
 
 # this can be "development", "staging", or "production"

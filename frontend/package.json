@@ -1,6 +1,6 @@
 {
   "name": "heatflask-frontend",
-  "version": "1.0.0",
+  "version": "1.3.0",
   "author": "Efrem Rensi",
   "description": "Animated Movement Data Visualization for Strava Tracks",
   "license": "ISC",
