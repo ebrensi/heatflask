@@ -81,7 +81,7 @@ export class LayerPicker implements IControl {
 
     const list = document.createElement("div")
     list.className = "layer-picker-list"
-    for (const name of Object.keys(baselayers)) {
+    for (const [name, basemap] of Object.entries(baselayers)) {
       const label = document.createElement("label")
       const radio = document.createElement("input")
       radio.type = "radio"
@@ -91,7 +91,7 @@ export class LayerPicker implements IControl {
       radio.addEventListener("change", () => {
         if (radio.checked) visual.baselayer = name
       })
-      label.append(radio, ` ${name}`)
+      label.append(radio, ` ${basemap.label}`)
       list.appendChild(label)
     }
     panel.appendChild(list)

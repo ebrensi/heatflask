@@ -76,7 +76,7 @@ const DEFAULT_GEOHASH: string = Geohash.encode(
 )
 /* The Mapbox token and CARTO key are hardcoded in Env.ts, so any layer
  * would work here. OSM is keyless and uses neither quota. */
-const DEFAULT_BASELAYER = "OpenStreetMap.Mapnik"
+const DEFAULT_BASELAYER = "OpenStreetMap.Standard"
 
 export const DefaultVisual: VisualParameters = {
   center: DEFAULT_CENTER,

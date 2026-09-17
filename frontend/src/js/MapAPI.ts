@@ -1,11 +1,12 @@
 /*
  * MapAPI -- the MapLibre GL map, its basemaps, and 3D terrain.
  *
- * Basemap names are kept from the Leaflet version wherever the same map still
- * exists, so a baselayer saved in someone's link still resolves. Several of
- * them are vector styles now where they were raster tiles: CARTO's and
- * Stadia's styles are published both ways, and the vector versions stay sharp
- * at fractional zoom and when the map is pitched or rotated.
+ * A basemap is named for the map it is, and answers to every name it has been
+ * given here before (see `aka`), so a baselayer saved in someone's link still
+ * resolves. Several of them are vector styles now where they were raster
+ * tiles: CARTO's and Stadia's styles are published both ways, and the vector
+ * versions stay sharp at fractional zoom and when the map is pitched or
+ * rotated.
  */
 
 import Geohash from "latlon-geohash"
@@ -78,73 +79,174 @@ const mapboxRaster = (id: string) =>
     { tileSize: 512 }
   )
 
-export const baselayers: Record<string, string | StyleSpecification> = {
+export type Basemap = {
+  /** What the layer picker shows: the map's own name, as its maker writes it */
+  label: string
+  style: string | StyleSpecification
+  /** Names this map has gone by here, so links carrying one still resolve */
+  aka?: string[]
+}
+
+export const baselayers: Record<string, Basemap> = {
   None: {
-    version: 8,
-    sources: {},
-    layers: [
-      {
-        id: "background",
-        type: "background",
-        paint: { "background-color": "#000" },
-      },
-    ],
+    label: "None",
+    style: {
+      version: 8,
+      sources: {},
+      layers: [
+        {
+          id: "background",
+          type: "background",
+          paint: { "background-color": "#000" },
+        },
+      ],
+    },
   },
 
   /* OpenFreeMap: free vector tiles with no key and no usage limits */
-  "OpenFreeMap.Liberty": "https://tiles.openfreemap.org/styles/liberty",
-  "OpenFreeMap.Bright": "https://tiles.openfreemap.org/styles/bright",
-  "OpenFreeMap.Positron": "https://tiles.openfreemap.org/styles/positron",
-  "OpenFreeMap.Dark": "https://tiles.openfreemap.org/styles/dark",
-  "OpenFreeMap.Fiord": "https://tiles.openfreemap.org/styles/fiord",
+  "OpenFreeMap.Liberty": {
+    label: "OpenFreeMap Liberty",
+    style: "https://tiles.openfreemap.org/styles/liberty",
+  },
+  "OpenFreeMap.Bright": {
+    label: "OpenFreeMap Bright",
+    style: "https://tiles.openfreemap.org/styles/bright",
+  },
+  "OpenFreeMap.Positron": {
+    label: "OpenFreeMap Positron",
+    style: "https://tiles.openfreemap.org/styles/positron",
+  },
+  "OpenFreeMap.Dark": {
+    label: "OpenFreeMap Dark",
+    style: "https://tiles.openfreemap.org/styles/dark",
+  },
+  "OpenFreeMap.Fiord": {
+    label: "OpenFreeMap Fiord",
+    style: "https://tiles.openfreemap.org/styles/fiord",
+  },
 
-  "CartoDB.Positron":
-    "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
-  "CartoDB.DarkMatter":
-    "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
-  "CartoDB.Voyager":
-    "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json",
+  /* CARTO, which was CartoDB when these were first added here */
+  "CARTO.Positron": {
+    label: "CARTO Positron",
+    style: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+    aka: ["CartoDB.Positron"],
+  },
+  "CARTO.DarkMatter": {
+    label: "CARTO Dark Matter",
+    style: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
+    aka: ["CartoDB.DarkMatter"],
+  },
+  "CARTO.Voyager": {
+    label: "CARTO Voyager",
+    style: "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json",
+    aka: ["CartoDB.Voyager"],
+  },
 
   /* Stadia authorizes by the requesting page's domain rather than a key:
-   * heatflask.com is registered on the account and localhost is allowed. */
-  "Stadia.AlidadeSmoothDark":
-    "https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json",
-  "Stadia.Outdoors": "https://tiles.stadiamaps.com/styles/outdoors.json",
-  "Stamen.Terrain": "https://tiles.stadiamaps.com/styles/stamen_terrain.json",
-  "Stamen.TonerLite":
-    "https://tiles.stadiamaps.com/styles/stamen_toner_lite.json",
+   * heatflask.com is registered on the account and localhost is allowed.
+   * The Stamen styles are Stamen's designs, hosted by Stadia since 2023 --
+   * which is why they are under Stadia here but still called Stamen. */
+  "Stadia.AlidadeSmoothDark": {
+    label: "Alidade Smooth Dark",
+    style: "https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json",
+  },
+  "Stadia.Outdoors": {
+    label: "Stadia Outdoors",
+    style: "https://tiles.stadiamaps.com/styles/outdoors.json",
+  },
+  "Stadia.StamenTerrain": {
+    label: "Stamen Terrain",
+    style: "https://tiles.stadiamaps.com/styles/stamen_terrain.json",
+    aka: ["Stamen.Terrain"],
+  },
+  "Stadia.StamenTonerLite": {
+    label: "Stamen Toner Lite",
+    style: "https://tiles.stadiamaps.com/styles/stamen_toner_lite.json",
+    aka: ["Stamen.TonerLite"],
+  },
 
-  "OpenStreetMap.Mapnik": rasterStyle(
-    "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-    OSM,
-    { maxzoom: 19 }
-  ),
-  "Esri.WorldImagery": rasterStyle(
-    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-    ESRI,
-    { maxzoom: 19 }
-  ),
-  "Esri.NatGeoWorldMap": rasterStyle(
-    "https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}",
-    ESRI,
-    { maxzoom: 16 }
-  ),
+  /* "Mapnik" was the renderer; OpenStreetMap calls this map Standard */
+  "OpenStreetMap.Standard": {
+    label: "OpenStreetMap",
+    style: rasterStyle("https://tile.openstreetmap.org/{z}/{x}/{y}.png", OSM, {
+      maxzoom: 19,
+    }),
+    aka: ["OpenStreetMap.Mapnik"],
+  },
 
-  "Mapbox.dark": mapboxRaster("dark-v10"),
-  "Mapbox.streets": mapboxRaster("streets-v11"),
-  "Mapbox.outdoors": mapboxRaster("outdoors-v11"),
-  "Mapbox.satellite": mapboxRaster("satellite-streets-v11"),
+  "Esri.WorldImagery": {
+    label: "Esri World Imagery",
+    style: rasterStyle(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      ESRI,
+      { maxzoom: 19 }
+    ),
+  },
+  "Esri.NatGeoWorldMap": {
+    label: "Esri NatGeo World Map",
+    style: rasterStyle(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}",
+      ESRI,
+      { maxzoom: 16 }
+    ),
+  },
 
-  "GSI.Standard 地理院 標準地図": rasterStyle(
-    "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png",
-    GSI,
-    { minzoom: 2, maxzoom: 18 }
-  ),
-  "GSI.Pale 地理院 淡色地図": rasterStyle(
-    "https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png",
-    GSI,
-    { minzoom: 2, maxzoom: 18 }
-  ),
+  "Mapbox.Dark": {
+    label: "Mapbox Dark",
+    style: mapboxRaster("dark-v10"),
+    aka: ["Mapbox.dark"],
+  },
+  "Mapbox.Streets": {
+    label: "Mapbox Streets",
+    style: mapboxRaster("streets-v11"),
+    aka: ["Mapbox.streets"],
+  },
+  "Mapbox.Outdoors": {
+    label: "Mapbox Outdoors",
+    style: mapboxRaster("outdoors-v11"),
+    aka: ["Mapbox.outdoors"],
+  },
+  /* The style is satellite-streets: satellite imagery with roads and labels */
+  "Mapbox.SatelliteStreets": {
+    label: "Mapbox Satellite Streets",
+    style: mapboxRaster("satellite-streets-v11"),
+    aka: ["Mapbox.satellite"],
+  },
+
+  "GSI.Standard": {
+    label: "GSI 標準地図 (Standard)",
+    style: rasterStyle(
+      "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png",
+      GSI,
+      { minzoom: 2, maxzoom: 18 }
+    ),
+    aka: ["GSI.Standard 地理院 標準地図"],
+  },
+  "GSI.Pale": {
+    label: "GSI 淡色地図 (Pale)",
+    style: rasterStyle(
+      "https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png",
+      GSI,
+      { minzoom: 2, maxzoom: 18 }
+    ),
+    aka: ["GSI.Pale 地理院 淡色地図"],
+  },
+}
+
+/** Every name a basemap has ever answered to here, mapped to its name now */
+const baselayerAliases: Record<string, string> = {}
+for (const [name, basemap] of Object.entries(baselayers)) {
+  for (const old of basemap.aka ?? []) baselayerAliases[old] = name
+}
+
+/**
+ * The current name of a basemap, given any name it has gone by, or undefined
+ * if we have no such map. A link someone saved years ago names it the way it
+ * was named then, and those links are the reason the old names are kept.
+ */
+export function resolveBaselayer(name: string): string | undefined {
+  if (name in baselayers) return name
+  return baselayerAliases[name]
 }
 
 /* ------------------------------------------------------------------ *
@@ -216,7 +318,7 @@ export function CreateMap(
 ): MLMap {
   const map = new MLMap({
     container,
-    style: <StyleSpecification>baselayers.None,
+    style: <StyleSpecification>baselayers.None.style,
     center: [center.lng, center.lat],
     zoom: toMapZoom(zoom),
     maxPitch: 85,
@@ -262,8 +364,8 @@ export function onStyleLoad(map: MLMap, hook: (map: MLMap) => void): void {
 let currentBaselayer: string
 
 export function setBaselayer(map: MLMap, name: string): void {
-  const style = baselayers[name]
-  if (!style || name === currentBaselayer) return
+  const basemap = baselayers[name]
+  if (!basemap || name === currentBaselayer) return
   currentBaselayer = name
   /* The old style's terrain outlives it: while a URL style is being fetched
    * the map still draws terrain depth, against a style that has no projection
@@ -271,7 +373,7 @@ export function setBaselayer(map: MLMap, name: string): void {
    * terrain back. */
   if (styleReady && map.terrain) map.setTerrain(null)
   styleReady = false
-  map.setStyle(style, { diff: false })
+  map.setStyle(basemap.style, { diff: false })
 }
 
 export function BindMap(map: MLMap, appState: State): void {
@@ -283,11 +385,14 @@ export function BindMap(map: MLMap, appState: State): void {
     if (visual.terrain) setTerrain(map, true, false)
   })
 
-  /* A link or saved setting can name a layer that no longer exists */
-  if (!(visual.baselayer in baselayers)) {
+  /* A link or saved setting can name a layer by a name it has since outgrown,
+   * or one that no longer exists at all. Resolving it here rather than at the
+   * point of use also rewrites the URL to the current name. */
+  const baselayer = resolveBaselayer(visual.baselayer)
+  if (!baselayer) {
     console.warn(`unknown baselayer "${visual.baselayer}"; using the default`)
-    visual.baselayer = DefaultVisual.baselayer
   }
+  visual.baselayer = baselayer ?? DefaultVisual.baselayer
 
   map.jumpTo({
     center: [visual.center.lng, visual.center.lat],
