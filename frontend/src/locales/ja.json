@@ -1,12 +1,9 @@
 {
   "common.close": "閉じる",
   "common.athleteFallback": "アスリート {id}",
-
   "splash.title": "{app} — アクティビティのアニメーション可視化",
   "splash.tagline": "あなたの Strava&nbsp;データを、動く地図に",
   "splash.demo": "デモ",
-  "splash.publicUsers": "公開ユーザー",
-
   "tab.query.title": "{name} のマップ",
   "tab.query.heading": "アクティビティの検索:",
   "tab.query.optDays": "最近の日数",
@@ -23,12 +20,10 @@
   "tab.query.authenticatedAs": "ログイン中:",
   "tab.query.logout": "<i class=\"hf hf-sign-out\"></i> ログアウト",
   "tab.query.createAccount": "アカウントを作成、またはログインしてください。",
-
   "tab.activities.title": "表示中のアクティビティ",
   "tab.activities.clearSelection": "選択を解除",
   "tab.activities.renderSelected": "選択を表示",
   "tab.activities.zoomToSelection": "<i class=\"fas fa-search-plus\"></i> <i class=\"far fa-object-group\"></i> <i class=\"fas fa-search-minus\"></i> 選択範囲にズーム",
-
   "tab.controls.title": "レイヤー設定",
   "tab.controls.timescale": "時間スケール <i>&tau;</i>",
   "tab.controls.timescaleHint": "再生速度",
@@ -39,20 +34,18 @@
   "tab.controls.pathWidthHint": "0 で軌跡を隠す",
   "tab.controls.colors": "配色",
   "tab.controls.colorsHint": "パレットを回転",
-
   "tab.profile.loginTitle": "ログイン",
   "tab.profile.anonNote": "Strava でログインすると、自分のアクティビティを表示し、Heatflask アカウントを管理できます。",
   "tab.profile.loginLink": "Strava でログイン",
   "tab.profile.editOnStrava": "Strava でプロフィールを編集",
   "tab.profile.indexNote": "すばやく表示できるよう、アクティビティの概要を保存しています。",
   "tab.profile.viewIndex": "一覧を表示",
-  "tab.profile.publicProfile": "プロフィールを公開",
-  "tab.profile.publicNote": "公開プロフィールは<a id=\"profile-directory-link\" href=\"#\" target=\"_blank\" rel=\"noopener\">公開ユーザー一覧</a>に掲載され、ほかの人があなたのマップを見つけて閲覧できるようになります。",
+  "tab.profile.sharedMaps": "マップの共有",
+  "tab.profile.sharedMapsNote": "オフ：Heatflask であなたのアクティビティを見られるのはあなただけです。オン：マップのリンクを知っている人は、あなたが Strava で公開しているアクティビティを見られます。非公開のアクティビティは、どちらの場合もあなただけのものです。 <a id=\"profile-privacy-link\" href=\"#\" target=\"_blank\" rel=\"noopener\">プライバシーの仕組み</a>",
   "tab.profile.adminDirectory": "ユーザー一覧（管理者）",
   "tab.profile.logout": "ログアウト",
   "tab.profile.deleteAccount": "アカウントを削除",
   "tab.profile.deleteConfirm": "Heatflask のアカウントを削除しますか?\n\n保存されたアクティビティは削除され、Heatflask による Strava データへのアクセスも取り消されます。元に戻すことはできません。",
-
   "tab.info.title": "情報",
   "tab.info.controlsHeading": "操作",
   "tab.info.ctrlDragKey": "<kbd>Ctrl</kbd> + ドラッグ",
@@ -81,11 +74,9 @@
   "tab.info.textLarger": "大きく",
   "tab.info.sponsor": "<i class=\"hf-github\"></i> GitHub でスポンサーになる",
   "tab.info.contactsHeading": "連絡先",
-
   "map.basemapAndTerrain": "ベースマップと地形",
   "map.pauseAnimation": "アニメーションを一時停止",
   "map.resumeAnimation": "アニメーションを再開",
-
   "capture.record": "動画を録画（一周 {period} 秒）",
   "capture.recordTruncated": "動画を録画（一周 {period} 秒。最初の {max} 秒のみ録画されます）",
   "capture.recordArea": "枠の中を録画",
@@ -98,23 +89,18 @@
   "capture.waitingForMap": "地図の読み込みを待っています…",
   "capture.encoding": "エンコード中… {percent}%",
   "capture.finalizing": "仕上げ中…",
-
   "import.title": "読み込み中",
   "import.stop": "停止",
   "import.stopping": "停止しています…",
   "import.contacting": "Strava に接続しています…",
   "import.countOf": "{total} 件中 {received} 件",
   "import.count": "{received} 件",
-
   "table.noActivities": "アクティビティなし",
   "table.untitled": "(タイトルなし)",
-
   "users.pageTitle": "{app} — ユーザー一覧",
   "users.heading": "ユーザー一覧",
   "users.headingAdmin": "登録ユーザー ({count})",
-  "users.headingPublic": "公開ユーザー一覧 ({count})",
   "users.emptyAdmin": "登録ユーザーはいません。",
-  "users.emptyPublic": "まだ誰もプロフィールを公開していません。自分のマップのユーザータブから公開に設定すると、ここに掲載されます。",
   "users.errParams": "ページのパラメータを読み取れませんでした: {details}",
   "users.errLoad": "一覧を読み込めませんでした: {error}",
   "users.col.id": "ID",
@@ -122,7 +108,6 @@
   "users.col.city": "市区町村",
   "users.col.region": "地域",
   "users.col.country": "国",
-  "users.col.lastActive": "最終アクティブ",
   "users.col.logins": "ログイン回数",
   "users.col.lastLogin": "最終ログイン",
   "users.col.indexAccess": "一覧の最終取得",
@@ -131,7 +116,6 @@
   "users.daysAgo": "{count} 日前",
   "users.monthsAgo": "{count} か月前",
   "users.yearsAgo": "{count} 年前",
-
   "activities.pageTitle": "{app} — アクティビティ索引",
   "activities.heading": "アクティビティ索引",
   "activities.fetching": "アクティビティを取得しています...",

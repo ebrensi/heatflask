@@ -1,6 +1,11 @@
 """
 Defines all the /users/* webserver endpoints for accessing
-Users data store
+Users data store.
+
+Admin only. There used to be a public directory here as well, listing the
+athletes who had made their profile public, and the splash page sent people
+to it. Sharing a map no longer means being listed anywhere, so the listing
+is gone and what is left is the operator's view of who is registered.
 """
 
 import sanic.response as Response
@@ -25,12 +30,11 @@ bp = sanic.Blueprint("users", url_prefix="/users")
 @bp.post("/")
 @session_cookie(get=True, set=True)
 async def query(request):
-    output = request.args.get("output", "json")
-    admin = request.args.get("admin")
-    if admin and (not request.ctx.is_admin):
+    if not request.ctx.is_admin:
         return Response.json({})
 
-    cursor = Users.dump(admin=admin, output=output)
+    output = request.args.get("output", "json")
+    cursor = Users.dump(output=output)
     dump = [a async for a in cursor]
     return Response.json(dump)
 
@@ -38,29 +42,27 @@ async def query(request):
 @bp.get("/")
 @session_cookie(get=True, flashes=True)
 async def directory(request):
-    admin = request.args.get("admin")
-    if admin and (not request.ctx.is_admin):
-        # This passed the view function itself, and `state` straight to
-        # redirect(), which has no such argument, so it raised a 500. Send them
-        # to log in, then back here.
+    if not request.ctx.is_admin:
+        # Not an admin, so send them to log in and then back here. This used
+        # to pass the view function itself, and `state` straight to
+        # redirect(), which has no such argument, so it raised a 500.
         state = request.path + (
             f"?{request.query_string}" if request.query_string else ""
         )
         return Response.redirect(request.app.url_for("auth.authorize", state=state))
 
-    kwargs = {"admin": 1} if admin else {}
-    query_url = request.url_for("users.query", output="csv", **kwargs)
+    query_url = request.url_for("users.query", output="csv")
 
-    # users-page.ts reads {admin, url} out of the #runtime_json element, the
-    # same way the activities page does. This used to pass `admin` and `url`
-    # as separate template parameters, which left the template's
-    # ${runtime_json} unsubstituted -- render_template uses safe_substitute,
-    # so a missing key is emitted literally rather than raising. The page then
-    # called JSON.parse("${runtime_json}") at module scope, outside its own
+    # users-page.ts reads {url} out of the #runtime_json element, the same way
+    # the activities page does. This used to pass it as a separate template
+    # parameter, which left the template's ${runtime_json} unsubstituted --
+    # render_template uses safe_substitute, so a missing key is emitted
+    # literally rather than raising. The page then called
+    # JSON.parse("${runtime_json}") at module scope, outside its own
     # try/catch, and died before it ever ran.
     params = {
         "app_name": APP_BASE_NAME,
-        "runtime_json": {"admin": bool(admin), "url": query_url},
+        "runtime_json": {"url": query_url},
     }
     html = request.ctx.render_template("users-page.html", **params)
     return Response.html(html)

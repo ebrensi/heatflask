@@ -48,16 +48,18 @@
 
   <div>
     <label>
-      <input type="checkbox" id="profile-public" />
-      <span data-i18n="tab.profile.publicProfile">Public profile</span>
+      <input type="checkbox" id="profile-shared" />
+      <span data-i18n="tab.profile.sharedMaps">Shared Maps</span>
     </label>
-    <!-- The directory link is inside the string so a translation can put it
-       where the sentence needs it; SETUP finds it by id afterwards. -->
-    <div class="profile-note" data-i18n="tab.profile.publicNote">
-      Public profiles are listed in the
-      <a id="profile-directory-link" href="#" target="_blank" rel="noopener"
-        >public user directory</a
-      >, so other people can find and browse your map.
+    <!-- The link is inside the string so a translation can put it where the
+       sentence needs it; SETUP finds it by id afterwards. -->
+    <div class="profile-note" data-i18n="tab.profile.sharedMapsNote">
+      Off: only you can see your activities on Heatflask. On: anyone with a link
+      to your map can see the activities you have made public on Strava. Your
+      private ones stay yours either way.
+      <a id="profile-privacy-link" href="#" target="_blank" rel="noopener"
+        >How privacy works</a
+      >
     </div>
   </div>
 

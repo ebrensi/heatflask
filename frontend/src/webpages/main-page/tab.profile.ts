@@ -14,7 +14,13 @@
 
 import { icon } from "~/src/js/Icons"
 import { State } from "~/src/js/Model"
-import { CURRENT_USER, URLS, ADMIN, STRAVA_PROFILE_URL } from "~/src/js/Env"
+import {
+  CURRENT_USER,
+  URLS,
+  ADMIN,
+  STRAVA_PROFILE_URL,
+  PRIVACY_URL,
+} from "~/src/js/Env"
 import { t } from "~/src/js/i18n"
 
 import CONTENT from "bundle-text:./tab.profile.html"
@@ -88,31 +94,31 @@ export function SETUP(_state: State): void {
     form.submit()
   })
 
-  /* --- public profile --------------------------------------------------- */
+  /* --- shared maps ------------------------------------------------------ */
 
-  const directoryLink = el<HTMLAnchorElement>("profile-directory-link")
-  if (directoryLink && URLS.directory) directoryLink.href = URLS.directory
+  const privacyLink = el<HTMLAnchorElement>("profile-privacy-link")
+  if (privacyLink) privacyLink.href = PRIVACY_URL
 
-  const pub = el<HTMLInputElement>("profile-public")
-  if (pub) {
+  const shared = el<HTMLInputElement>("profile-shared")
+  if (shared) {
     // `private` is the stored field; the checkbox asks the opposite question
-    pub.checked = !user.private
+    shared.checked = !user.private
 
-    pub.addEventListener("change", async () => {
-      const setting = pub.checked ? "on" : "off"
+    shared.addEventListener("change", async () => {
+      const setting = shared.checked ? "on" : "off"
       try {
         const resp = await fetch(`${URLS.visibility}${setting}`, {
           method: "POST",
         })
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
-        /* The endpoint answers with the resulting public/not-public state, so
+        /* The endpoint answers with the resulting shared/not-shared state, so
          * take that rather than assuming the click did what it looked like. */
-        const isPublic = <boolean>await resp.json()
-        pub.checked = isPublic
-        user.private = !isPublic
+        const isShared = <boolean>await resp.json()
+        shared.checked = isShared
+        user.private = !isShared
       } catch (e) {
-        console.error("could not change profile visibility", e)
-        pub.checked = !pub.checked // put it back
+        console.error("could not change map sharing", e)
+        shared.checked = !shared.checked // put it back
       }
     })
   }

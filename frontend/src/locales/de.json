@@ -1,12 +1,9 @@
 {
   "common.close": "Schließen",
   "common.athleteFallback": "Athlet {id}",
-
   "splash.title": "{app} — animierte Aktivitätsvisualisierung",
   "splash.tagline": "Deine Strava&nbsp;Daten in Bewegung",
   "splash.demo": "Demo",
-  "splash.publicUsers": "Öffentliche Nutzer",
-
   "tab.query.title": "Karte von {name}",
   "tab.query.heading": "Aktivitäten abfragen:",
   "tab.query.optDays": "letzte Tage",
@@ -23,12 +20,10 @@
   "tab.query.authenticatedAs": "Angemeldet als",
   "tab.query.logout": "<i class=\"hf hf-sign-out\"></i> Abmelden",
   "tab.query.createAccount": "Konto anlegen oder anmelden.",
-
   "tab.activities.title": "Angezeigte Aktivitäten",
   "tab.activities.clearSelection": "Auswahl aufheben",
   "tab.activities.renderSelected": "Auswahl anzeigen",
   "tab.activities.zoomToSelection": "<i class=\"fas fa-search-plus\"></i> <i class=\"far fa-object-group\"></i> <i class=\"fas fa-search-minus\"></i> Auf Auswahl zoomen",
-
   "tab.controls.title": "Ebeneneinstellungen",
   "tab.controls.timescale": "Zeitskala <i>&tau;</i>",
   "tab.controls.timescaleHint": "Abspielgeschwindigkeit",
@@ -39,20 +34,18 @@
   "tab.controls.pathWidthHint": "null blendet die Linien aus",
   "tab.controls.colors": "Farben",
   "tab.controls.colorsHint": "Palette drehen",
-
   "tab.profile.loginTitle": "Anmelden",
   "tab.profile.anonNote": "Melde dich mit Strava an, um deine eigenen Aktivitäten zu sehen und dein Heatflask-Konto zu verwalten.",
   "tab.profile.loginLink": "Mit Strava anmelden",
   "tab.profile.editOnStrava": "Profil auf Strava bearbeiten",
   "tab.profile.indexNote": "Wir indizieren deine Aktivitätsübersichten, damit sie schnell verfügbar sind.",
   "tab.profile.viewIndex": "Index ansehen",
-  "tab.profile.publicProfile": "Öffentliches Profil",
-  "tab.profile.publicNote": "Öffentliche Profile stehen im <a id=\"profile-directory-link\" href=\"#\" target=\"_blank\" rel=\"noopener\">öffentlichen Nutzerverzeichnis</a>, sodass andere deine Karte finden und ansehen können.",
+  "tab.profile.sharedMaps": "Geteilte Karten",
+  "tab.profile.sharedMapsNote": "Aus: Nur du siehst deine Aktivitäten in Heatflask. An: Jeder mit einem Link zu deiner Karte sieht die Aktivitäten, die du auf Strava öffentlich gemacht hast. Deine privaten bleiben in jedem Fall nur für dich sichtbar. <a id=\"profile-privacy-link\" href=\"#\" target=\"_blank\" rel=\"noopener\">So funktioniert der Datenschutz</a>",
   "tab.profile.adminDirectory": "Nutzerverzeichnis (Admin)",
   "tab.profile.logout": "Abmelden",
   "tab.profile.deleteAccount": "Konto löschen",
   "tab.profile.deleteConfirm": "Dein Heatflask-Konto löschen?\n\nDamit werden deine indizierten Aktivitäten entfernt und Heatflask der Zugriff auf deine Strava-Daten entzogen. Das lässt sich nicht rückgängig machen.",
-
   "tab.info.title": "Info",
   "tab.info.controlsHeading": "Steuerung",
   "tab.info.ctrlDragKey": "<kbd>Ctrl</kbd> + ziehen",
@@ -81,11 +74,9 @@
   "tab.info.textLarger": "Größer",
   "tab.info.sponsor": "<i class=\"hf-github\"></i> Auf GitHub sponsern",
   "tab.info.contactsHeading": "Kontakt",
-
   "map.basemapAndTerrain": "Hintergrundkarte und Gelände",
   "map.pauseAnimation": "Animation anhalten",
   "map.resumeAnimation": "Animation fortsetzen",
-
   "capture.record": "Video aufnehmen ({period} s pro Durchlauf)",
   "capture.recordTruncated": "Video aufnehmen (ein Durchlauf dauert {period} s; nur die ersten {max} s werden aufgenommen)",
   "capture.recordArea": "Bereich im Rechteck aufnehmen",
@@ -98,23 +89,18 @@
   "capture.waitingForMap": "Warte auf die Karte…",
   "capture.encoding": "Kodiere… {percent} %",
   "capture.finalizing": "Wird abgeschlossen…",
-
   "import.title": "Import läuft",
   "import.stop": "Stopp",
   "import.stopping": "wird gestoppt…",
   "import.contacting": "verbinde mit Strava…",
   "import.countOf": "Aktivitäten: {received} von {total}",
   "import.count": "Aktivitäten: {received}",
-
   "table.noActivities": "keine Aktivitäten",
   "table.untitled": "(ohne Titel)",
-
   "users.pageTitle": "{app} — Nutzerverzeichnis",
   "users.heading": "Nutzerverzeichnis",
   "users.headingAdmin": "Registrierte Nutzer ({count})",
-  "users.headingPublic": "Öffentliches Nutzerverzeichnis ({count})",
   "users.emptyAdmin": "Keine registrierten Nutzer.",
-  "users.emptyPublic": "Noch hat niemand ein öffentliches Profil. Du kannst deines im Nutzer-Reiter deiner Karte öffentlich schalten und stehst dann hier.",
   "users.errParams": "Seitenparameter konnten nicht gelesen werden: {details}",
   "users.errLoad": "Verzeichnis konnte nicht geladen werden: {error}",
   "users.col.id": "ID",
@@ -122,7 +108,6 @@
   "users.col.city": "Stadt",
   "users.col.region": "Region",
   "users.col.country": "Land",
-  "users.col.lastActive": "Zuletzt aktiv",
   "users.col.logins": "Anmeldungen",
   "users.col.lastLogin": "Letzte Anmeldung",
   "users.col.indexAccess": "Indexzugriff",
@@ -131,7 +116,6 @@
   "users.daysAgo": "vor {count} Tagen",
   "users.monthsAgo": "vor {count} Mon.",
   "users.yearsAgo": "vor {count} J.",
-
   "activities.pageTitle": "{app} — Aktivitätsindex",
   "activities.heading": "Aktivitätsindex",
   "activities.fetching": "Aktivitäten werden geladen...",

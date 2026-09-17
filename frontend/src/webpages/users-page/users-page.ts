@@ -1,16 +1,13 @@
 /*
- * The user directory.
+ * The user listing at /users: every registered user, with the operational
+ * columns (login count, last login, last index access, shared). Admin only --
+ * there used to be a public directory here too, of athletes who had made
+ * their profile public, and it is gone along with the idea that sharing a map
+ * means being listed somewhere.
  *
- * Two modes off one page, the way the backend serves it:
- *
- *   /users          the public directory -- people who have ticked "public
- *                   profile", so others can find and browse their map
- *   /users?admin=1  every registered user, with the operational columns
- *                   (login count, last login, last index access, private)
- *
- * The point of the public list is to get you to somebody's map, so the whole
- * row is a link to it. Columns sort on click; master used DataTables for that,
- * which is a large dependency for one table, and the sort here is a few lines.
+ * Each row is a link to that user's map. Columns sort on click; master used
+ * DataTables for that, which is a large dependency for one table, and the
+ * sort here is a few lines.
  */
 
 import { img, sleep, escapeHTML } from "~/src/js/appUtil"
@@ -30,10 +27,9 @@ const status_el = document.getElementById("status")
  * blank with nothing but a console message. That is how the backend failing to
  * substitute ${runtime_json} stayed invisible. */
 const jsonString = document.getElementById("runtime_json").textContent
-let admin: boolean
 let url: string
 try {
-  ;({ admin, url } = JSON.parse(jsonString) as { admin: boolean; url: string })
+  ;({ url } = JSON.parse(jsonString) as { url: string })
 } catch (e) {
   status_el.textContent = t("users.errParams", { details: jsonString })
   throw e
@@ -97,29 +93,6 @@ const nameOf = (r: Row) =>
  * text cell is escaped before it goes into the table's innerHTML. */
 const nameHTML = (r: Row) => escapeHTML(nameOf(r))
 
-const publicColumns: Column[] = [
-  {
-    title: "",
-    field: U.PROFILE,
-    render: (r) => user_thumbnail(r[U.ID], <string>r[U.PROFILE]),
-    sortKey: () => 0,
-  },
-  {
-    titleKey: "users.col.name",
-    field: U.FIRSTNAME,
-    render: nameHTML,
-    sortKey: nameOf,
-  },
-  { titleKey: "users.col.city", field: U.CITY },
-  { titleKey: "users.col.region", field: U.STATE },
-  { titleKey: "users.col.country", field: U.COUNTRY },
-  {
-    titleKey: "users.col.lastActive",
-    field: U.LAST_LOGIN,
-    render: (r) => since(<number>r[U.LAST_LOGIN]),
-  },
-]
-
 const adminColumns: Column[] = [
   {
     title: "",
@@ -159,7 +132,7 @@ const adminColumns: Column[] = [
  * Table
  * ------------------------------------------------------------------ */
 
-const columns = admin ? adminColumns : publicColumns
+const columns = adminColumns
 let rows: Row[] = []
 /* The backend already sorts by last login descending, so start there. */
 let sortCol = columns.findIndex((c) => c.field === U.LAST_LOGIN)
@@ -253,16 +226,13 @@ async function run() {
 
   const heading = document.getElementById("heading")
   if (heading) {
-    heading.textContent = t(
-      admin ? "users.headingAdmin" : "users.headingPublic",
-      { count: rows.length }
-    )
+    heading.textContent = t("users.headingAdmin", { count: rows.length })
   }
 
   if (!rows.length) {
     table_element.innerHTML = ""
     status_el.classList.remove("spinner")
-    status_el.innerHTML = t(admin ? "users.emptyAdmin" : "users.emptyPublic")
+    status_el.innerHTML = t("users.emptyAdmin")
     return
   }
 

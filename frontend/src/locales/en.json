@@ -1,12 +1,9 @@
 {
   "common.close": "Close",
   "common.athleteFallback": "athlete {id}",
-
   "splash.title": "{app} — Animated Activity Visualization",
   "splash.tagline": "Motion Mapping for Your Strava&nbsp;Data",
   "splash.demo": "Demo",
-  "splash.publicUsers": "Public Users",
-
   "tab.query.title": "{name}'s map",
   "tab.query.heading": "Activities Query:",
   "tab.query.optDays": "recent days",
@@ -23,12 +20,10 @@
   "tab.query.authenticatedAs": "You are authenticated as",
   "tab.query.logout": "<i class=\"hf hf-sign-out\"></i> Log Out",
   "tab.query.createAccount": "Create an account and/or log in.",
-
   "tab.activities.title": "Rendered Activities",
   "tab.activities.clearSelection": "Clear Selection",
   "tab.activities.renderSelected": "Render selected",
   "tab.activities.zoomToSelection": "<i class=\"fas fa-search-plus\"></i> <i class=\"far fa-object-group\"></i> <i class=\"fas fa-search-minus\"></i> Zoom to selection",
-
   "tab.controls.title": "Layer Settings",
   "tab.controls.timescale": "Timescale <i>&tau;</i>",
   "tab.controls.timescaleHint": "playback speed",
@@ -39,20 +34,18 @@
   "tab.controls.pathWidthHint": "zero hides the paths",
   "tab.controls.colors": "Colors",
   "tab.controls.colorsHint": "rotate the palette",
-
   "tab.profile.loginTitle": "Log in",
   "tab.profile.anonNote": "Log in with Strava to see your own activities, and to manage your Heatflask account.",
   "tab.profile.loginLink": "Log in with Strava",
   "tab.profile.editOnStrava": "Edit your profile on Strava",
   "tab.profile.indexNote": "We index your activity summaries for fast access.",
   "tab.profile.viewIndex": "View index",
-  "tab.profile.publicProfile": "Public profile",
-  "tab.profile.publicNote": "Public profiles are listed in the <a id=\"profile-directory-link\" href=\"#\" target=\"_blank\" rel=\"noopener\">public user directory</a>, so other people can find and browse your map.",
+  "tab.profile.sharedMaps": "Shared Maps",
+  "tab.profile.sharedMapsNote": "Off: only you can see your activities on Heatflask. On: anyone with a link to your map can see the activities you have made public on Strava. Your private ones stay yours either way. <a id=\"profile-privacy-link\" href=\"#\" target=\"_blank\" rel=\"noopener\">How privacy works</a>",
   "tab.profile.adminDirectory": "User directory (admin)",
   "tab.profile.logout": "Log Out",
   "tab.profile.deleteAccount": "Delete Account",
   "tab.profile.deleteConfirm": "Delete your Heatflask account?\n\nThis removes your indexed activities and revokes Heatflask's access to your Strava data. It cannot be undone.",
-
   "tab.info.title": "Info",
   "tab.info.controlsHeading": "Controls",
   "tab.info.ctrlDragKey": "<kbd>Ctrl</kbd> + drag",
@@ -81,11 +74,9 @@
   "tab.info.textLarger": "Larger",
   "tab.info.sponsor": "<i class=\"hf-github\"></i> Sponsor on GitHub",
   "tab.info.contactsHeading": "Contacts",
-
   "map.basemapAndTerrain": "Basemap and terrain",
   "map.pauseAnimation": "Pause animation",
   "map.resumeAnimation": "Resume animation",
-
   "capture.record": "Record video ({period}s loop)",
   "capture.recordTruncated": "Record video (one cycle is {period}s; only the first {max}s will be recorded)",
   "capture.recordArea": "Record the area inside the box",
@@ -98,23 +89,18 @@
   "capture.waitingForMap": "waiting for the map to load…",
   "capture.encoding": "encoding… {percent}%",
   "capture.finalizing": "finalizing…",
-
   "import.title": "Importing",
   "import.stop": "Stop",
   "import.stopping": "stopping…",
   "import.contacting": "contacting Strava…",
   "import.countOf": "{received} of {total} activities",
   "import.count": "{received} activities",
-
   "table.noActivities": "no activities",
   "table.untitled": "(untitled)",
-
   "users.pageTitle": "{app} — User Directory",
   "users.heading": "User Directory",
   "users.headingAdmin": "Registered Users ({count})",
-  "users.headingPublic": "Public User Directory ({count})",
   "users.emptyAdmin": "No registered users.",
-  "users.emptyPublic": "No one has a public profile yet. You can make yours public from the User tab on your map, and you will be listed here.",
   "users.errParams": "could not read page parameters: {details}",
   "users.errLoad": "could not load the directory: {error}",
   "users.col.id": "ID",
@@ -122,7 +108,6 @@
   "users.col.city": "City",
   "users.col.region": "Region",
   "users.col.country": "Country",
-  "users.col.lastActive": "Last active",
   "users.col.logins": "Logins",
   "users.col.lastLogin": "Last login",
   "users.col.indexAccess": "Index access",
@@ -131,7 +116,6 @@
   "users.daysAgo": "{count} days ago",
   "users.monthsAgo": "{count} mo ago",
   "users.yearsAgo": "{count} yr ago",
-
   "activities.pageTitle": "{app} — Activity Index",
   "activities.heading": "Activity Index",
   "activities.fetching": "Fetching activities...",

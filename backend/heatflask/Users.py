@@ -224,10 +224,8 @@ default_out_fields = {
     U.CITY: True,
     U.STATE: True,
     U.COUNTRY: True,
-    # Shown as "last active" in the public directory, which is also what the
-    # listing is sorted by (SORT_SPEC below). Only users who have opted in to
-    # being public appear there at all, and master's directory showed the same
-    # column.
+    # Shown as "last active", which is also what the listing is sorted by
+    # (SORT_SPEC below)
     U.LAST_LOGIN: True,
     #
     # U.LOGIN_COUNT=False
@@ -242,9 +240,9 @@ SORT_SPEC = [(U.LAST_LOGIN, DESCENDING)]
 
 def is_sharing(user: dict) -> bool:
     """
-    Whether this athlete lets other people see their map. The public-profile
-    switch: off unless they turned it on, and a record without the field has
-    never been asked, so it counts as off.
+    Whether this athlete lets other people see their map: the "Shared Maps"
+    switch, off unless they turned it on. A record without the field predates
+    the question, so it counts as off.
     """
     return user.get(U.PRIVATE, True) is False
 
@@ -256,21 +254,16 @@ async def sharing_ids() -> list[int]:
     return [u[U.ID] async for u in cursor]
 
 
-async def dump(admin=False, output="json"):
-    query = {} if admin else {U.PRIVATE: False}
-
-    out_fields = {**default_out_fields}
-    if admin:
-        out_fields.update(
-            {
-                U.LAST_LOGIN: True,
-                U.LOGIN_COUNT: True,
-                U.LAST_INDEX_ACCESS: True,
-                U.PRIVATE: True,
-            }
-        )
+async def dump(output="json"):
+    """Every registered user, for the admin listing at /users"""
+    out_fields = {
+        **default_out_fields,
+        U.LOGIN_COUNT: True,
+        U.LAST_INDEX_ACCESS: True,
+        U.PRIVATE: True,
+    }
     users = await get_collection()
-    cursor = users.find(filter=query, projection=out_fields, sort=SORT_SPEC)
+    cursor = users.find(projection=out_fields, sort=SORT_SPEC)
     keys = list(out_fields.keys())
     csv = output == "csv"
     if csv:

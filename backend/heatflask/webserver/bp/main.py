@@ -54,7 +54,6 @@ async def splash_page(request: Request):
                 # was activities.activities_page, the logged-in user's
                 # activity index, not a demo
                 "demo": app.url_for("main.demo_page"),
-                "directory": app.url_for("users.directory"),
                 "authorize": app.url_for("auth.authorize", state=request.path),
             },
         },
@@ -150,12 +149,8 @@ async def user_page(request: Request, target_user_id=None):
                 "visibility": app.url_for("main.visibility", setting=""),
                 "delete": app.url_for("main.delete"),
                 "logout": app.url_for("auth.logout"),
-                # The public directory, so the profile tab can link to the
-                # list a user is opting into when they make themselves public
-                "directory": app.url_for("users.directory"),
-                # Same page with the admin columns; the frontend only offers
-                # this when ADMIN is set, and the route checks again anyway
-                "admin": app.url_for("users.directory", admin=1),
+                # The user listing; admin only, and the route checks again
+                "admin": app.url_for("users.directory"),
                 # The internal log, also admin-only and checked again there
                 "history": app.url_for("history.page"),
             },

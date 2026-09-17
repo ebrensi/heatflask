@@ -1,12 +1,9 @@
 {
   "common.close": "Закрыть",
   "common.athleteFallback": "спортсмен {id}",
-
   "splash.title": "{app} — анимированная визуализация активностей",
   "splash.tagline": "Ваши данные Strava&nbsp;в движении",
   "splash.demo": "Демо",
-  "splash.publicUsers": "Открытые профили",
-
   "tab.query.title": "Карта: {name}",
   "tab.query.heading": "Запрос активностей:",
   "tab.query.optDays": "последние дни",
@@ -23,12 +20,10 @@
   "tab.query.authenticatedAs": "Вы вошли как",
   "tab.query.logout": "<i class=\"hf hf-sign-out\"></i> Выйти",
   "tab.query.createAccount": "Создайте аккаунт или войдите.",
-
   "tab.activities.title": "Показанные активности",
   "tab.activities.clearSelection": "Снять выделение",
   "tab.activities.renderSelected": "Показать выбранное",
   "tab.activities.zoomToSelection": "<i class=\"fas fa-search-plus\"></i> <i class=\"far fa-object-group\"></i> <i class=\"fas fa-search-minus\"></i> Приблизить к выделению",
-
   "tab.controls.title": "Настройки слоя",
   "tab.controls.timescale": "Масштаб времени <i>&tau;</i>",
   "tab.controls.timescaleHint": "скорость воспроизведения",
@@ -39,20 +34,18 @@
   "tab.controls.pathWidthHint": "ноль скрывает линии",
   "tab.controls.colors": "Цвета",
   "tab.controls.colorsHint": "сдвиг палитры",
-
   "tab.profile.loginTitle": "Вход",
   "tab.profile.anonNote": "Войдите через Strava, чтобы видеть свои активности и управлять аккаунтом Heatflask.",
   "tab.profile.loginLink": "Войти через Strava",
   "tab.profile.editOnStrava": "Изменить профиль в Strava",
   "tab.profile.indexNote": "Мы индексируем сводки ваших активностей для быстрого доступа.",
   "tab.profile.viewIndex": "Открыть указатель",
-  "tab.profile.publicProfile": "Открытый профиль",
-  "tab.profile.publicNote": "Открытые профили попадают в <a id=\"profile-directory-link\" href=\"#\" target=\"_blank\" rel=\"noopener\">каталог пользователей</a>, чтобы другие могли найти вашу карту и посмотреть её.",
+  "tab.profile.sharedMaps": "Общий доступ к картам",
+  "tab.profile.sharedMapsNote": "Выключено: ваши тренировки в Heatflask видите только вы. Включено: любой, у кого есть ссылка на вашу карту, увидит тренировки, которые вы открыли для всех в Strava. Приватные в любом случае останутся только вашими. <a id=\"profile-privacy-link\" href=\"#\" target=\"_blank\" rel=\"noopener\">Как устроена приватность</a>",
   "tab.profile.adminDirectory": "Каталог пользователей (админ)",
   "tab.profile.logout": "Выйти",
   "tab.profile.deleteAccount": "Удалить аккаунт",
   "tab.profile.deleteConfirm": "Удалить ваш аккаунт Heatflask?\n\nЭто удалит проиндексированные активности и отзовёт доступ Heatflask к вашим данным в Strava. Отменить будет нельзя.",
-
   "tab.info.title": "Справка",
   "tab.info.controlsHeading": "Управление",
   "tab.info.ctrlDragKey": "<kbd>Ctrl</kbd> + перетаскивание",
@@ -81,11 +74,9 @@
   "tab.info.textLarger": "Больше",
   "tab.info.sponsor": "<i class=\"hf-github\"></i> Стать спонсором на GitHub",
   "tab.info.contactsHeading": "Контакты",
-
   "map.basemapAndTerrain": "Подложка и рельеф",
   "map.pauseAnimation": "Приостановить анимацию",
   "map.resumeAnimation": "Продолжить анимацию",
-
   "capture.record": "Записать видео (цикл {period} с)",
   "capture.recordTruncated": "Записать видео (цикл длится {period} с; будут записаны только первые {max} с)",
   "capture.recordArea": "Записать область внутри рамки",
@@ -98,23 +89,18 @@
   "capture.waitingForMap": "ожидание загрузки карты…",
   "capture.encoding": "кодирование… {percent} %",
   "capture.finalizing": "завершение…",
-
   "import.title": "Импорт",
   "import.stop": "Стоп",
   "import.stopping": "останавливаем…",
   "import.contacting": "подключение к Strava…",
   "import.countOf": "Активности: {received} из {total}",
   "import.count": "Активности: {received}",
-
   "table.noActivities": "нет активностей",
   "table.untitled": "(без названия)",
-
   "users.pageTitle": "{app} — каталог пользователей",
   "users.heading": "Каталог пользователей",
   "users.headingAdmin": "Зарегистрированные пользователи ({count})",
-  "users.headingPublic": "Открытый каталог пользователей ({count})",
   "users.emptyAdmin": "Зарегистрированных пользователей нет.",
-  "users.emptyPublic": "Пока ни у кого нет открытого профиля. Сделайте свой открытым на вкладке «Профиль» вашей карты — и вы появитесь здесь.",
   "users.errParams": "не удалось прочитать параметры страницы: {details}",
   "users.errLoad": "не удалось загрузить каталог: {error}",
   "users.col.id": "ID",
@@ -122,7 +108,6 @@
   "users.col.city": "Город",
   "users.col.region": "Регион",
   "users.col.country": "Страна",
-  "users.col.lastActive": "Последняя активность",
   "users.col.logins": "Входы",
   "users.col.lastLogin": "Последний вход",
   "users.col.indexAccess": "Обращение к указателю",
@@ -131,7 +116,6 @@
   "users.daysAgo": "{count} дн. назад",
   "users.monthsAgo": "{count} мес. назад",
   "users.yearsAgo": "{count} г. назад",
-
   "activities.pageTitle": "{app} — указатель активностей",
   "activities.heading": "Указатель активностей",
   "activities.fetching": "Загрузка активностей...",

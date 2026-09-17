@@ -25,9 +25,7 @@ export type RuntimeJson = {
     visibility: string
     delete: string
     logout: string
-    /** The public user directory */
-    directory: string
-    /** The same directory with the admin columns; only sent to admins */
+    /** The user listing; only sent to admins */
     admin: string
     /** The internal history log; only useful to admins */
     history: string
@@ -66,6 +64,10 @@ export const CAPTURE_DURATION_MAX = 30
 
 // Where the "contribute" links point
 export const SPONSOR_URL = "https://github.com/sponsors/ebrensi"
+
+// What Heatflask shows to whom, in more detail than a checkbox can
+export const PRIVACY_URL =
+  "https://github.com/ebrensi/heatflask/blob/main/docs/PRIVACY.md"
 
 /* The catalogs and the instructions for adding one live together, so the
  * "help fix it" link goes to the README next to them rather than to the repo
