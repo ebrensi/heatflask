@@ -124,7 +124,7 @@ async def page(request: Request):
             limit=limit, kind=kind, user=int(user) if user else None
         )
     except (TypeError, ValueError):
-        raise sanic.exceptions.SanicException("bad query", status_code=400)
+        raise sanic.exceptions.SanicException("bad query", status_code=400, quiet=True)
 
     if request.args.get("output") == "json":
         return Response.json(entries, default=str)

@@ -87,14 +87,18 @@ def relevant_info(user):
 @bp.get("/<target_user_id:int>")
 @session_cookie(get=True, set=True, flashes=True)
 async def user_page(request: Request, target_user_id=None):
+    app = request.app
     target_user = await Users.get(target_user_id)
     if target_user_id and not target_user:
-        raise SanicException(
-            f"Sorry, Strava athlete {target_user_id} is not registered with Heatflask",
-            status_code=404,
+        # As the 2020 app did: say so on the splash page rather than serve a
+        # bare error. These are old bookmarks and shared links, whose athlete
+        # triage has since retired, and the splash page is where they can
+        # sign in again and get their map back.
+        request.ctx.flash(
+            f"Strava athlete {target_user_id} is not registered with Heatflask"
         )
+        return Response.redirect(app.url_for("main.splash_page"))
 
-    app = request.app
     params = {
         # These will be imbedded in the served html as text
         "APP_NAME": APP_BASE_NAME,
@@ -138,7 +142,7 @@ async def demo_page(request: Request):
 
 @bp.get("/test")
 async def test(request: Request):
-    raise SanicException("get outta here", status_code=403)
+    raise SanicException("get outta here", status_code=403, quiet=True)
 
 
 # This decorator is for endpoints that default to doing something for
@@ -153,10 +157,12 @@ def self_or_admin(func):
             target_user_id = request.args.get("user")
             if target_user_id and not request.ctx.is_admin:
                 raise SanicException(
-                    "sorry, you are not authorized to do this", status_code=401
+                    "sorry, you are not authorized to do this",
+                    status_code=401,
+                    quiet=True,
                 )
             elif not request.ctx.current_user:
-                raise SanicException("Who are you?", status_code=400)
+                raise SanicException("Who are you?", status_code=400, quiet=True)
 
             target_user = (
                 await Users.get(target_user_id)
@@ -165,7 +171,7 @@ def self_or_admin(func):
             )
             if not target_user:
                 raise SanicException(
-                    f"User {target_user_id} not found.", status_code=404
+                    f"User {target_user_id} not found.", status_code=404, quiet=True
                 )
 
             return await f(request, target_user, *args, **kwargs)

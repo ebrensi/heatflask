@@ -72,7 +72,7 @@ def admin_strava_session(func):
         @wraps(f)
         async def decorated_function(request, *args, **kwargs):
             if not request.ctx.is_admin:
-                raise SanicException("sorry", status_code=401)
+                raise SanicException("sorry", status_code=401, quiet=True)
             request.ctx.strava_client = Strava.AsyncClient("admin")
             response = f(request, *args, **kwargs)
             if isawaitable(response):
@@ -130,7 +130,7 @@ async def delete_subscription(request):
 async def updates_page(request):
     """Recent Strava webhook deliveries, newest first, from the capped log."""
     if not request.ctx.is_admin:
-        raise SanicException("sorry", status_code=401)
+        raise SanicException("sorry", status_code=401, quiet=True)
     n = int(request.args.get("n", 100))
     events = [doc async for doc in Updates.recent(n)]
     for doc in events:

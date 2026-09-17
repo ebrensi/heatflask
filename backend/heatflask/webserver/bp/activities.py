@@ -69,7 +69,7 @@ async def query(request: SessionRequest):
         target_user = await Users.get(target_user_id)
         if not target_user:
             raise SanicException(
-                f"user {target_user_id} not registered", status_code=404
+                f"user {target_user_id} not registered", status_code=404, quiet=True
             )
 
         # If there are no index entries for this user and they aren't
@@ -225,7 +225,7 @@ async def activities_page(request: SessionRequest):
         target_user = request.ctx.current_user or await Users.get(target_user_id)
         if not target_user:
             raise SanicException(
-                f"user {target_user_id} not registered", status_code=404
+                f"user {target_user_id} not registered", status_code=404, quiet=True
             )
 
         query["user_id"] = target_user_id
