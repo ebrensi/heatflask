@@ -88,13 +88,29 @@ const ALT_RECALIBRATE_ZOOM = 2
  * terrain mesh flickers in and out. */
 const DEPTH_TEST = false
 
-/* Dot streams are resampled onto a uniform grid of this many seconds, or
- * coarser for an activity so long it would otherwise take more than
+/* Dot streams are resampled onto a uniform grid of at most this many seconds,
+ * or coarser for an activity so long it would otherwise take more than
  * MAX_SAMPLES_PER_ACTIVITY texels. Positions are linearly interpolated between
  * samples, so at 2s a dot strays from the recorded track by at most the
  * curvature of two seconds of travel. */
 const SAMPLE_SECONDS = 2
 const MAX_SAMPLES_PER_ACTIVITY = 16384
+
+/**
+ * How many grid steps to divide an activity into, given a target step.
+ *
+ * The grid is fitted to the activity rather than laid over it: the step is
+ * shortened so that N of them land exactly on the end of the recording. With
+ * a grid of fixed-length steps the last one runs past the end, and since a
+ * sample past the end is not a position the athlete was ever at, it is marked
+ * invalid -- which culled every dot in the final partial step, so an activity
+ * drew nothing over its last seconds. Fitting the grid costs no extra texels
+ * and leaves every instant of the activity bracketed by two real samples.
+ */
+function gridSteps(duration: number, dt: number): number {
+  if (!(duration > 0)) return 1
+  return Math.min(MAX_SAMPLES_PER_ACTIVITY, Math.ceil(duration / dt))
+}
 
 /* Texture layout. Sample offsets are carried as float32, which counts exactly
  * only to 2**24, so that caps the total -- as does the GPU's largest texture,
@@ -794,8 +810,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
       for (const A of items) {
         const time = A.streams.time
         const duration = time[time.length - 1] || 0
-        total +=
-          Math.min(MAX_SAMPLES_PER_ACTIVITY, Math.ceil(duration / dt)) + 2
+        total += gridSteps(duration, dt) + 2
       }
       if (total <= maxTotal) break
       dt *= 2
@@ -809,8 +824,11 @@ export class HeatflaskLayer implements CustomLayerInterface {
       const { px, time, altitude: alt } = A.streams
       const nPoints = time.length
       const duration = time[nPoints - 1] || 0
-      const step = Math.max(dt, duration / MAX_SAMPLES_PER_ACTIVITY)
-      const count = Math.ceil(duration / step) + 2
+      /* steps land on the end; one sample past it, so the last step still has
+       * an upper bracket to fetch */
+      const steps = gridSteps(duration, dt)
+      const step = duration > 0 ? duration / steps : dt
+      const count = steps + 2
 
       const [bx0, by0, bx1, by1] = A.pxBounds.data
       const ox = (this.originX[a] = (bx0 + bx1) / 2)
@@ -837,8 +855,13 @@ export class HeatflaskLayer implements CustomLayerInterface {
         data[o + 1] =
           px[2 * seg + 1] + (px[2 * seg + 3] - px[2 * seg + 1]) * f - oy
         data[o + 2] = alt[seg] + (alt[seg + 1] - alt[seg]) * f
-        /* a recording gap is a straight line the athlete never travelled */
-        data[o + 3] = gaps.has(seg) || t > duration ? 0 : 1
+        /* A recording gap is a straight line the athlete never travelled. The
+         * samples past step `steps` are past the end of the recording; they
+         * exist only so the fetch of i0+1 has something to land on. Tested by
+         * index, not by t > duration: the last step's t is duration give or
+         * take a float rounding, and rounding the wrong way would invalidate a
+         * real sample. */
+        data[o + 3] = gaps.has(seg) || s > steps ? 0 : 1
       }
       offset += count
     }
