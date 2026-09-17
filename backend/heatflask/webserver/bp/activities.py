@@ -55,23 +55,40 @@ async def query(request: SessionRequest):
     # query without one (an ?id= link, the all-users list) returned anyone's
     # private activities, and their cached tracks, to anyone who asked.
     query.pop("privacy", None)
-    if not request.ctx.is_admin:
-        viewer = request.ctx.current_user
-        query["privacy"] = Index.visible_to(viewer[U.ID] if viewer else None)
 
     target_user_id = query.get("user_id")
+    target_user = None
     if target_user_id:
-        is_owner_or_admin = request.ctx.current_user and (
-            request.ctx.is_admin
-            or (request.ctx.current_user[U.ID] == int(target_user_id))
-        )
-
         target_user = await Users.get(target_user_id)
         if not target_user:
             raise SanicException(
                 f"user {target_user_id} not registered", status_code=404, quiet=True
             )
 
+    viewer = request.ctx.current_user
+    is_owner = bool(viewer and target_user and viewer[U.ID] == target_user[U.ID])
+
+    if not request.ctx.is_admin:
+        viewer_id = viewer[U.ID] if viewer else None
+        if target_user is None:
+            sharing = await Users.sharing_ids()
+        elif Users.is_sharing(target_user):
+            sharing = [target_user[U.ID]]
+        elif is_owner:
+            sharing = []
+        else:
+            # Someone else's map, and they have not chosen to share it. Refused
+            # before anything below can import their index with their token.
+            await sendPacked(
+                {
+                    "error": "This athlete's map is private"
+                    + ("" if viewer else ". If it is yours, log in to see it.")
+                }
+            )
+            return
+        query["privacy"] = Index.visible_to(viewer_id, sharing=sharing)
+
+    if target_user:
         # If there are no index entries for this user and they aren't
         #  currently being imported, start importing them now
         if (not await Index.has_user_entries(**target_user)) and (
@@ -82,7 +99,7 @@ async def query(request: SessionRequest):
             # by the time we start looking at import progress
             await asyncio.sleep(0)
 
-        elif is_owner_or_admin:
+        elif is_owner or request.ctx.is_admin:
             # The index exists, so nothing above will touch it again and only
             # a Strava webhook would keep it current -- which never happens in
             # local development, and misses anything recorded while a webhook
@@ -107,13 +124,6 @@ async def query(request: SessionRequest):
             async for msg in progress:
                 await sendPacked({"msg": msg})
                 log.debug("awaiting index import finish: %s", msg)
-
-    elif not request.ctx.is_admin:
-        # If there is no target_user then this is a multi-user query.
-
-        # We need to make sure a user is not accessing
-        # other users' private activities
-        pass
 
     query_result = await Index.query(**query)
     if "delete" in query_result:

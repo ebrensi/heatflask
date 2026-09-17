@@ -240,6 +240,22 @@ default_out_fields = {
 SORT_SPEC = [(U.LAST_LOGIN, DESCENDING)]
 
 
+def is_sharing(user: dict) -> bool:
+    """
+    Whether this athlete lets other people see their map. The public-profile
+    switch: off unless they turned it on, and a record without the field has
+    never been asked, so it counts as off.
+    """
+    return user.get(U.PRIVATE, True) is False
+
+
+async def sharing_ids() -> list[int]:
+    """The athletes who let other people see their map"""
+    users = await get_collection()
+    cursor = users.find({U.PRIVATE: False}, projection={U.ID: True})
+    return [u[U.ID] async for u in cursor]
+
+
 async def dump(admin=False, output="json"):
     query = {} if admin else {U.PRIVATE: False}
 

@@ -64,6 +64,24 @@ async def splash_page(request: Request):
     return Response.html(html)
 
 
+def target_info(target_user, viewer, is_admin: bool):
+    """
+    What the map page may say about whose map it is. A map its owner has not
+    shared is refused by /activities, and their name and photo are Strava data
+    too, so for anyone else the page carries only the id, which is in the URL
+    already.
+    """
+    info = relevant_info(target_user)
+    if (
+        info
+        and not Users.is_sharing(target_user)
+        and not is_admin
+        and not (viewer and viewer[U.ID] == target_user[U.ID])
+    ):
+        return {"id": target_user[U.ID], "private": True}
+    return info
+
+
 def relevant_info(user):
     if not user:
         return None
@@ -120,7 +138,9 @@ async def user_page(request: Request, target_user_id=None):
             # at non-visible element "#runtime_json"
             "APP_VERSION": APP_VERSION,
             "CURRENT_USER": relevant_info(request.ctx.current_user),
-            "TARGET_USER": relevant_info(target_user),
+            "TARGET_USER": target_info(
+                target_user, request.ctx.current_user, request.ctx.is_admin
+            ),
             "ADMIN": request.ctx.is_admin,
             "OFFLINE": OFFLINE,
             "URLS": {

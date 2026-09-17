@@ -13,7 +13,7 @@ import asyncio
 import types
 from pymongo import DESCENDING, ReplaceOne
 from aiohttp import ClientResponseError
-from typing import TypedDict
+from typing import Iterable, TypedDict
 
 from . import DataAPIs
 from . import History
@@ -541,21 +541,28 @@ SORT_SPECS = [(F.UTC_START_TIME, DESCENDING)]
 NON_PUBLIC_VISIBILITY = ["only_me", "followers"]
 
 
-def visible_to(viewer_id: int | None) -> dict:
+def visible_to(viewer_id: int | None, sharing: Iterable[int]) -> dict:
     """
-    A Mongo filter for the activities this viewer may see: their own, and
-    everyone's public ones. None is an anonymous viewer, who sees only public.
+    A Mongo filter for the activities this viewer may see: all of their own,
+    and the public activities of the athletes in `sharing` -- those who have
+    chosen to share their map (Users.sharing_ids). None is an anonymous
+    viewer, who sees only those.
+
+    Strava's API Agreement (2.3) lets us show an athlete's data to that athlete
+    only, so an activity being public on Strava is not enough by itself: its
+    owner has to have opted in here too.
 
     Public means not flagged private and not restricted by visibility. Missing
     fields count as public, since older index entries may lack visibility.
     """
-    public = {
+    shared = {
+        F.USER_ID: {"$in": [int(uid) for uid in sharing]},
         F.FLAG_PRIVATE: {"$ne": True},
         F.VISIBILITY: {"$nin": NON_PUBLIC_VISIBILITY},
     }
     if viewer_id is None:
-        return public
-    return {"$or": [public, {F.USER_ID: int(viewer_id)}]}
+        return shared
+    return {"$or": [shared, {F.USER_ID: int(viewer_id)}]}
 
 
 async def query(
