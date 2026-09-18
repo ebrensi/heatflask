@@ -97,13 +97,17 @@ export function reset(): void {
 /** How far the palette is turned before it is dealt out. See makePalette. */
 let colorRotation = 0
 
-/** assign a dot-color to each item of _items */
+/**
+ * Assign a dot-color to each item of _items, in the order the table lists
+ * them -- most recent first -- since neighbours in that list are the ones
+ * the palette keeps apart. The order they arrive in isn't that: the backend
+ * sends the streams it already holds first, then the rest in whatever order
+ * Strava answers (Streams.aiter_query).
+ */
 function setDotColors(): void {
   const colorPalette = ColorPalette.makePalette(items.size, colorRotation)
-  let i = 0
-  for (const A of items.values()) {
-    A.colors.dot = colorPalette[i++]
-  }
+  const byDate = [...items.values()].sort((a, b) => (b.ts || 0) - (a.ts || 0))
+  for (let i = 0; i < byDate.length; i++) byDate[i].colors.dot = colorPalette[i]
 }
 
 /**

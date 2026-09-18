@@ -86,10 +86,10 @@ const PW_HIGH = 10
 
 /* Colour rotation, in degrees of one turn of the palette. The knob sweeps a
  * full circle from the top, so the dial's angle is the rotation itself, and
- * its rest position -- 12 o'clock, 0 degrees -- is the palette as it has
- * always been dealt out. A full turn comes back to the same colours, which is
- * why this dial is linear where the others are exponential: there is nothing
- * at either end of it to reach. */
+ * its rest position -- 12 o'clock, 0 degrees -- is the palette unturned. A
+ * full turn comes back to the same colours, which is why this dial is linear
+ * where the others are exponential: there is nothing at either end of it to
+ * reach. */
 const CR_HIGH = 360
 
 /** A duration in seconds, at a length people can read at a glance. */
