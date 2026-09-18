@@ -31,16 +31,19 @@
         # Postgres survives only as a one-shot user import (Users.migrate(),
         # which talks to the remote legacy database, not a local one), and
         # Redis was a read cache in front of Mongo.
-        mongoConf = pkgs.writeText "mongod.conf" ''
-          storage:
-            dbPath: ./.data/mongodb
-          systemLog:
-            destination: file
-            path: ./.data/mongodb/mongod.log
-            logAppend: true
-          net:
-            bindIp: 127.0.0.1
-            port: 27017
+
+        # One local database per clone, at .data/mongodb in the main worktree.
+        # A relative dbPath resolved against the shell's working directory, so
+        # starting MongoDB from frontend/ or from a linked worktree quietly
+        # made a second, empty database, and it looked as if the data had
+        # been wiped. --git-common-dir is the main worktree's .git from
+        # anywhere in the repo, linked worktrees included.
+        mongoDataDir = ''
+          git_dir=$(${pkgs.git}/bin/git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || {
+            echo "ERROR: run this from inside the heatflask repository"
+            exit 1
+          }
+          MONGO_DATA_DIR="$(dirname "$git_dir")/.data/mongodb"
         '';
 
         setupScript = pkgs.writeShellScriptBin "heatflask-setup" ''
@@ -48,7 +51,8 @@
 
           echo "Setting up Heatflask development environment..."
 
-          mkdir -p .data/mongodb
+          ${mongoDataDir}
+          mkdir -p "$MONGO_DATA_DIR"
 
           # backend/.venv/heatflask, not a bare .venv: that is the path the
           # pre-commit hook runs Black from, and what .gitignore excludes
@@ -77,29 +81,33 @@
 
         startServicesScript = pkgs.writeShellScriptBin "heatflask-start-services" ''
           set -e
+          ${mongoDataDir}
 
-          # Detect by port, not by process name. mongod's dbPath lives in the
-          # config file, so a `pgrep -f "mongod.*\.data/mongodb"` pattern never
-          # matches -- the command line is just `mongod --config ... --fork`.
-          # We would then start a second server, which exits 48 (addr in use).
+          # Detect by port, not by process name, so that a mongod started some
+          # other way is found too. A second server would exit 48 (address in
+          # use).
           if (exec 3<>/dev/tcp/127.0.0.1/27017) 2>/dev/null; then
             echo "MongoDB already running on 127.0.0.1:27017"
           else
             echo "Starting MongoDB..."
-            mkdir -p .data/mongodb
-            ${pkgs.mongodb}/bin/mongod --config ${mongoConf} --fork
-            echo "MongoDB: localhost:27017"
+            mkdir -p "$MONGO_DATA_DIR"
+            ${pkgs.mongodb}/bin/mongod --fork \
+              --dbpath "$MONGO_DATA_DIR" \
+              --logpath "$MONGO_DATA_DIR/mongod.log" --logappend \
+              --bind_ip 127.0.0.1 --port 27017
+            echo "MongoDB: localhost:27017, data in $MONGO_DATA_DIR"
           fi
         '';
 
         stopServicesScript = pkgs.writeShellScriptBin "heatflask-stop-services" ''
+          ${mongoDataDir}
           # mongod can shut itself down given its dbPath. The mongodb package
           # ships mongo/mongod/mongos and *not* mongosh, so the previous
           # `mongosh --eval shutdown` was a command-not-found, and its pkill
           # fallback matched a pattern that never appears in mongod's argv.
           if (exec 3<>/dev/tcp/127.0.0.1/27017) 2>/dev/null; then
             echo "Stopping MongoDB..."
-            ${pkgs.mongodb}/bin/mongod --dbpath .data/mongodb --shutdown
+            ${pkgs.mongodb}/bin/mongod --dbpath "$MONGO_DATA_DIR" --shutdown
           else
             echo "MongoDB is not running"
           fi
