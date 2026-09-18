@@ -101,6 +101,11 @@ const DEPTH_TEST = false
  * coarser, and it has a quarter of the pixels to fill. See SHADOW_FS. */
 const SHADOW_SCALE = 0.5
 
+/* The height, in CSS px, of the light that shades the spheres, against the
+ * shadow's offset (see lightDirection). With the default 5px offset, 12 puts
+ * the highlight a little above centre. */
+const LIGHT_HEIGHT = 12
+
 /* Dot streams are resampled onto a uniform grid of at most this many seconds,
  * or coarser for an activity so long it would otherwise take more than
  * MAX_SAMPLES_PER_ACTIVITY texels. Positions are linearly interpolated between
@@ -279,6 +284,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
       "u_zScale",
       "u_size",
       "u_shadow",
+      "u_light",
       "u_T",
       "u_phase",
       "u_streams",
@@ -450,6 +456,16 @@ export class HeatflaskLayer implements CustomLayerInterface {
     return 0.5 * blur * this.map.getPixelRatio() * SHADOW_SCALE
   }
 
+  /** Toward the light that shades the spheres (see DOT_FS), opposite the
+   * shadow's offset: x right, y down, z toward the viewer, unit length. The
+   * light is LIGHT_HEIGHT CSS px above the dots, so a longer shadow means a
+   * lower light. */
+  private lightDirection(): [number, number, number] {
+    const { x, y } = this.options.dotShadows
+    const len = Math.hypot(x, y, LIGHT_HEIGHT)
+    return [-x / len, -y / len, LIGHT_HEIGHT / len]
+  }
+
   private createDataTexture(gl: WebGL2RenderingContext): WebGLTexture {
     const tex = gl.createTexture()
     gl.bindTexture(gl.TEXTURE_2D, tex)
@@ -540,6 +556,8 @@ export class HeatflaskLayer implements CustomLayerInterface {
     gl.uniform1f(u.u_pixelRatio, pixelRatio)
     gl.uniform1f(u.u_zScale, this.zScale())
     gl.uniform1f(u.u_size, this.dotSize())
+    const [lx, ly, lz] = this.lightDirection()
+    gl.uniform3f(u.u_light, lx, ly, lz)
     gl.uniform1f(u.u_T, T)
     /* simTime is ~1e11; the remainder is taken here in float64, and what
      * reaches the GPU is always less than T */
