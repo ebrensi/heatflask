@@ -111,7 +111,7 @@ void main() {
  *   0: sample offset, sample count, samples per second, ts mod T
  *   1: origin x, origin y (relative to the view origin), px per metre, altitude offset
  *   2: colour, straight alpha
- *   3: 1 for circle (selected) else 0, duration in seconds, 0, 0
+ *   3: 1 for sphere (selected) else 0 for cube, duration in seconds, 0, 0
  * ---------------------------------------------------------------------- */
 export const DOT_VS = `#version 300 es
 precision highp float;
@@ -121,7 +121,8 @@ precision highp sampler2D;
 uniform mat4 u_matrix;
 uniform float u_pixelRatio;
 uniform float u_zScale;
-uniform float u_size;      // CSS px: a square's side; a circle's radius
+uniform float u_size;      // CSS px: a cube's edge; a sphere's radius
+uniform mat3 u_view;       // see DOT_FS
 uniform float u_T;
 uniform float u_phase;     // now mod T
 uniform sampler2D u_streams;
@@ -168,23 +169,42 @@ void main() {
   v_circle = m3.x;
   float size = m3.x > 0.5 ? 2.0 * u_size : u_size;
   v_halfSize = 0.5 * size * u_pixelRatio;
-  v_pointSize = size * u_pixelRatio + 2.0;
+  /* A cube's outline reaches out to its corners: along screen x, half an edge
+   * times the sum of its three edges' x extents. Square sprites, so the
+   * greater of x and y; top-down with no bearing that is one edge. */
+  float extent = m3.x > 0.5 ? 1.0 : max(
+    abs(u_view[0].x) + abs(u_view[1].x) + abs(u_view[2].x),
+    abs(u_view[0].y) + abs(u_view[1].y) + abs(u_view[2].y));
+  v_pointSize = size * extent * u_pixelRatio + 2.0;
   gl_PointSize = v_pointSize;
   v_color = fetch(u_meta, a + 2);
 }
 `
 
-/* Circles are shaded as spheres. A sphere looks the same from any direction,
- * so the screen-aligned point sprite is already its true outline, pitched or
- * not, and only the shading changes: each pixel's normal follows from where it
- * falls in the disc. u_light points toward the light, in the sprite's frame
- * (x right, y down, z toward the viewer), and is set against the shadow's
- * offset so the highlight and the shadow agree. */
+/* Selected dots are spheres, the rest cubes, shaded by one light. u_light
+ * points toward it in the sprite's frame (x right, y down, z toward the
+ * viewer), set against the shadow's offset so the highlights and the shadow
+ * agree.
+ *
+ * A sphere looks the same from any direction, so the screen-aligned point
+ * sprite is already its true outline, pitched or not, and each pixel's normal
+ * follows from where it falls in the disc.
+ *
+ * A cube sits square to the map: its edges run east, south and up. u_view's
+ * columns are those three directions in the sprite's frame, a rotation set by
+ * the bearing and pitch. The cube is small enough on screen to treat the view
+ * as orthographic, so every dot's cube looks the same, and:
+ *   - its outline is the hexagon swept out by its three edges projected onto
+ *     the screen, whose sides are parallel to them (cubeDistance);
+ *   - the face a pixel shows is the one a ray from the eye through that pixel
+ *     enters first (cubeNormal).
+ * Top-down it is a square, as the dots were before. */
 export const DOT_FS = `#version 300 es
 precision highp float;
 
 uniform float u_shadow;    // 1 on the shadow pass
 uniform vec3 u_light;      // unit vector
+uniform mat3 u_view;       // east, south, up, in the sprite's frame
 
 in vec4 v_color;
 in float v_pointSize;
@@ -197,12 +217,48 @@ const float DIFFUSE = 0.75;
 const float SPECULAR = 0.35;
 const float SHININESS = 24.0;
 
-void main() {
-  // distance from the centre, in device pixels
-  vec2 p = (gl_PointCoord - 0.5) * v_pointSize;
-  float d = v_circle > 0.5 ? length(p) : max(abs(p.x), abs(p.y));
+/* Signed distance, in device pixels, from p to the outline of a cube of half
+ * edge h. For each edge direction g, the hexagon has a pair of sides parallel
+ * to g, as far from the centre (along g's normal) as the three edges reach.
+ * An edge seen end-on projects to nothing and has no sides; at most one can. */
+float cubeDistance(vec2 p, float h) {
+  float d = -1e9;
+  for (int i = 0; i < 3; i++) {
+    vec2 g = u_view[i].xy;
+    float len = length(g);
+    if (len < 1e-4) continue;
+    vec2 n = vec2(-g.y, g.x) / len;
+    float reach = h * (abs(dot(n, u_view[0].xy)) + abs(dot(n, u_view[1].xy))
+      + abs(dot(n, u_view[2].xy)));
+    d = max(d, abs(dot(n, p)) - reach);
+  }
+  return d;
+}
 
-  float a = clamp(v_halfSize + 0.5 - d, 0.0, 1.0) * v_color.a;
+/* The outward normal, in the sprite's frame, of the face seen at p. The ray
+ * runs from the eye into the screen; in the cube's own frame (u_view is a
+ * rotation, so its transpose undoes it) it enters each pair of faces at t,
+ * and it enters the cube through the last of them. The cube is taken a pixel
+ * larger here, so the antialiased fringe just outside the outline still finds
+ * a face. */
+vec3 cubeNormal(vec2 p, float h) {
+  vec3 o = vec3(p, 0.0) * u_view;
+  vec3 dir = vec3(0.0, 0.0, -1.0) * u_view;
+  vec3 s = vec3(dir.x < 0.0 ? -1.0 : 1.0, dir.y < 0.0 ? -1.0 : 1.0,
+    dir.z < 0.0 ? -1.0 : 1.0);
+  vec3 t = (-s * (h + 1.0) - o) * s / max(abs(dir), 1e-6);
+  if (t.x >= t.y && t.x >= t.z) return -s.x * u_view[0];
+  if (t.y >= t.z) return -s.y * u_view[1];
+  return -s.z * u_view[2];
+}
+
+void main() {
+  // position from the centre, in device pixels
+  vec2 p = (gl_PointCoord - 0.5) * v_pointSize;
+  float h = v_halfSize;
+  float d = v_circle > 0.5 ? length(p) - h : cubeDistance(p, h);
+
+  float a = clamp(0.5 - d, 0.0, 1.0) * v_color.a;
   if (a <= 0.0) discard;
   /* The shadow pass wants only coverage, in a one-channel buffer: see
    * SHADOW_FS */
@@ -213,12 +269,15 @@ void main() {
 
   vec3 rgb = v_color.rgb;
   if (v_circle > 0.5) {
-    vec2 q = p / v_halfSize;
+    vec2 q = p / h;
     vec3 n = vec3(q, sqrt(max(0.0, 1.0 - dot(q, q))));
     float diffuse = max(dot(n, u_light), 0.0);
-    vec3 h = normalize(u_light + vec3(0.0, 0.0, 1.0));
-    float specular = pow(max(dot(n, h), 0.0), SHININESS);
+    vec3 half_ = normalize(u_light + vec3(0.0, 0.0, 1.0));
+    float specular = pow(max(dot(n, half_), 0.0), SHININESS);
     rgb = min(rgb * (AMBIENT + DIFFUSE * diffuse) + SPECULAR * specular, 1.0);
+  } else {
+    float diffuse = max(dot(cubeNormal(p, h), u_light), 0.0);
+    rgb = min(rgb * (AMBIENT + DIFFUSE * diffuse), 1.0);
   }
   fragColor = vec4(rgb * a, a);  // premultiplied
 }

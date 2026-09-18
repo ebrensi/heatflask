@@ -101,7 +101,7 @@ const DEPTH_TEST = false
  * coarser, and it has a quarter of the pixels to fill. See SHADOW_FS. */
 const SHADOW_SCALE = 0.5
 
-/* The height, in CSS px, of the light that shades the spheres, against the
+/* The height, in CSS px, of the light that shades the dots, against the
  * shadow's offset (see lightDirection). With the default 5px offset, 12 puts
  * the highlight a little above centre. */
 const LIGHT_HEIGHT = 12
@@ -285,6 +285,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
       "u_size",
       "u_shadow",
       "u_light",
+      "u_view",
       "u_T",
       "u_phase",
       "u_streams",
@@ -456,7 +457,24 @@ export class HeatflaskLayer implements CustomLayerInterface {
     return 0.5 * blur * this.map.getPixelRatio() * SHADOW_SCALE
   }
 
-  /** Toward the light that shades the spheres (see DOT_FS), opposite the
+  /** The cubes' orientation (see DOT_FS): columns are east, south and up in
+   * the sprite's frame, x right, y down, z toward the viewer. The bearing
+   * turns the map about up; the pitch then tips the camera back about screen
+   * x, so up leans toward the top of the screen and south toward the viewer. */
+  private cubeView(): Float32Array {
+    const b = (this.map.getBearing() * Math.PI) / 180
+    const p = (this.map.getPitch() * Math.PI) / 180
+    const [cb, sb] = [Math.cos(b), Math.sin(b)]
+    const [cp, sp] = [Math.cos(p), Math.sin(p)]
+    // prettier-ignore
+    return new Float32Array([
+      cb, -sb * cp, -sb * sp,  // east
+      sb, cb * cp, cb * sp,    // south
+      0, -sp, cp,              // up
+    ])
+  }
+
+  /** Toward the light that shades the dots (see DOT_FS), opposite the
    * shadow's offset: x right, y down, z toward the viewer, unit length. The
    * light is LIGHT_HEIGHT CSS px above the dots, so a longer shadow means a
    * lower light. */
@@ -558,6 +576,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
     gl.uniform1f(u.u_size, this.dotSize())
     const [lx, ly, lz] = this.lightDirection()
     gl.uniform3f(u.u_light, lx, ly, lz)
+    gl.uniformMatrix3fv(u.u_view, false, this.cubeView())
     gl.uniform1f(u.u_T, T)
     /* simTime is ~1e11; the remainder is taken here in float64, and what
      * reaches the GPU is always less than T */
