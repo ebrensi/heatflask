@@ -10,7 +10,12 @@
  */
 
 import Geohash from "latlon-geohash"
-import { Map as MLMap, NavigationControl, setWorkerUrl } from "maplibre-gl"
+import {
+  Map as MLMap,
+  NavigationControl,
+  GeolocateControl,
+  setWorkerUrl,
+} from "maplibre-gl"
 
 import strava_logo from "url:../images/pbs4.png"
 import heatflask_logo from "url:../images/logo.png"
@@ -327,6 +332,13 @@ export function CreateMap(
 
   map.addControl(
     new NavigationControl({ visualizePitch: true }),
+    "bottom-right"
+  )
+  map.addControl(
+    new GeolocateControl({
+      positionOptions: { enableHighAccuracy: true },
+      trackUserLocation: true,
+    }),
     "bottom-right"
   )
   map.addControl(new Watermarks(), "bottom-left")
