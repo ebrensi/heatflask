@@ -4,6 +4,7 @@
 
 import { HeatflaskLayer } from "./GL/HeatflaskLayer"
 import { onStyleLoad } from "./MapAPI"
+import { initClusters, updateClusters } from "./Clusters"
 
 import type { Map as MLMap } from "maplibre-gl"
 import type { State } from "./Model"
@@ -20,6 +21,10 @@ export function createDotLayer(map: MLMap, appState: State): HeatflaskLayer {
     showPaths: +visual.pw > 0,
     startPaused: visual.paused,
   })
+
+  /* Markers for the activities too small to see at this zoom */
+  initClusters(map)
+  dotLayer.onUpdate = updateClusters
 
   /* On top of everything, labels included, as the canvases sat over Leaflet's
    * panes. Re-added after every basemap change, which replaces the style. */

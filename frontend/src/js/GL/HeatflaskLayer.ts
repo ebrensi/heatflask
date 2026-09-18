@@ -204,6 +204,10 @@ export class HeatflaskLayer implements CustomLayerInterface {
   private infoBox?: HTMLDivElement
   private frameTimes: number[] = []
 
+  /** Called whenever what is drawn changes: the view, the activities or the
+   * selection */
+  onUpdate?: () => void
+
   constructor(opts: LayerOptions) {
     this.options = { ...defaultOptions, ...opts }
     this.visual = opts.visual
@@ -497,6 +501,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
       this.pathInstances = 0
       this.slotCount = 0
       this.map.triggerRepaint()
+      this.onUpdate?.()
       return
     }
     ActivityCollection.reset()
@@ -734,6 +739,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
     // the activity origins are stored relative to the view origin
     this.metaDirty = true
     this.map.triggerRepaint()
+    this.onUpdate?.()
   }
 
   private buildPaths(): void {
