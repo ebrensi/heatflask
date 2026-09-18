@@ -33,7 +33,6 @@ import { Dialog } from "./Dialog"
 import { LayerPicker } from "./MapControls"
 import { addAnimationControl } from "./AnimationControl"
 import { addBoxSelect } from "./BoxSelect"
-import { addAltDragRotate } from "./AltDragRotate"
 import { addCaptureControl } from "./CaptureControl"
 import * as Table from "./Table"
 import { initRender, renderFromQuery } from "./Render"
@@ -82,11 +81,8 @@ export async function start() {
   addAnimationControl(map, appState)
   addCaptureControl(map)
 
-  // ctrl-drag a box over the map to select the activities inside it
+  // shift-drag a box over the map to select the activities inside it
   addBoxSelect(map)
-
-  // alt-drag rotates and tilts, since ctrl-drag (MapLibre's) is box select
-  addAltDragRotate(map)
 
   // The dialog that shows while activities stream in
   initImportProgress(map)
