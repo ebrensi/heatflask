@@ -119,12 +119,9 @@ precision highp int;
 precision highp sampler2D;
 
 uniform mat4 u_matrix;
-uniform vec2 u_viewport;
 uniform float u_pixelRatio;
 uniform float u_zScale;
 uniform float u_size;      // CSS px: a square's side; a circle's radius
-uniform float u_blur;      // CSS px of soft edge, for the shadow pass
-uniform vec2 u_shift;      // CSS px screen offset, for the shadow pass
 uniform float u_T;
 uniform float u_phase;     // now mod T
 uniform sampler2D u_streams;
@@ -166,16 +163,12 @@ void main() {
 
   vec4 m1 = fetch(u_meta, a + 1);
   vec3 p = mix(s0.xyz, s1.xyz, f - i0);
-  vec4 c = u_matrix * vec4(p.xy + m1.xy, (p.z + m1.w) * m1.z * u_zScale, 1.0);
-
-  // screen y points down; clip y points up
-  c.xy += vec2(u_shift.x, -u_shift.y) * u_pixelRatio * 2.0 / u_viewport * c.w;
-  gl_Position = c;
+  gl_Position = u_matrix * vec4(p.xy + m1.xy, (p.z + m1.w) * m1.z * u_zScale, 1.0);
 
   v_circle = m3.x;
   float size = m3.x > 0.5 ? 2.0 * u_size : u_size;
   v_halfSize = 0.5 * size * u_pixelRatio;
-  v_pointSize = (size + 2.0 * u_blur) * u_pixelRatio + 2.0;
+  v_pointSize = size * u_pixelRatio + 2.0;
   gl_PointSize = v_pointSize;
   v_color = fetch(u_meta, a + 2);
 }
@@ -184,10 +177,7 @@ void main() {
 export const DOT_FS = `#version 300 es
 precision highp float;
 
-uniform float u_blur;
-uniform float u_pixelRatio;
 uniform float u_shadow;    // 1 on the shadow pass
-uniform float u_shadowAlpha;
 
 in vec4 v_color;
 in float v_pointSize;
@@ -200,17 +190,80 @@ void main() {
   vec2 p = (gl_PointCoord - 0.5) * v_pointSize;
   float d = v_circle > 0.5 ? length(p) : max(abs(p.x), abs(p.y));
 
-  if (u_shadow > 0.5) {
-    float blur = max(u_blur * u_pixelRatio, 1.0);
-    float a = (1.0 - smoothstep(v_halfSize - blur, v_halfSize + blur, d))
-      * u_shadowAlpha * v_color.a;
-    if (a <= 0.0) discard;
-    fragColor = vec4(0.0, 0.0, 0.0, a);
-    return;
-  }
-
   float a = clamp(v_halfSize + 0.5 - d, 0.0, 1.0) * v_color.a;
   if (a <= 0.0) discard;
-  fragColor = vec4(v_color.rgb * a, a);  // premultiplied
+  /* The shadow pass wants only coverage, in a one-channel buffer: see
+   * SHADOW_FS */
+  fragColor = u_shadow > 0.5 ? vec4(a) : vec4(v_color.rgb * a, a);  // premultiplied
+}
+`
+
+/* ---------------------------------------------------------------------- *
+ * Shadows: one for all the dots together, not one per dot.
+ *
+ * Drawn per dot straight over the map, n overlapping shadows of opacity a
+ * leave (1 - a)^n of what is under them, and a cluster of dots goes black. A
+ * real shadow does not work like that: the shade behind two opaque objects is
+ * no darker than behind one, only larger.
+ *
+ * So the shadow is cast by the dots' combined silhouette, as the CSS
+ * drop-shadow on the 2D canvas was:
+ *
+ *   1. The dots are drawn, hard-edged, into an offscreen one-channel buffer
+ *      with blendEquation(MAX), so overlapping dots cover a pixel once.
+ *   2. That silhouette is blurred horizontally into a second buffer.
+ *   3. It is blurred vertically on the way onto the map, offset, and the map
+ *      is darkened by the result.
+ *
+ * The blur is a Gaussian of standard deviation u_sigma source texels, as
+ * CSS's drop-shadow blur radius is twice the standard deviation. Both blur
+ * passes use this shader, on one oversized triangle that covers the viewport;
+ * no vertex buffer is needed.
+ * ---------------------------------------------------------------------- */
+export const SHADOW_VS = `#version 300 es
+precision highp float;
+
+void main() {
+  vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));
+  gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
+}
+`
+
+export const SHADOW_FS = `#version 300 es
+precision highp float;
+
+const int MAX_RADIUS = 16;
+
+uniform sampler2D u_source;
+uniform vec2 u_viewport;   // the target's size, in its pixels
+uniform vec2 u_offset;     // target pixels to shift the source by
+uniform vec2 u_step;       // one source texel along the blur, in uv
+uniform float u_sigma;     // in source texels
+uniform float u_final;     // 1 for the pass onto the map
+uniform vec4 u_color;      // the shadow's, premultiplied
+
+out vec4 fragColor;
+
+void main() {
+  vec2 uv = (gl_FragCoord.xy - u_offset) / u_viewport;
+  float sigma = max(u_sigma, 0.01);
+  int radius = min(int(ceil(3.0 * sigma)), MAX_RADIUS);
+  float sum = 0.0;
+  float weights = 0.0;
+  for (int i = -MAX_RADIUS; i <= MAX_RADIUS; i++) {
+    if (abs(i) > radius) continue;
+    float x = float(i);
+    float w = exp(-0.5 * x * x / (sigma * sigma));
+    sum += w * texture(u_source, uv + x * u_step).r;
+    weights += w;
+  }
+  float a = sum / weights;
+
+  if (u_final < 0.5) {
+    fragColor = vec4(a);
+    return;
+  }
+  if (a <= 0.0) discard;
+  fragColor = u_color * a;
 }
 `

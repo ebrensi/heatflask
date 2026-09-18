@@ -32,7 +32,8 @@ export const options = {
     pathWidth: 1,
   },
 
-  // always on: a second, blurred pass under the dots (see HeatflaskLayer)
+  // always on: one shadow cast by all the dots together (see SHADOW_FS);
+  // blur is a CSS blur radius, twice the Gaussian's standard deviation
   dotShadows: {
     x: 0,
     y: 5,

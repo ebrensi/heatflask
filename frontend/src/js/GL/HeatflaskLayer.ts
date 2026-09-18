@@ -39,7 +39,14 @@ import { options as defaultOptions } from "../DotLayer/Defaults"
 import { makePT, px2lngLat, WORLD_PX } from "../DotLayer/CRS"
 import { Bounds } from "../Bounds"
 import { ADMIN } from "../Env"
-import { PATH_VS, PATH_FS, DOT_VS, DOT_FS } from "./shaders"
+import {
+  PATH_VS,
+  PATH_FS,
+  DOT_VS,
+  DOT_FS,
+  SHADOW_VS,
+  SHADOW_FS,
+} from "./shaders"
 import {
   compileProgram,
   uniformLocations,
@@ -87,6 +94,12 @@ const ALT_RECALIBRATE_ZOOM = 2
  * still shows. On is more physical, but a track that is a metre under the
  * terrain mesh flickers in and out. */
 const DEPTH_TEST = false
+
+/* The dot shadows are drawn and blurred offscreen at this fraction of the
+ * drawing buffer's resolution, then stretched back over the map. They are
+ * blurred by several pixels anyway, so half resolution is not visibly
+ * coarser, and it has a quarter of the pixels to fill. See SHADOW_FS. */
+const SHADOW_SCALE = 0.5
 
 /* Dot streams are resampled onto a uniform grid of at most this many seconds,
  * or coarser for an activity so long it would otherwise take more than
@@ -181,6 +194,21 @@ export class HeatflaskLayer implements CustomLayerInterface {
   private streamTexture: WebGLTexture
   private metaTexture: WebGLTexture
   private meta = new Float32Array(0)
+
+  /* Dot shadows. In prerender the dots' silhouette is drawn into
+   * shadowTextures[0] and blurred horizontally into [1]; render blurs that
+   * vertically onto the map. */
+  private shadowProgram: WebGLProgram
+  private shadowU: Record<string, WebGLUniformLocation>
+  private shadowVAO: WebGLVertexArrayObject
+  private shadowTextures: WebGLTexture[] = []
+  private shadowFramebuffers: WebGLFramebuffer[] = []
+  private shadowWidth = 0
+  private shadowHeight = 0
+  /* whether prerender has set this frame up, and drawn its shadows */
+  private framePrepared = false
+  private shadowsDrawn = false
+  private prerenderMs = 0
   /* what the slot buffer and the metadata were built for */
   private slotsT = NaN
   private slotsDirty = true
@@ -250,18 +278,27 @@ export class HeatflaskLayer implements CustomLayerInterface {
       "u_pixelRatio",
       "u_zScale",
       "u_size",
-      "u_blur",
-      "u_shift",
       "u_shadow",
-      "u_shadowAlpha",
       "u_T",
       "u_phase",
       "u_streams",
       "u_meta",
     ])
 
+    this.shadowProgram = compileProgram(gl, SHADOW_VS, SHADOW_FS)
+    this.shadowU = uniformLocations(gl, this.shadowProgram, [
+      "u_source",
+      "u_viewport",
+      "u_offset",
+      "u_step",
+      "u_sigma",
+      "u_final",
+      "u_color",
+    ])
+
     this.setupPathVAO(gl)
     this.setupDotVAO(gl)
+    this.setupShadowBuffers(gl)
 
     map.on("move", this.onMove)
     map.on("moveend", this.onMoveEnd)
@@ -293,6 +330,13 @@ export class HeatflaskLayer implements CustomLayerInterface {
     gl.deleteTexture(this.metaTexture)
     gl.deleteVertexArray(this.pathVAO)
     gl.deleteVertexArray(this.dotVAO)
+    gl.deleteProgram(this.shadowProgram)
+    gl.deleteVertexArray(this.shadowVAO)
+    for (const tex of this.shadowTextures) gl.deleteTexture(tex)
+    for (const fb of this.shadowFramebuffers) gl.deleteFramebuffer(fb)
+    this.shadowTextures = []
+    this.shadowFramebuffers = []
+    this.shadowWidth = this.shadowHeight = 0
     this.pathProgram = undefined
     this.gl = undefined
     this.infoBox?.remove()
@@ -346,6 +390,66 @@ export class HeatflaskLayer implements CustomLayerInterface {
     this.metaTexture = this.createDataTexture(gl)
   }
 
+  private setupShadowBuffers(gl: WebGL2RenderingContext): void {
+    // the blur passes draw one triangle from gl_VertexID, with no attributes
+    this.shadowVAO = gl.createVertexArray()
+
+    for (let i = 0; i < 2; i++) {
+      const tex = gl.createTexture()
+      gl.bindTexture(gl.TEXTURE_2D, tex)
+      // linear, to stretch the reduced-resolution buffer smoothly over the map
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+      this.shadowTextures.push(tex)
+      this.shadowFramebuffers.push(gl.createFramebuffer())
+    }
+    gl.bindTexture(gl.TEXTURE_2D, null)
+  }
+
+  /** Size the shadow buffers to the drawing buffer. Allocates only when that
+   * changes. */
+  private sizeShadowBuffers(gl: WebGL2RenderingContext): void {
+    const w = Math.max(1, Math.round(gl.drawingBufferWidth * SHADOW_SCALE))
+    const h = Math.max(1, Math.round(gl.drawingBufferHeight * SHADOW_SCALE))
+    if (w === this.shadowWidth && h === this.shadowHeight) return
+    this.shadowWidth = w
+    this.shadowHeight = h
+
+    for (let i = 0; i < 2; i++) {
+      const tex = this.shadowTextures[i]
+      gl.bindTexture(gl.TEXTURE_2D, tex)
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.R8,
+        w,
+        h,
+        0,
+        gl.RED,
+        gl.UNSIGNED_BYTE,
+        null
+      )
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.shadowFramebuffers[i])
+      gl.framebufferTexture2D(
+        gl.FRAMEBUFFER,
+        gl.COLOR_ATTACHMENT0,
+        gl.TEXTURE_2D,
+        tex,
+        0
+      )
+    }
+    gl.bindTexture(gl.TEXTURE_2D, null)
+  }
+
+  /** The shadow's blur, as a Gaussian's standard deviation in shadow buffer
+   * texels. CSS's blur radius, which dotShadows.blur is, is twice that. */
+  private shadowSigma(): number {
+    const blur = this.options.dotShadows.blur
+    return 0.5 * blur * this.map.getPixelRatio() * SHADOW_SCALE
+  }
+
   private createDataTexture(gl: WebGL2RenderingContext): WebGLTexture {
     const tex = gl.createTexture()
     gl.bindTexture(gl.TEXTURE_2D, tex)
@@ -392,14 +496,9 @@ export class HeatflaskLayer implements CustomLayerInterface {
     gl.bindTexture(gl.TEXTURE_2D, null)
   }
 
-  render(
-    glCtx: WebGLRenderingContext | WebGL2RenderingContext,
-    args: CustomRenderMethodInput
-  ): void {
-    if (!this.ready) return
-    const gl = <WebGL2RenderingContext>glCtx
-    const t0 = performance.now()
-
+  /** Per-frame setup shared by prerender and render: advance the clock,
+   * take the camera matrix and rebuild whatever is stale. */
+  private prepareFrame(args: CustomRenderMethodInput): void {
     const now = performance.now()
     if (!this._paused) {
       this.simTime += ((now - this.lastFrame) / 1000) * +this.visual.tau
@@ -420,6 +519,130 @@ export class HeatflaskLayer implements CustomLayerInterface {
     if (this.slotsDirty) this.buildSlots()
     if (this.metaDirty) this.buildMeta()
 
+    this.framePrepared = true
+  }
+
+  /** Bind the dot program and set the uniforms both of its passes share */
+  private useDotProgram(gl: WebGL2RenderingContext, pixelRatio: number): void {
+    const T = +this.visual.T
+    gl.useProgram(this.dotProgram)
+    gl.bindVertexArray(this.dotVAO)
+
+    gl.activeTexture(gl.TEXTURE0)
+    gl.bindTexture(gl.TEXTURE_2D, this.streamTexture)
+    gl.activeTexture(gl.TEXTURE1)
+    gl.bindTexture(gl.TEXTURE_2D, this.metaTexture)
+
+    const u = this.dotU
+    gl.uniform1i(u.u_streams, 0)
+    gl.uniform1i(u.u_meta, 1)
+    gl.uniformMatrix4fv(u.u_matrix, false, this.matrix32)
+    gl.uniform1f(u.u_pixelRatio, pixelRatio)
+    gl.uniform1f(u.u_zScale, this.zScale())
+    gl.uniform1f(u.u_size, this.dotSize())
+    gl.uniform1f(u.u_T, T)
+    /* simTime is ~1e11; the remainder is taken here in float64, and what
+     * reaches the GPU is always less than T */
+    gl.uniform1f(u.u_phase, mod(this.simTime, T))
+  }
+
+  private unbindDotTextures(gl: WebGL2RenderingContext): void {
+    gl.activeTexture(gl.TEXTURE1)
+    gl.bindTexture(gl.TEXTURE_2D, null)
+    gl.activeTexture(gl.TEXTURE0)
+    gl.bindTexture(gl.TEXTURE_2D, null)
+  }
+
+  /**
+   * MapLibre's offscreen pass, before it draws anything into the map: draw
+   * the dots' silhouette and blur it horizontally, the first two steps of the
+   * shadow (see SHADOW_FS). MapLibre marks all of its cached GL state dirty
+   * afterwards, so the framebuffer, viewport and blending set here need no
+   * restoring.
+   */
+  prerender(
+    glCtx: WebGLRenderingContext | WebGL2RenderingContext,
+    args: CustomRenderMethodInput
+  ): void {
+    this.shadowsDrawn = false
+    this.prerenderMs = 0
+    if (!this.ready) return
+    const gl = <WebGL2RenderingContext>glCtx
+    const t0 = performance.now()
+    this.prepareFrame(args)
+
+    if (!(this.slotCount > 0 && +this.visual.T > 0)) return
+
+    this.sizeShadowBuffers(gl)
+    const [silhouette] = this.shadowTextures
+    gl.viewport(0, 0, this.shadowWidth, this.shadowHeight)
+    gl.disable(gl.DEPTH_TEST)
+    gl.disable(gl.STENCIL_TEST)
+    gl.colorMask(true, true, true, true)
+
+    /* 1. The silhouette. MAX, so a pixel under several dots is covered once,
+     * not more. The blend factors are ignored under MAX. The buffer is
+     * SHADOW_SCALE of the drawing buffer, so the dot size in device pixels
+     * scales with it. */
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.shadowFramebuffers[0])
+    gl.clearColor(0, 0, 0, 0)
+    gl.clear(gl.COLOR_BUFFER_BIT)
+    gl.enable(gl.BLEND)
+    gl.blendEquation(gl.MAX)
+    this.useDotProgram(gl, this.map.getPixelRatio() * SHADOW_SCALE)
+    gl.uniform1f(this.dotU.u_shadow, 1)
+    gl.drawArrays(gl.POINTS, 0, this.slotCount)
+    this.unbindDotTextures(gl)
+    gl.blendEquation(gl.FUNC_ADD)
+
+    /* 2. Blurred horizontally. Every pixel is written, so no clear. */
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.shadowFramebuffers[1])
+    gl.disable(gl.BLEND)
+    this.useShadowProgram(gl, silhouette, this.shadowWidth, this.shadowHeight)
+    const u = this.shadowU
+    gl.uniform2f(u.u_offset, 0, 0)
+    gl.uniform2f(u.u_step, 1 / this.shadowWidth, 0)
+    gl.uniform1f(u.u_final, 0)
+    gl.drawArrays(gl.TRIANGLES, 0, 3)
+    gl.bindTexture(gl.TEXTURE_2D, null)
+    gl.enable(gl.BLEND)
+
+    gl.bindVertexArray(null)
+    this.shadowsDrawn = true
+    this.prerenderMs = performance.now() - t0
+  }
+
+  /** Bind the shadow program to read `source`, drawing into a target of the
+   * given size in its own pixels */
+  private useShadowProgram(
+    gl: WebGL2RenderingContext,
+    source: WebGLTexture,
+    targetWidth: number,
+    targetHeight: number
+  ): void {
+    gl.useProgram(this.shadowProgram)
+    gl.bindVertexArray(this.shadowVAO)
+    gl.activeTexture(gl.TEXTURE0)
+    gl.bindTexture(gl.TEXTURE_2D, source)
+    const u = this.shadowU
+    gl.uniform1i(u.u_source, 0)
+    gl.uniform2f(u.u_viewport, targetWidth, targetHeight)
+    gl.uniform1f(u.u_sigma, this.shadowSigma())
+  }
+
+  render(
+    glCtx: WebGLRenderingContext | WebGL2RenderingContext,
+    args: CustomRenderMethodInput
+  ): void {
+    if (!this.ready) return
+    const gl = <WebGL2RenderingContext>glCtx
+    const t0 = performance.now()
+
+    // normally prerender has done this already, this frame
+    if (!this.framePrepared) this.prepareFrame(args)
+    this.framePrepared = false
+
+    const T = +this.visual.T
     const zScale = this.zScale()
     const pixelRatio = this.map.getPixelRatio()
     const vw = gl.drawingBufferWidth
@@ -443,50 +666,42 @@ export class HeatflaskLayer implements CustomLayerInterface {
 
     /* ---- dots ---- */
     if (this.slotCount > 0 && T > 0) {
-      gl.useProgram(this.dotProgram)
-      gl.bindVertexArray(this.dotVAO)
+      /* Shadows first, all of them, so no dot's shadow falls on another dot,
+       * and as one, so overlapping shadows do not compound. 3. The blurred
+       * silhouette, blurred vertically, offset, onto the map. */
+      if (this.shadowsDrawn) {
+        gl.disable(gl.DEPTH_TEST)
+        this.useShadowProgram(gl, this.shadowTextures[1], vw, vh)
+        const u = this.shadowU
+        const shadow = this.options.dotShadows
+        /* screen y points down; gl_FragCoord y points up */
+        gl.uniform2f(u.u_offset, shadow.x * pixelRatio, -shadow.y * pixelRatio)
+        gl.uniform2f(u.u_step, 0, 1 / this.shadowHeight)
+        gl.uniform1f(u.u_final, 1)
+        const rgba = packColor(shadow.color)
+        gl.uniform4f(
+          u.u_color,
+          (rgba & 0xff) / 255,
+          ((rgba >>> 8) & 0xff) / 255,
+          ((rgba >>> 16) & 0xff) / 255,
+          1
+        )
+        gl.drawArrays(gl.TRIANGLES, 0, 3)
+        gl.bindTexture(gl.TEXTURE_2D, null)
+        if (DEPTH_TEST && zScale) gl.enable(gl.DEPTH_TEST)
+      }
 
-      gl.activeTexture(gl.TEXTURE0)
-      gl.bindTexture(gl.TEXTURE_2D, this.streamTexture)
-      gl.activeTexture(gl.TEXTURE1)
-      gl.bindTexture(gl.TEXTURE_2D, this.metaTexture)
-
-      const u = this.dotU
-      gl.uniform1i(u.u_streams, 0)
-      gl.uniform1i(u.u_meta, 1)
-      gl.uniformMatrix4fv(u.u_matrix, false, this.matrix32)
-      gl.uniform2f(u.u_viewport, vw, vh)
-      gl.uniform1f(u.u_pixelRatio, pixelRatio)
-      gl.uniform1f(u.u_zScale, zScale)
-      gl.uniform1f(u.u_size, this.dotSize())
-      gl.uniform1f(u.u_T, T)
-      /* simTime is ~1e11; the remainder is taken here in float64, and what
-       * reaches the GPU is always less than T */
-      gl.uniform1f(u.u_phase, mod(this.simTime, T))
-
-      /* Shadows first, for every dot, so no dot's shadow falls on another dot.
-       * That is what the CSS drop-shadow on the whole canvas did. */
-      const shadow = this.options.dotShadows
-      gl.uniform1f(u.u_shadow, 1)
-      gl.uniform1f(u.u_blur, shadow.blur)
-      gl.uniform2f(u.u_shift, shadow.x, shadow.y)
-      gl.uniform1f(u.u_shadowAlpha, 0.8)
+      this.useDotProgram(gl, pixelRatio)
+      gl.uniform1f(this.dotU.u_shadow, 0)
       gl.drawArrays(gl.POINTS, 0, this.slotCount)
-
-      gl.uniform1f(u.u_shadow, 0)
-      gl.uniform1f(u.u_blur, 0)
-      gl.uniform2f(u.u_shift, 0, 0)
-      gl.drawArrays(gl.POINTS, 0, this.slotCount)
-
-      gl.activeTexture(gl.TEXTURE1)
-      gl.bindTexture(gl.TEXTURE_2D, null)
-      gl.activeTexture(gl.TEXTURE0)
-      gl.bindTexture(gl.TEXTURE_2D, null)
+      this.unbindDotTextures(gl)
     }
 
     gl.bindVertexArray(null)
 
-    if (this.infoBox) this.updateInfoBox(performance.now() - t0)
+    if (this.infoBox) {
+      this.updateInfoBox(this.prerenderMs + performance.now() - t0)
+    }
   }
 
   /* ------------------------------------------------------------------ *
