@@ -109,12 +109,6 @@
   pointer-events: none;
 }
 
-/* alt-drag rotate */
-.alt-drag-rotating,
-.alt-drag-rotating canvas {
-  cursor: move !important;
-}
-
 /* box select */
 .box-select-crosshair,
 .box-select-crosshair canvas {

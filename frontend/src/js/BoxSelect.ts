@@ -3,9 +3,12 @@
  *
  * Two ways in:
  *
- *   ctrl-drag   with a mouse, any time
+ *   shift-drag  with a mouse, any time
  *   select mode a toggle button; while it is on, a plain drag -- one finger on
  *               a touchscreen -- draws the box instead of panning
+ *
+ * Shift-drag is MapLibre's box zoom, which this replaces. Ctrl-drag is left to
+ * MapLibre, which rotates and tilts the map with it, as other maps do.
  *
  * Pointer events cover mouse, touch and pen with one set of handlers, so both
  * ways in share the same code.
@@ -37,6 +40,10 @@ const GESTURES: Gesture[] = [
   "dragRotate",
 ]
 
+/* Select mode holds off the same ones except dragRotate, so ctrl-drag and
+ * right-drag still rotate the map between boxes */
+const SELECT_MODE_GESTURES = GESTURES.filter((g) => g !== "dragRotate")
+
 export function addBoxSelect(map: MLMap): void {
   const container = map.getCanvasContainer()
   let selectMode = false
@@ -44,8 +51,8 @@ export function addBoxSelect(map: MLMap): void {
   let start: { x: number; y: number }
   let box: HTMLDivElement | null = null
 
-  function gestures(on: boolean): void {
-    for (const g of GESTURES) {
+  function gestures(on: boolean, which = GESTURES): void {
+    for (const g of which) {
       if (on) map[g].enable()
       else map[g].disable()
     }
@@ -60,7 +67,7 @@ export function addBoxSelect(map: MLMap): void {
       selectMode ? CANCEL_ICON : SELECT_ICON,
       selectMode
         ? "Stop selecting"
-        : "Select activities: drag a box over them (or ctrl-drag any time)"
+        : "Select activities: drag a box over them (or shift-drag any time)"
     )
     control.button.setAttribute("aria-pressed", String(selectMode))
   }
@@ -69,7 +76,7 @@ export function addBoxSelect(map: MLMap): void {
     if (on === selectMode) return
     if (!on && pointerId !== null) finish()
     selectMode = on
-    gestures(!on)
+    gestures(!on, SELECT_MODE_GESTURES)
     /* without touch-action: none the browser claims a one-finger drag as a
      * page scroll and cancels the pointer */
     container.style.touchAction = on ? "none" : ""
@@ -83,9 +90,10 @@ export function addBoxSelect(map: MLMap): void {
   }
 
   function onPointerDown(e: PointerEvent): void {
-    // alt-drag rotates the map, even in select mode (AltDragRotate.ts)
-    if (!e.isPrimary || e.button !== 0 || e.altKey || pointerId !== null) return
-    if (!selectMode && !(e.ctrlKey && e.pointerType === "mouse")) return
+    // ctrl-drag rotates the map, even in select mode
+    if (!e.isPrimary || e.button !== 0 || e.ctrlKey || pointerId !== null)
+      return
+    if (!selectMode && !(e.shiftKey && e.pointerType === "mouse")) return
 
     /* pointerdown fires before mousedown and touchstart, so stopping it here
      * keeps MapLibre's own handlers from seeing this drag at all */
@@ -119,7 +127,7 @@ export function addBoxSelect(map: MLMap): void {
     box?.remove()
     box = null
     pointerId = null
-    if (!selectMode) gestures(true)
+    gestures(true, selectMode ? ["dragRotate"] : GESTURES)
     document.removeEventListener("pointermove", onPointerMove)
     document.removeEventListener("pointerup", onPointerUp)
     document.removeEventListener("pointercancel", onPointerCancel)
@@ -177,6 +185,7 @@ export function addBoxSelect(map: MLMap): void {
     if (e.key === "Escape") finish()
   }
 
+  map.boxZoom.disable()
   container.addEventListener("pointerdown", onPointerDown, { capture: true })
   render()
   map.addControl(control, "top-left")
