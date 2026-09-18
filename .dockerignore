@@ -2,7 +2,6 @@
 # built locally or holding secrets.
 .git
 .data
-.dev-setup
 .vscode
 docs
 
@@ -16,6 +15,5 @@ frontend/dev-docs
 
 backend/.venv
 backend/.env
-backend/activate
 backend/tests
 backend/.pytest_cache

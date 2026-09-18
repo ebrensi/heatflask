@@ -1,13 +1,11 @@
 # Contributing to Heatflask
 ### tl;dr
 If you mostly know what you are doing and you are on a Linux based operating system,
-  * install MongoDB and Python 3.13 (or run `nix develop` in the root of the repo, which provides both)
+  * install [Nix](https://nixos.org), clone this repo, and in the root of the repo run `nix develop`, which provides MongoDB, Python 3.13 and Node, then `heatflask-setup`.  It installs everything, and a pre-commit hook that formats what you commit.
 
-  * clone this repo, and in the root of the repo, run [`.dev-setup`](./.dev-setup), which should be executable.  It should install everything.
+  * copy [`backend/.env.example`](./backend/.env.example) to `backend/.env` and put your Strava app credentials in it (see [`backend/README.md`](./backend/README.md)), then start MongoDB with `heatflask-start-services` and the server with `heatflask-run`, which loads that file for you.
 
-  * put your Strava app credentials in `backend/activate` (see [`backend/README.md`](./backend/README.md)), then start the server with [`backend/dev-run`](./backend/dev-run), which loads that file for you.
-
-  * to build and bundle the frontend TypeScript, navigate to [`/frontend`](./frontend/) and run `npm run build`.  See [`./frontend/package.json`](./frontend/package.json).  `npm run watch` to start a process that rebuilds as you modify the frontend files.
+  * `heatflask-frontend-watch` builds the frontend TypeScript and rebuilds it as you modify the frontend files; `heatflask-frontend-build` builds it once.  See [`./frontend/package.json`](./frontend/package.json).
 
 
 ## Code Style Guidelines

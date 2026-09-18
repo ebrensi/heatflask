@@ -50,9 +50,8 @@
 
           mkdir -p .data/mongodb
 
-          # backend/.venv/heatflask, not a bare .venv: that is the path
-          # backend/.env.tmp sources, what backend/.dev-install-backend creates,
-          # and what .gitignore already excludes
+          # backend/.venv/heatflask, not a bare .venv: that is the path the
+          # pre-commit hook runs Black from, and what .gitignore excludes
           if [ ! -d "backend/.venv/heatflask" ]; then
             echo "Creating Python virtual environment..."
             python -m venv backend/.venv/heatflask
@@ -63,6 +62,12 @@
             pip install -r backend/requirements-dev.txt
             deactivate
           fi
+
+          ( ${frontendInstall} )
+
+          # The pre-commit hook in .githooks formats staged files with
+          # Prettier and Black.
+          git config core.hooksPath .githooks
 
           echo "Setup complete!"
           echo ""
@@ -113,19 +118,13 @@
           cd backend || exit 1
           source .venv/heatflask/bin/activate
 
-          # Local credentials. `.env` is what backend/.env.tmp is meant to be
-          # copied to; `activate` is the name .dev-install-backend gives it.
-          # Both are gitignored. Sourced from inside backend/ because the file
-          # activates the venv by a path relative to here.
-          for envfile in .env activate; do
-            if [ -f "$envfile" ]; then
-              echo "loading backend/$envfile"
-              set -a
-              . "./$envfile"
-              set +a
-              break
-            fi
-          done
+          # Local credentials, copied from backend/.env.example and gitignored.
+          if [ -f .env ]; then
+            echo "loading backend/.env"
+            set -a
+            . ./.env
+            set +a
+          fi
 
           export MONGODB_URL=''${MONGODB_URL:-mongodb://localhost:27017/heatflask}
           export APP_ENV=''${APP_ENV:-development}
@@ -133,7 +132,7 @@
           if [ -z "''${STRAVA_CLIENT_ID:-}" ]; then
             echo ""
             echo "ERROR: STRAVA_CLIENT_ID is not set, so the app cannot import."
-            echo "       Copy backend/.env.tmp to backend/.env and fill it in."
+            echo "       Copy backend/.env.example to backend/.env and fill it in."
             exit 1
           fi
 
@@ -198,6 +197,11 @@
             jq
             curl
 
+            # Deploys and the production logs and database. Only the
+            # maintainer has access to the Heroku app, but whoever does
+            # should get the CLI with the project, not their own machine.
+            heroku
+
             setupScript
             startServicesScript
             stopServicesScript
@@ -225,7 +229,7 @@
             echo "MongoDB: $(mongod --version | head -n1)"
             echo "Node.js: $(node --version)"
             echo ""
-            echo "  heatflask-setup            - create .venv and install deps"
+            echo "  heatflask-setup            - install deps and the git hooks"
             echo "  heatflask-start-services   - start MongoDB"
             echo "  heatflask-stop-services    - stop MongoDB"
             echo "  heatflask-run              - run the Sanic backend"
@@ -236,8 +240,8 @@
             echo "  1. heatflask-setup && heatflask-start-services"
             echo "  2. heatflask-frontend-watch     (leave running)"
             echo "  3. heatflask-run               (in a second shell)"
-            echo "  Needs STRAVA_CLIENT_ID/SECRET in the environment; see"
-            echo "  backend/.env.tmp for the full list."
+            echo "  Needs STRAVA_CLIENT_ID/SECRET in backend/.env; copy"
+            echo "  backend/.env.example there and fill it in."
             echo ""
           '';
 

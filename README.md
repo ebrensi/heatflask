@@ -6,15 +6,11 @@ Heatflask animates your [Strava](https://www.strava.com) activities on a map, at
 
 ## Running it locally
 
-On Linux:
+The development environment is a [Nix](https://nixos.org) flake, which provides Python, MongoDB and Node. On Linux, in the root of the repo:
 
-  * **With Nix:** run `nix develop` in the root of the repo, then `heatflask-setup`, `heatflask-start-services` (MongoDB) and `heatflask-run` (the server).
-
-  * **Without Nix:** install [MongoDB](https://www.mongodb.com) and Python 3.13, then run [`.dev-setup`](./.dev-setup) in the root of the repo. It installs the git hooks and both sets of dependencies. Start the server with [`backend/dev-run`](./backend/dev-run).
-
-  * **Either way:**
-    * Put your Strava app's client id and secret in `backend/activate`; see [`backend/README.md`](./backend/README.md).
-    * Build the frontend by running `npm run build` in [`/frontend`](./frontend/), or `npm run watch` to rebuild as you edit. See [`frontend/README.md`](./frontend/README.md).
+  1. `nix develop`, then `heatflask-setup` to install both sets of dependencies and the git hooks.
+  2. Copy [`backend/.env.example`](./backend/.env.example) to `backend/.env` and put your Strava app's client id and secret in it; see [`backend/README.md`](./backend/README.md).
+  3. `heatflask-start-services` to start MongoDB, `heatflask-frontend-watch` to build the frontend and rebuild it as you edit, and `heatflask-run` in a second shell for the server.
 
 The server runs at http://127.0.0.1:8000.
 

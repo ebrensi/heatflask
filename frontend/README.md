@@ -6,9 +6,9 @@ This is the client-side code for [Heatflask](https://www.heatflask.com), which w
 ## Contributing
 
 ### Set up frontend dev environment
-Note: The [`.dev-setup`](/.dev-setup) script does this all for you.
+Note: `heatflask-setup`, from `nix develop` in the root of the repo, does this all for you.
 
-You will need [Node.js](https://nodejs.org) 22 or newer, which comes with [npm](https://www.npmjs.com). `nix develop` in the root of the repo provides it.
+You will need [Node.js](https://nodejs.org) 22 or newer, which comes with [npm](https://www.npmjs.com). `nix develop` provides it.
 
 Specifications for frontend development are given in [`package.json`](/frontend/package.json), which is used by `npm` to create the environment and load in all the required packages.
 

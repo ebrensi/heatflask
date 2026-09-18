@@ -115,11 +115,11 @@ frontend/.parcel-cache
 # For Development
 frontend/dev-docs.md
 
-# Local credentials: Strava client secret and friends. backend/.env.tmp is the
-# committed template; the filled-in file must never be committed, under either
-# name (.dev-install-backend calls it `activate`).
-backend/activate
+# Local credentials: Strava client secret and friends. backend/.env.example is
+# the committed template; the filled-in copy must never be committed.
+# backend/activate is what the old non-Nix setup called it.
 backend/.env
+backend/activate
 .env
 
 # frontend/dist has to exist for the app to run, but it is built on the
