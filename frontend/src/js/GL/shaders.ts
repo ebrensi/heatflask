@@ -174,16 +174,28 @@ void main() {
 }
 `
 
+/* Circles are shaded as spheres. A sphere looks the same from any direction,
+ * so the screen-aligned point sprite is already its true outline, pitched or
+ * not, and only the shading changes: each pixel's normal follows from where it
+ * falls in the disc. u_light points toward the light, in the sprite's frame
+ * (x right, y down, z toward the viewer), and is set against the shadow's
+ * offset so the highlight and the shadow agree. */
 export const DOT_FS = `#version 300 es
 precision highp float;
 
 uniform float u_shadow;    // 1 on the shadow pass
+uniform vec3 u_light;      // unit vector
 
 in vec4 v_color;
 in float v_pointSize;
 in float v_halfSize;
 flat in float v_circle;
 out vec4 fragColor;
+
+const float AMBIENT = 0.45;
+const float DIFFUSE = 0.75;
+const float SPECULAR = 0.35;
+const float SHININESS = 24.0;
 
 void main() {
   // distance from the centre, in device pixels
@@ -194,7 +206,21 @@ void main() {
   if (a <= 0.0) discard;
   /* The shadow pass wants only coverage, in a one-channel buffer: see
    * SHADOW_FS */
-  fragColor = u_shadow > 0.5 ? vec4(a) : vec4(v_color.rgb * a, a);  // premultiplied
+  if (u_shadow > 0.5) {
+    fragColor = vec4(a);
+    return;
+  }
+
+  vec3 rgb = v_color.rgb;
+  if (v_circle > 0.5) {
+    vec2 q = p / v_halfSize;
+    vec3 n = vec3(q, sqrt(max(0.0, 1.0 - dot(q, q))));
+    float diffuse = max(dot(n, u_light), 0.0);
+    vec3 h = normalize(u_light + vec3(0.0, 0.0, 1.0));
+    float specular = pow(max(dot(n, h), 0.0), SHININESS);
+    rgb = min(rgb * (AMBIENT + DIFFUSE * diffuse) + SPECULAR * specular, 1.0);
+  }
+  fragColor = vec4(rgb * a, a);  // premultiplied
 }
 `
 
