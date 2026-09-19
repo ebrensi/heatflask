@@ -613,7 +613,8 @@ export class HeatflaskLayer implements CustomLayerInterface {
     const t0 = performance.now()
     this.prepareFrame(args)
 
-    if (!(this.slotCount > 0 && +this.visual.T > 0)) return
+    if (!(this.slotCount > 0 && +this.visual.T > 0 && this.visual.shadows))
+      return
 
     this.sizeShadowBuffers(gl)
     const [silhouette] = this.shadowTextures

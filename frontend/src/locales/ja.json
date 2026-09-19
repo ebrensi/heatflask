@@ -34,6 +34,7 @@
   "tab.controls.pathWidthHint": "0 で軌跡を隠す",
   "tab.controls.colors": "配色",
   "tab.controls.colorsHint": "パレットを回転",
+  "tab.controls.shadows": "影",
   "tab.profile.loginTitle": "ログイン",
   "tab.profile.anonNote": "Strava でログインすると、自分のアクティビティを表示し、Heatflask アカウントを管理できます。",
   "tab.profile.loginLink": "Strava でログイン",

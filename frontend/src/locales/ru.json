@@ -34,6 +34,7 @@
   "tab.controls.pathWidthHint": "ноль скрывает линии",
   "tab.controls.colors": "Цвета",
   "tab.controls.colorsHint": "сдвиг палитры",
+  "tab.controls.shadows": "Тени",
   "tab.profile.loginTitle": "Вход",
   "tab.profile.anonNote": "Войдите через Strava, чтобы видеть свои активности и управлять аккаунтом Heatflask.",
   "tab.profile.loginLink": "Войти через Strava",

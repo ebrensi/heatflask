@@ -46,6 +46,7 @@ const urlArgNames: Record<URLParameter, string[]> = {
   paused: ["paused", "pu"],
   pw: ["pw", "pathwidth"],
   cr: ["cr", "colors"],
+  shadows: ["sh", "shadows"],
   paths: ["pa", "paths"],
   alpha: ["alpha"],
 }
@@ -85,6 +86,7 @@ function QVtoURL({ query, visual }: QVParams): URLParameters {
     paused: boolString(visual.paused),
     pw: numStr(visual.pw),
     cr: numStr(visual.cr),
+    shadows: boolString(visual.shadows),
     alpha: str(visual.alpha),
     baselayer: visual.baselayer,
     pitch: str(visual.pitch),
@@ -201,7 +203,7 @@ export function parseURL(urlString: string) {
   }
 
   // boolean params
-  for (const p of ["paused", "terrain"] as URLParameter[]) {
+  for (const p of ["paused", "terrain", "shadows"] as URLParameter[]) {
     if (urlParams[p]) vparams[p] = boolVal(urlParams[p])
   }
 

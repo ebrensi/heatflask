@@ -34,6 +34,7 @@
   "tab.controls.pathWidthHint": "null blendet die Linien aus",
   "tab.controls.colors": "Farben",
   "tab.controls.colorsHint": "Palette drehen",
+  "tab.controls.shadows": "Schatten",
   "tab.profile.loginTitle": "Anmelden",
   "tab.profile.anonNote": "Melde dich mit Strava an, um deine eigenen Aktivitäten zu sehen und dein Heatflask-Konto zu verwalten.",
   "tab.profile.loginLink": "Mit Strava anmelden",

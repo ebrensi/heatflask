@@ -64,6 +64,7 @@ export type VisualParameters = {
   //             nothing selected; 0 draws no paths at all
   cr?: number // colour rotation in degrees: how far the dot palette is
   //             turned before it is dealt out to the activities
+  shadows?: boolean // cast the dots' shadow on the map
   paused?: boolean // start in paused state
 }
 
@@ -93,6 +94,7 @@ export const DefaultVisual: VisualParameters = {
   alpha: 0.8,
   pw: 2,
   cr: 0,
+  shadows: true,
   paused: false,
 }
 
@@ -126,6 +128,7 @@ export type URLParameters = {
   paused?: string
   pw?: string
   cr?: string
+  shadows?: string
   /** Not written any more: "paths=0" in an old link becomes pw=0 */
   paths?: string
   alpha?: string

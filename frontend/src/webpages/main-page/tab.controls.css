@@ -99,3 +99,14 @@
   font-size: 0.77em;
   opacity: 0.5;
 }
+
+/* An on/off setting, under the dials and centred as they are */
+.controls-checkbox {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5em;
+  max-width: 22em;
+  margin-bottom: 1em;
+  cursor: pointer;
+}
