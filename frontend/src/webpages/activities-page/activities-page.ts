@@ -12,6 +12,7 @@ import {
 import { icon } from "~/src/js/Icons"
 import { initI18n, applyTranslations, t, getLocale } from "~/src/js/i18n"
 import * as StreamCache from "~/src/js/StreamCache"
+import { isMetric } from "~/src/js/Units"
 import type { ActivityQuery, ImportedActivity } from "~/src/js/DataImport"
 import type { ActivityType } from "~/src/js/Strava"
 // import { JSTable } from "../../js/jstable"
@@ -53,8 +54,7 @@ function user_thumbnail(id: number, img_url: string) {
 }
 
 const STRAVA_BUTTON = img(strava_button_url.href)
-const store = window.localStorage
-const METRIC = store.getItem("units") == "metric"
+const METRIC = isMetric()
 const DIST_SCALE = METRIC ? 1 / 1000 : 1 / 1609.34
 const DIST_LABEL = METRIC ? "km" : "mi"
 const ELEV_SCALE = METRIC ? 1 : 3.28084

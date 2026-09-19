@@ -16,12 +16,18 @@ import { href, HHMMSS, escapeHTML } from "./appUtil"
 import { activityURL, activity_vtype } from "./Strava"
 import { heatflaskURL } from "./Table"
 import { getLocale } from "./i18n"
+import { isMetric } from "./Units"
 
 import type { Map as MLMap, LngLatLike } from "maplibre-gl"
 import type { Activity } from "./DotLayer/Activity"
 
 const KM = 1000
 const MI = 1609.34
+
+/** "a (b)", with the reader's own unit first */
+function both(metric: string, imperial: string): string {
+  return isMetric() ? `${metric} (${imperial})` : `${imperial} (${metric})`
+}
 
 /** "4:52/km" -- a pace, given a speed in m/s and a unit length in m */
 function pace(v: number, unit: number): string {
@@ -33,11 +39,11 @@ function speedText(A: Activity): string {
   if (!isFinite(v) || v <= 0) return ""
 
   if (activity_vtype(A.type) === "pace")
-    return `${pace(v, KM)}/km (${pace(v, MI)}/mi)`
+    return both(`${pace(v, KM)}/km`, `${pace(v, MI)}/mi`)
 
   const kmh = ((v * 3600) / KM).toFixed(2)
   const mih = ((v * 3600) / MI).toFixed(2)
-  return `${kmh} km/hr (${mih} mi/hr)`
+  return both(`${kmh} km/hr`, `${mih} mi/hr`)
 }
 
 let open: Popup | undefined
@@ -64,7 +70,7 @@ export function activityPopup(map: MLMap, A: Activity, at?: LngLatLike): void {
   const content =
     `<b>${escapeHTML(A.name || "(untitled)")}</b><br>` +
     `${A.type}: ${when}<br>` +
-    `${dkm} km (${dmi} mi) in ${HHMMSS(A.elapsed_time || 0)}<br>` +
+    `${both(`${dkm} km`, `${dmi} mi`)} in ${HHMMSS(A.elapsed_time || 0)}<br>` +
     (speed ? `${speed}<br>` : "") +
     `View in ${href(activityURL(A.id), "Strava")}, ` +
     href(heatflaskURL([A.id]), "Heatflask")

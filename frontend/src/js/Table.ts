@@ -16,15 +16,12 @@ import { fitTo } from "./Render"
 import { closePopupIfUnselected } from "./ActivityPopup"
 import { PANE_OPEN } from "./Sidebar"
 import { t, getLocale } from "./i18n"
+import { distance, UNITS_CHANGE } from "./Units"
 
 import type { Map as MLMap } from "maplibre-gl"
 import type { Activity } from "./DotLayer/Activity"
 import type { ActivityType } from "./Strava"
 import type { State } from "./Model"
-
-const METRIC = window.localStorage.getItem("units") == "metric"
-const DIST_SCALE = METRIC ? 1 / 1000 : 1 / 1609.34
-const DIST_LABEL = METRIC ? "km" : "mi"
 
 let tableEl: HTMLTableElement
 let _map: MLMap
@@ -70,6 +67,8 @@ export function init(map: MLMap, appState: State): void {
     zoomBox.addEventListener("change", () => {
       if (zoomToSelection()) zoomToSelected()
     })
+
+  document.addEventListener(UNITS_CHANGE, update)
 }
 
 function toggle(id: number, row: HTMLElement): void {
@@ -200,7 +199,7 @@ function makeRow(A: Activity): string {
   const date = A.tsLocal
     ? A.tsLocal.toLocaleDateString(getLocale(), DATE_FORMAT)
     : ""
-  const dist = ((A.total_distance || 0) * DIST_SCALE).toFixed(1)
+  const dist = distance(A.total_distance || 0)
   const elapsed = HHMMSS(A.elapsed_time || 0)
   const aicon = activity_icon(<ActivityType>A.type) || String(A.type)
   // the title is whatever its owner typed, so it goes into the HTML escaped
@@ -222,7 +221,7 @@ function makeRow(A: Activity): string {
     `<span>${date}</span>` +
     `<span>${aicon}</span>` +
     `<span>${elapsed}</span>` +
-    `<span>${dist} ${DIST_LABEL}</span>` +
+    `<span>${dist.value.toFixed(1)} ${dist.label}</span>` +
     `</div>`
 
   return (

@@ -2,8 +2,17 @@ import { icon } from "~/src/js/Icons"
 import { State } from "~/src/js/Model"
 import type { QueryParameters } from "~/src/js/Model"
 import { renderFromQuery, abortRender } from "~/src/js/Render"
-import { STRAVA_USER_URL } from "~/src/js/Env"
-import { t } from "~/src/js/i18n"
+import { OFFLINE, STRAVA_USER_URL, TRANSLATE_URL } from "~/src/js/Env"
+import { LOCALES, setLocale, storedLocale, localeName, t } from "~/src/js/i18n"
+import { setUnits, storedUnits, Units } from "~/src/js/Units"
+import {
+  TEXT_SCALE_CHANGE,
+  TEXT_SCALE_MAX,
+  TEXT_SCALE_MIN,
+  getTextScale,
+  resetTextScale,
+  stepTextScale,
+} from "~/src/js/TextScale"
 import CONTENT from "bundle-text:./tab.query.html"
 export { CONTENT }
 
@@ -80,10 +89,6 @@ const OnClick: CallbackDispatch = {
     // const currentUrl = window.location.href
     window.location.href = "/authorize"
   },
-  "button:logout": (el, S) => {
-    console.log("button:logout", el, S)
-    window.location.href = "/auth/logout"
-  },
 }
 
 /**
@@ -112,6 +117,9 @@ export function SETUP(appState: State) {
   const tabContentElement = document.getElementById(ID)
 
   fillHeader(appState)
+  buildLanguagePicker()
+  buildUnitsPicker()
+  buildTextSize()
 
   // Set up change and click listeners
   tabContentElement.addEventListener("change", (e: Event) => {
@@ -154,6 +162,77 @@ export function SETUP(appState: State) {
   //  Initialize DOM element values with those from appState paramters
   setDomFromParams(appState, tabContentElement)
   tabContentElement.dispatchEvent(new Event("change"))
+}
+
+/**
+ * The language menu: every catalog we ship, each named in its own language so
+ * that it is legible to the person looking for it, plus an Automatic entry
+ * that hands the choice back to the browser.
+ */
+function buildLanguagePicker(): void {
+  const select = <HTMLSelectElement>document.getElementById("language-select")
+  if (!select) return
+
+  const options = [
+    `<option value="">${t("tab.query.languageAuto")}</option>`,
+    ...LOCALES.map(
+      (tag) => `<option value="${tag}">${localeName(tag)}</option>`
+    ),
+  ]
+  select.innerHTML = options.join("")
+
+  /* Only mark a language current if it was actually chosen; on Automatic the
+   * empty option stays selected, which is the honest reading of the state. */
+  select.value = storedLocale() || ""
+
+  select.addEventListener("change", () => setLocale(select.value))
+
+  /* The instructions for adding a catalog are on GitHub, which is no use to
+   * someone running Heatflask offline */
+  const link = <HTMLAnchorElement>document.getElementById("translate-link")
+  if (OFFLINE) document.getElementById("translate-note")?.remove()
+  else if (link) link.href = TRANSLATE_URL
+}
+
+/**
+ * Automatic / Metric / Imperial, the same shape as the language menu: the
+ * empty option is the browser's locale deciding, and stays selected until
+ * someone actually chooses.
+ */
+function buildUnitsPicker(): void {
+  const select = <HTMLSelectElement>document.getElementById("units-select")
+  if (!select) return
+  select.value = storedUnits()
+  select.addEventListener("change", () => setUnits(<Units | "">select.value))
+}
+
+/**
+ * Smaller / Normal / Larger.
+ *
+ * A stepper rather than a menu of sizes: what the reader wants is this a bit
+ * bigger, and the answer to that is one more press, not a list of numbers
+ * none of which means anything until it is tried.
+ */
+function buildTextSize(): void {
+  const smaller = document.getElementById("text-smaller")
+  const larger = document.getElementById("text-larger")
+  const reset = document.getElementById("text-reset")
+  if (!(smaller && larger && reset)) return
+
+  smaller.addEventListener("click", () => stepTextScale(-1))
+  larger.addEventListener("click", () => stepTextScale(1))
+  reset.addEventListener("click", () => resetTextScale())
+
+  /* Nothing happens at the ends, so say so rather than letting the button
+   * look live and do nothing. */
+  const sync = () => {
+    const scale = getTextScale()
+    ;(<HTMLButtonElement>smaller).disabled = scale <= TEXT_SCALE_MIN
+    ;(<HTMLButtonElement>larger).disabled = scale >= TEXT_SCALE_MAX
+    ;(<HTMLButtonElement>reset).disabled = scale === 1
+  }
+  document.addEventListener(TEXT_SCALE_CHANGE, sync)
+  sync()
 }
 
 type TT<k extends keyof State> = [k, keyof State[k]]
