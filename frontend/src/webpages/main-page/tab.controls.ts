@@ -224,6 +224,17 @@ export function SETUP(state: State) {
       else dotLayer.updateDotSettings()
     })
   }
+
+  /* The dots' shadow is the most expensive thing the layer draws: blurring it
+   * costs more GPU time a frame than the dots themselves (see SHADOW_FS). */
+  const shadows = <HTMLInputElement>document.getElementById("showShadows")
+  shadows.addEventListener("change", () => {
+    visual.shadows = shadows.checked
+  })
+  visual.onChange("shadows", (on: boolean) => {
+    shadows.checked = !!on
+    dotLayer.updateDotSettings()
+  })
 }
 
 /**

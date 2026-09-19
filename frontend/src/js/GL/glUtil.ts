@@ -111,3 +111,85 @@ export class VertexArray {
     if (keep) this.f32.set(old.subarray(0, keep))
   }
 }
+
+/* The constants EXT_disjoint_timer_query_webgl2 adds; TypeScript's DOM types
+ * do not have it. */
+type TimerQueryExt = { TIME_ELAPSED_EXT: number; GPU_DISJOINT_EXT: number }
+
+/**
+ * GPU time spent in labelled stretches of GL calls, for the dev readout.
+ *
+ * JavaScript's clock only times issuing the calls; the GPU runs them later.
+ * This asks the GPU itself, with EXT_disjoint_timer_query_webgl2, where the
+ * browser exposes it: not every Chrome platform does, and Firefox only behind
+ * a pref. Results come back a frame or more late, so they are gathered as
+ * they arrive and summed by label until taken. Timer queries cannot overlap,
+ * so neither can the stretches.
+ */
+export class GpuTimer {
+  private ext: TimerQueryExt | null
+  private spare: WebGLQuery[] = []
+  private pending: { query: WebGLQuery; label: string }[] = []
+  private open = false
+  private totals: Record<string, number> = {}
+
+  constructor(private gl: WebGL2RenderingContext) {
+    this.ext = gl.getExtension("EXT_disjoint_timer_query_webgl2")
+  }
+
+  get available(): boolean {
+    return !!this.ext
+  }
+
+  begin(label: string): void {
+    if (!this.ext || this.open) return
+    const query = this.spare.pop() ?? this.gl.createQuery()
+    this.gl.beginQuery(this.ext.TIME_ELAPSED_EXT, query)
+    this.pending.push({ query, label })
+    this.open = true
+  }
+
+  end(): void {
+    if (!this.ext || !this.open) return
+    this.gl.endQuery(this.ext.TIME_ELAPSED_EXT)
+    this.open = false
+  }
+
+  /** Collect whatever results have arrived, oldest first. Results from a
+   * stretch in which the GPU was disturbed (a power-state change, say) are
+   * meaningless, and are dropped. */
+  poll(): void {
+    const { gl, ext } = this
+    if (!ext) return
+    const settled = this.open ? this.pending.length - 1 : this.pending.length
+    let n = 0
+    while (
+      n < settled &&
+      gl.getQueryParameter(this.pending[n].query, gl.QUERY_RESULT_AVAILABLE)
+    )
+      n++
+    if (!n) return
+    const disjoint = gl.getParameter(ext.GPU_DISJOINT_EXT)
+    for (const { query, label } of this.pending.splice(0, n)) {
+      if (!disjoint) {
+        const ms = gl.getQueryParameter(query, gl.QUERY_RESULT) / 1e6
+        this.totals[label] = (this.totals[label] ?? 0) + ms
+      }
+      this.spare.push(query)
+    }
+  }
+
+  /** The totals, in ms, since the last take */
+  take(): Record<string, number> {
+    const totals = this.totals
+    this.totals = {}
+    return totals
+  }
+
+  delete(): void {
+    for (const { query } of this.pending) this.gl.deleteQuery(query)
+    for (const query of this.spare) this.gl.deleteQuery(query)
+    this.pending = []
+    this.spare = []
+  }
+}

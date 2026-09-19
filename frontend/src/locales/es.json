@@ -34,6 +34,7 @@
   "tab.controls.pathWidthHint": "cero oculta los trazos",
   "tab.controls.colors": "Colores",
   "tab.controls.colorsHint": "girar la paleta",
+  "tab.controls.shadows": "Sombras",
   "tab.profile.loginTitle": "Iniciar sesión",
   "tab.profile.anonNote": "Inicia sesión con Strava para ver tus propias actividades y gestionar tu cuenta de Heatflask.",
   "tab.profile.loginLink": "Iniciar sesión con Strava",

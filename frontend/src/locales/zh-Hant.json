@@ -34,6 +34,7 @@
   "tab.controls.pathWidthHint": "設為 0 可隱藏軌跡",
   "tab.controls.colors": "配色",
   "tab.controls.colorsHint": "旋轉調色盤",
+  "tab.controls.shadows": "陰影",
   "tab.profile.loginTitle": "登入",
   "tab.profile.anonNote": "使用 Strava 登入即可檢視自己的活動，並管理你的 Heatflask 帳號。",
   "tab.profile.loginLink": "使用 Strava 登入",

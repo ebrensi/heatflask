@@ -34,6 +34,7 @@
   "tab.controls.pathWidthHint": "null skjuler linjene",
   "tab.controls.colors": "Farger",
   "tab.controls.colorsHint": "roter fargepaletten",
+  "tab.controls.shadows": "Skygger",
   "tab.profile.loginTitle": "Logg inn",
   "tab.profile.anonNote": "Logg inn med Strava for å se dine egne aktiviteter og administrere Heatflask-kontoen din.",
   "tab.profile.loginLink": "Logg inn med Strava",

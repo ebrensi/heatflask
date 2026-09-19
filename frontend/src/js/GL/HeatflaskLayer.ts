@@ -53,6 +53,7 @@ import {
   multiply,
   packColor,
   VertexArray,
+  GpuTimer,
 } from "./glUtil"
 
 import type { VisualParameters } from "../Model"
@@ -101,7 +102,7 @@ const DEPTH_TEST = false
  * coarser, and it has a quarter of the pixels to fill. See SHADOW_FS. */
 const SHADOW_SCALE = 0.5
 
-/* The height, in CSS px, of the light that shades the spheres, against the
+/* The height, in CSS px, of the light that shades the dots, against the
  * shadow's offset (see lightDirection). With the default 5px offset, 12 puts
  * the highlight a little above centre. */
 const LIGHT_HEIGHT = 12
@@ -201,8 +202,8 @@ export class HeatflaskLayer implements CustomLayerInterface {
   private meta = new Float32Array(0)
 
   /* Dot shadows. In prerender the dots' silhouette is drawn into
-   * shadowTextures[0] and blurred horizontally into [1]; render blurs that
-   * vertically onto the map. */
+   * shadowTextures[0], blurred horizontally into [1] and vertically back into
+   * [0]; render stretches that onto the map. */
   private shadowProgram: WebGLProgram
   private shadowU: Record<string, WebGLUniformLocation>
   private shadowVAO: WebGLVertexArrayObject
@@ -236,6 +237,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
 
   private infoBox?: HTMLDivElement
   private frameTimes: number[] = []
+  private gpuTimer?: GpuTimer
 
   /** Called whenever what is drawn changes: the view, the activities or the
    * selection */
@@ -285,6 +287,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
       "u_size",
       "u_shadow",
       "u_light",
+      "u_view",
       "u_T",
       "u_phase",
       "u_streams",
@@ -315,6 +318,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
       this.infoBox = document.createElement("div")
       this.infoBox.className = "gl-info-box"
       map.getContainer().appendChild(this.infoBox)
+      this.gpuTimer = new GpuTimer(gl)
     }
 
     /* A style change removes and re-adds this layer; pick up where we were */
@@ -346,6 +350,8 @@ export class HeatflaskLayer implements CustomLayerInterface {
     this.pathProgram = undefined
     this.gl = undefined
     this.infoBox?.remove()
+    this.gpuTimer?.delete()
+    this.gpuTimer = undefined
   }
 
   private setupPathVAO(gl: WebGL2RenderingContext): void {
@@ -456,7 +462,24 @@ export class HeatflaskLayer implements CustomLayerInterface {
     return 0.5 * blur * this.map.getPixelRatio() * SHADOW_SCALE
   }
 
-  /** Toward the light that shades the spheres (see DOT_FS), opposite the
+  /** The cubes' orientation (see DOT_FS): columns are east, south and up in
+   * the sprite's frame, x right, y down, z toward the viewer. The bearing
+   * turns the map about up; the pitch then tips the camera back about screen
+   * x, so up leans toward the top of the screen and south toward the viewer. */
+  private cubeView(): Float32Array {
+    const b = (this.map.getBearing() * Math.PI) / 180
+    const p = (this.map.getPitch() * Math.PI) / 180
+    const [cb, sb] = [Math.cos(b), Math.sin(b)]
+    const [cp, sp] = [Math.cos(p), Math.sin(p)]
+    // prettier-ignore
+    return new Float32Array([
+      cb, -sb * cp, -sb * sp,  // east
+      sb, cb * cp, cb * sp,    // south
+      0, -sp, cp,              // up
+    ])
+  }
+
+  /** Toward the light that shades the dots (see DOT_FS), opposite the
    * shadow's offset: x right, y down, z toward the viewer, unit length. The
    * light is LIGHT_HEIGHT CSS px above the dots, so a longer shadow means a
    * lower light. */
@@ -558,6 +581,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
     gl.uniform1f(u.u_size, this.dotSize())
     const [lx, ly, lz] = this.lightDirection()
     gl.uniform3f(u.u_light, lx, ly, lz)
+    gl.uniformMatrix3fv(u.u_view, false, this.cubeView())
     gl.uniform1f(u.u_T, T)
     /* simTime is ~1e11; the remainder is taken here in float64, and what
      * reaches the GPU is always less than T */
@@ -573,8 +597,8 @@ export class HeatflaskLayer implements CustomLayerInterface {
 
   /**
    * MapLibre's offscreen pass, before it draws anything into the map: draw
-   * the dots' silhouette and blur it horizontally, the first two steps of the
-   * shadow (see SHADOW_FS). MapLibre marks all of its cached GL state dirty
+   * the dots' silhouette and blur it, the first three steps of the shadow
+   * (see SHADOW_FS). MapLibre marks all of its cached GL state dirty
    * afterwards, so the framebuffer, viewport and blending set here need no
    * restoring.
    */
@@ -589,7 +613,8 @@ export class HeatflaskLayer implements CustomLayerInterface {
     const t0 = performance.now()
     this.prepareFrame(args)
 
-    if (!(this.slotCount > 0 && +this.visual.T > 0)) return
+    if (!(this.slotCount > 0 && +this.visual.T > 0 && this.visual.shadows))
+      return
 
     this.sizeShadowBuffers(gl)
     const [silhouette] = this.shadowTextures
@@ -597,6 +622,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
     gl.disable(gl.DEPTH_TEST)
     gl.disable(gl.STENCIL_TEST)
     gl.colorMask(true, true, true, true)
+    this.gpuTimer?.begin("shadow")
 
     /* 1. The silhouette. MAX, so a pixel under several dots is covered once,
      * not more. The blend factors are ignored under MAX. The buffer is
@@ -622,8 +648,15 @@ export class HeatflaskLayer implements CustomLayerInterface {
     gl.uniform2f(u.u_step, 1 / this.shadowWidth, 0)
     gl.uniform1f(u.u_final, 0)
     gl.drawArrays(gl.TRIANGLES, 0, 3)
+
+    /* 3. Blurred vertically, back into the first buffer */
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.shadowFramebuffers[0])
+    gl.bindTexture(gl.TEXTURE_2D, this.shadowTextures[1])
+    gl.uniform2f(u.u_step, 0, 1 / this.shadowHeight)
+    gl.drawArrays(gl.TRIANGLES, 0, 3)
     gl.bindTexture(gl.TEXTURE_2D, null)
     gl.enable(gl.BLEND)
+    this.gpuTimer?.end()
 
     gl.bindVertexArray(null)
     this.shadowsDrawn = true
@@ -679,22 +712,23 @@ export class HeatflaskLayer implements CustomLayerInterface {
       gl.uniform1f(u.u_pixelRatio, pixelRatio)
       gl.uniform1f(u.u_zScale, zScale)
       gl.uniform1f(u.u_opacity, 1)
+      this.gpuTimer?.begin("paths")
       gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, this.pathInstances)
+      this.gpuTimer?.end()
     }
 
     /* ---- dots ---- */
     if (this.slotCount > 0 && T > 0) {
       /* Shadows first, all of them, so no dot's shadow falls on another dot,
-       * and as one, so overlapping shadows do not compound. 3. The blurred
-       * silhouette, blurred vertically, offset, onto the map. */
+       * and as one, so overlapping shadows do not compound. 4. The blurred
+       * silhouette, offset, onto the map. */
       if (this.shadowsDrawn) {
         gl.disable(gl.DEPTH_TEST)
-        this.useShadowProgram(gl, this.shadowTextures[1], vw, vh)
+        this.useShadowProgram(gl, this.shadowTextures[0], vw, vh)
         const u = this.shadowU
         const shadow = this.options.dotShadows
         /* screen y points down; gl_FragCoord y points up */
         gl.uniform2f(u.u_offset, shadow.x * pixelRatio, -shadow.y * pixelRatio)
-        gl.uniform2f(u.u_step, 0, 1 / this.shadowHeight)
         gl.uniform1f(u.u_final, 1)
         const rgba = packColor(shadow.color)
         gl.uniform4f(
@@ -704,18 +738,23 @@ export class HeatflaskLayer implements CustomLayerInterface {
           ((rgba >>> 16) & 0xff) / 255,
           1
         )
+        this.gpuTimer?.begin("shadow")
         gl.drawArrays(gl.TRIANGLES, 0, 3)
+        this.gpuTimer?.end()
         gl.bindTexture(gl.TEXTURE_2D, null)
         if (DEPTH_TEST && zScale) gl.enable(gl.DEPTH_TEST)
       }
 
       this.useDotProgram(gl, pixelRatio)
       gl.uniform1f(this.dotU.u_shadow, 0)
+      this.gpuTimer?.begin("dots")
       gl.drawArrays(gl.POINTS, 0, this.slotCount)
+      this.gpuTimer?.end()
       this.unbindDotTextures(gl)
     }
 
     gl.bindVertexArray(null)
+    this.gpuTimer?.poll()
 
     if (this.infoBox) {
       this.updateInfoBox(this.prerenderMs + performance.now() - t0)
@@ -1287,10 +1326,26 @@ export class HeatflaskLayer implements CustomLayerInterface {
     const times = this.frameTimes
     times.push(ms)
     if (times.length < 30) return
-    const avg = times.reduce((a, b) => a + b, 0) / times.length
+    const frames = times.length
+    const avg = times.reduce((a, b) => a + b, 0) / frames
     times.length = 0
+    /* GPU results lag by a frame or two, so these are the last ~30 frames'
+     * worth, near enough */
+    let gpu = "gpu n/a"
+    if (this.gpuTimer?.available) {
+      const totals = this.gpuTimer.take()
+      const labels = ["shadow", "paths", "dots"]
+      const sum = labels.reduce((a, l) => a + (totals[l] ?? 0), 0)
+      gpu =
+        `gpu ${(sum / frames).toFixed(2)} (` +
+        labels
+          .map((l) => `${l} ${((totals[l] ?? 0) / frames).toFixed(2)}`)
+          .join(", ") +
+        ")"
+    }
     this.infoBox.textContent =
-      `cpu ${avg.toFixed(1)} ms/frame, ${this.slotCount} dot slots, ` +
+      `cpu ${avg.toFixed(1)}, ${gpu} ms/frame, ` +
+      `${this.slotCount} dot slots, ` +
       `${this.pathInstances} segments, z${this.zoomLevel()}`
   }
 }
