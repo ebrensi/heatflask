@@ -22,6 +22,7 @@ import {
 } from "./Model"
 
 import { parseURL } from "./URL"
+import { savedStyle, setsStyle } from "./MapDefaults"
 import { escapeHTML } from "./appUtil"
 import { watch } from "./DataBinding"
 
@@ -61,10 +62,13 @@ export async function start() {
 
   // Get model parameters from the current URL
   const init = parseURL(window.location.href)
+  /* The reader's saved style, if any, but only for a link that sets none of
+   * its own; see MapDefaults.ts */
+  const saved = setsStyle(init.visual) ? {} : savedStyle()
   const appState: State = {
     currentUser: watch<User>(CURRENT_USER),
     targetUser: watch<User>(TARGET_USER),
-    visual: watch({ ...DefaultVisual, ...init.visual }),
+    visual: watch({ ...DefaultVisual, ...saved, ...init.visual }),
     query: watch({ ...DefaultQuery, ...init.query }),
     url: watch<URLParameters>(init.url),
   }

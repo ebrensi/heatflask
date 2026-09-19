@@ -3,6 +3,7 @@
  */
 import Geohash from "latlon-geohash"
 import { nextTask } from "./appUtil"
+import { STYLE_PARAMS, hasSavedStyle } from "./MapDefaults"
 
 import {
   QueryParameters,
@@ -262,6 +263,18 @@ export function toString(urlParams: URLParameters): string {
       urlArgs.set(argname[param], val)
     }
   }
+
+  /* A link that sets no style gets the saved defaults of whoever opens it --
+   * this reader included, on a reload. So if everything here is at the
+   * built-in defaults and this reader has saved some, say one of them out
+   * loud, or reloading would swap the map they are looking at for their
+   * saved one. */
+  if (
+    hasSavedStyle() &&
+    urlParams.baselayer &&
+    !STYLE_PARAMS.some((p) => urlArgs.has(argname[p]))
+  )
+    urlArgs.set(argname.baselayer, urlParams.baselayer)
 
   return url.toString()
 }

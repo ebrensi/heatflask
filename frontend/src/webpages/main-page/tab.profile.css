@@ -1,0 +1,75 @@
+/* For the profile tab */
+
+/* The preference headings are a step down from the tab's other headings:
+ * they label one control each rather than a section */
+.prefs h3 {
+  margin: 0.9em 0 0.35em;
+  font-size: 1em;
+}
+
+.prefs h3:first-child {
+  margin-top: 0;
+}
+
+/* Chromium sizes a select to its longest option -- "português (Brasil)" --
+ * which is wider than the pane once it is dragged narrow */
+#language-select,
+#units-select {
+  max-width: 100%;
+}
+
+/*
+ * The size control keeps its own size whatever it is set to: dividing the
+ * scale back out means shrinking the text does not also shrink the button you
+ * need to undo it with.
+ */
+.text-size {
+  display: flex;
+  gap: 0.5em;
+  margin: 0.25em 0 1em;
+  font-size: calc(1em / var(--text-scale));
+}
+
+.text-size button,
+.map-defaults button {
+  flex: none;
+  min-width: 2.8em;
+  padding: 0.35em 0.7em;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.35);
+  color: rgba(255, 255, 255, 0.95);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+/* the middle one is the label as much as a button, so it takes the slack */
+#text-reset {
+  flex: 1;
+}
+
+.text-size button:hover:not(:disabled),
+.text-size button:focus-visible:not(:disabled),
+.map-defaults button:hover:not(:disabled),
+.map-defaults button:focus-visible:not(:disabled) {
+  border-color: #fc4c02;
+  background: rgba(252, 76, 2, 0.2);
+}
+
+.text-size button:disabled,
+.map-defaults button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.map-defaults {
+  display: flex;
+  gap: 0.5em;
+  margin: 0 0 1em;
+}
+
+/* the one that does something takes the slack, as Normal does above */
+#defaults-save {
+  flex: 1;
+}

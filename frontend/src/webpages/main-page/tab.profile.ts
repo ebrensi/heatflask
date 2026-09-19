@@ -20,8 +20,27 @@ import {
   ADMIN,
   STRAVA_PROFILE_URL,
   PRIVACY_URL,
+  OFFLINE,
+  TRANSLATE_URL,
 } from "~/src/js/Env"
-import { t } from "~/src/js/i18n"
+import { LOCALES, setLocale, storedLocale, localeName, t } from "~/src/js/i18n"
+import { setUnits, storedUnits, Units } from "~/src/js/Units"
+import {
+  TEXT_SCALE_CHANGE,
+  TEXT_SCALE_MAX,
+  TEXT_SCALE_MIN,
+  getTextScale,
+  resetTextScale,
+  stepTextScale,
+} from "~/src/js/TextScale"
+import {
+  STYLE_PARAMS,
+  SAVED_STYLE_CHANGE,
+  forgetStyle,
+  hasSavedStyle,
+  isSaved,
+  saveStyle,
+} from "~/src/js/MapDefaults"
 
 import CONTENT from "bundle-text:./tab.profile.html"
 export { CONTENT }
@@ -34,7 +53,13 @@ function el<T extends HTMLElement>(id: string): T {
   return <T>document.getElementById(id)
 }
 
-export function SETUP(_state: State): void {
+export function SETUP(state: State): void {
+  /* Preferences first: they are for everyone, logged in or not */
+  buildLanguagePicker()
+  buildUnitsPicker()
+  buildTextSize()
+  buildMapDefaults(state)
+
   const user = CURRENT_USER
   if (!user) {
     /* A visitor viewing someone's shared map: offer a login, which comes back
@@ -51,6 +76,7 @@ export function SETUP(_state: State): void {
     return
   }
   el("profile-authed").hidden = false
+  el("profile-delete").hidden = false
 
   /* --- identity -------------------------------------------------------- */
 
@@ -133,6 +159,100 @@ export function SETUP(_state: State): void {
     if (historyLink && URLS.history) historyLink.href = URLS.history
     if (box) box.hidden = false
   }
+}
+
+/**
+ * The language menu: every catalog we ship, each named in its own language so
+ * that it is legible to the person looking for it, plus an Automatic entry
+ * that hands the choice back to the browser.
+ */
+function buildLanguagePicker(): void {
+  const select = <HTMLSelectElement>document.getElementById("language-select")
+  if (!select) return
+
+  const options = [
+    `<option value="">${t("tab.profile.languageAuto")}</option>`,
+    ...LOCALES.map(
+      (tag) => `<option value="${tag}">${localeName(tag)}</option>`
+    ),
+  ]
+  select.innerHTML = options.join("")
+
+  /* Only mark a language current if it was actually chosen; on Automatic the
+   * empty option stays selected, which is the honest reading of the state. */
+  select.value = storedLocale() || ""
+
+  select.addEventListener("change", () => setLocale(select.value))
+
+  /* The instructions for adding a catalog are on GitHub, which is no use to
+   * someone running Heatflask offline */
+  const link = <HTMLAnchorElement>document.getElementById("translate-link")
+  if (OFFLINE) document.getElementById("translate-note")?.remove()
+  else if (link) link.href = TRANSLATE_URL
+}
+
+/**
+ * Automatic / Metric / Imperial, the same shape as the language menu: the
+ * empty option is the browser's locale deciding, and stays selected until
+ * someone actually chooses.
+ */
+function buildUnitsPicker(): void {
+  const select = <HTMLSelectElement>document.getElementById("units-select")
+  if (!select) return
+  select.value = storedUnits()
+  select.addEventListener("change", () => setUnits(<Units | "">select.value))
+}
+
+/**
+ * Smaller / Normal / Larger.
+ *
+ * A stepper rather than a menu of sizes: what the reader wants is this a bit
+ * bigger, and the answer to that is one more press, not a list of numbers
+ * none of which means anything until it is tried.
+ */
+function buildTextSize(): void {
+  const smaller = document.getElementById("text-smaller")
+  const larger = document.getElementById("text-larger")
+  const reset = document.getElementById("text-reset")
+  if (!(smaller && larger && reset)) return
+
+  smaller.addEventListener("click", () => stepTextScale(-1))
+  larger.addEventListener("click", () => stepTextScale(1))
+  reset.addEventListener("click", () => resetTextScale())
+
+  /* Nothing happens at the ends, so say so rather than letting the button
+   * look live and do nothing. */
+  const sync = () => {
+    const scale = getTextScale()
+    ;(<HTMLButtonElement>smaller).disabled = scale <= TEXT_SCALE_MIN
+    ;(<HTMLButtonElement>larger).disabled = scale >= TEXT_SCALE_MAX
+    ;(<HTMLButtonElement>reset).disabled = scale === 1
+  }
+  document.addEventListener(TEXT_SCALE_CHANGE, sync)
+  sync()
+}
+
+/**
+ * Save as my defaults / Forget. Each button is live only when it would do
+ * something: Save greys out once the map is the saved style, and comes back
+ * the moment a dial or the basemap moves off it.
+ */
+function buildMapDefaults(appState: State): void {
+  const save = <HTMLButtonElement>document.getElementById("defaults-save")
+  const forget = <HTMLButtonElement>document.getElementById("defaults-forget")
+  if (!(save && forget)) return
+  const { visual } = appState
+
+  save.addEventListener("click", () => saveStyle(visual))
+  forget.addEventListener("click", () => forgetStyle())
+
+  const sync = () => {
+    save.disabled = isSaved(visual)
+    forget.disabled = !hasSavedStyle()
+  }
+  for (const p of STYLE_PARAMS) visual.onChange(p, sync, false)
+  document.addEventListener(SAVED_STYLE_CHANGE, sync)
+  sync()
 }
 
 /** Wire every element carrying data-action="<name>" to a handler. */

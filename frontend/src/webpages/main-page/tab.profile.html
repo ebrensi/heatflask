@@ -88,7 +88,91 @@
       >History log (admin)</a
     >
   </div>
+</div>
 
+<!-- Preferences: anyone can set these, logged in or not, and they are kept in
+     this browser rather than on an account -->
+<hr />
+
+<section class="prefs">
+  <h3 data-i18n="tab.profile.languageHeading">Language</h3>
+
+  <!-- Options are built in tab.profile.ts from the catalogs that exist, named in
+       their own language, so adding a catalog adds its option. -->
+  <select id="language-select"></select>
+
+  <p id="translate-note" data-i18n="tab.profile.translateNote">
+    <a id="translate-link" target="_blank" rel="noopener"
+      >Help us fix or add new translations!</a
+    >
+  </p>
+
+  <h3 data-i18n="tab.profile.unitsHeading">Units</h3>
+
+  <select id="units-select">
+    <option value="" data-i18n="tab.profile.unitsAuto">Automatic</option>
+    <option value="metric" data-i18n="tab.profile.unitsMetric">
+      Metric (km, m)
+    </option>
+    <option value="imperial" data-i18n="tab.profile.unitsImperial">
+      Imperial (mi, ft)
+    </option>
+  </select>
+
+  <h3 data-i18n="tab.profile.textSizeHeading">Text size</h3>
+
+  <!-- A- and A+ are the same in every language; the labels beside them are not,
+       so they carry the translated titles. -->
+  <div class="text-size">
+    <button
+      type="button"
+      id="text-smaller"
+      data-i18n-title="tab.profile.textSmaller"
+      title="Smaller"
+    >
+      A&minus;
+    </button>
+    <button type="button" id="text-reset" data-i18n="tab.profile.textReset">
+      Normal
+    </button>
+    <button
+      type="button"
+      id="text-larger"
+      data-i18n-title="tab.profile.textLarger"
+      title="Larger"
+    >
+      A+
+    </button>
+  </div>
+
+  <h3 data-i18n="tab.profile.mapDefaultsHeading">Map defaults</h3>
+
+  <p class="profile-note" data-i18n="tab.profile.mapDefaultsNote">
+    Start with this basemap, terrain and layer settings whenever you open a map
+    whose link does not set its own. Links you share still show exactly what you
+    see.
+  </p>
+
+  <div class="map-defaults">
+    <button
+      type="button"
+      id="defaults-save"
+      data-i18n="tab.profile.mapDefaultsSave"
+    >
+      Save as my defaults
+    </button>
+    <button
+      type="button"
+      id="defaults-forget"
+      data-i18n="tab.profile.mapDefaultsForget"
+    >
+      Forget
+    </button>
+  </div>
+</section>
+
+<!-- Last and on its own, as far as the tab allows from everything else -->
+<div id="profile-delete" hidden>
   <hr />
 
   <button

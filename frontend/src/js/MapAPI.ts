@@ -440,6 +440,12 @@ export function BindMap(map: MLMap, appState: State): void {
     false
   )
 
+  /* The dials and the Shadows box change these, and until now the URL only
+   * caught up with them the next time the map moved: a link copied straight
+   * after turning a dial did not show what its sender saw. */
+  for (const p of ["tau", "T", "sz", "alpha", "pw", "cr", "shadows"] as const)
+    visual.onChange(p, () => setURLfromQV({ visual, query }), false)
+
   warnWhenBlocked(map)
 
   map.on("move", (e) => {
