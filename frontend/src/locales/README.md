@@ -4,9 +4,10 @@ One JSON file per language. `en.json` is the source of truth: every string the
 front end shows is in it, and English is the fallback for any key a translation
 has not got to yet.
 
-Shipping twelve: English, German, Spanish, French, Italian, Japanese,
-Norwegian (Bokmål), Brazilian and European Portuguese, Russian, and Chinese in
-both Simplified and Traditional. All but English are a machine first pass -- **they have not been
+Shipping nineteen: English, Czech, Dutch, French, German, Indonesian, Italian,
+Japanese, Norwegian (Bokmål), Polish, Brazilian and European Portuguese,
+Russian, Spanish, Thai, Ukrainian, Vietnamese, and Chinese in both Simplified
+and Traditional. All but English are a machine first pass -- **they have not been
 read by a native speaker**, and corrections are the point.
 The keys most likely to be wrong are the terse ones, where the English gives a
 translator nothing to go on: `tab.controls.*` (the dial labels) and
@@ -63,6 +64,9 @@ Bokmål, `nb`, but a browser may send the umbrella `no`, and a Nynorsk (`nn`)
 reader is better served by Bokmål than by English. Both are aliased to `nb`.
 A Nynorsk catalog, if someone writes one, is just `nn.json` and dropping the
 `nn` alias.
+
+Slovak (`sk`) goes to Czech on the same reasoning, and `in` -- the old tag for
+Indonesian that some Android and Java stacks still send -- goes to `id`.
 
 ## How a reader gets a language
 

@@ -27,15 +27,22 @@
  */
 
 import EN_JSON from "../locales/en.json"
+import CS_JSON from "../locales/cs.json"
 import DE_JSON from "../locales/de.json"
 import ES_JSON from "../locales/es.json"
 import FR_JSON from "../locales/fr.json"
+import ID_JSON from "../locales/id.json"
 import IT_JSON from "../locales/it.json"
 import JA_JSON from "../locales/ja.json"
 import NB_JSON from "../locales/nb.json"
+import NL_JSON from "../locales/nl.json"
+import PL_JSON from "../locales/pl.json"
 import PT_BR_JSON from "../locales/pt-BR.json"
 import PT_PT_JSON from "../locales/pt-PT.json"
 import RU_JSON from "../locales/ru.json"
+import TH_JSON from "../locales/th.json"
+import UK_JSON from "../locales/uk.json"
+import VI_JSON from "../locales/vi.json"
 import ZH_HANS_JSON from "../locales/zh-Hans.json"
 import ZH_HANT_JSON from "../locales/zh-Hant.json"
 
@@ -56,15 +63,22 @@ const EN = <Catalog>EN_JSON
  * many languages or many times the strings.
  */
 const CATALOGS: Record<string, Catalog> = {
+  cs: <Catalog>CS_JSON,
   de: <Catalog>DE_JSON,
   es: <Catalog>ES_JSON,
   fr: <Catalog>FR_JSON,
+  id: <Catalog>ID_JSON,
   it: <Catalog>IT_JSON,
   ja: <Catalog>JA_JSON,
   nb: <Catalog>NB_JSON,
+  nl: <Catalog>NL_JSON,
+  pl: <Catalog>PL_JSON,
   "pt-BR": <Catalog>PT_BR_JSON,
   "pt-PT": <Catalog>PT_PT_JSON,
   ru: <Catalog>RU_JSON,
+  th: <Catalog>TH_JSON,
+  uk: <Catalog>UK_JSON,
+  vi: <Catalog>VI_JSON,
   "zh-Hans": <Catalog>ZH_HANS_JSON,
   "zh-Hant": <Catalog>ZH_HANT_JSON,
 }
@@ -86,6 +100,11 @@ const CATALOGS: Record<string, Catalog> = {
  * instead, and a Nynorsk (nn) reader reads Bokmål far more easily than
  * English. Neither shares a base subtag with nb, so neither would get there
  * on its own.
+ *
+ * Slovak goes to Czech for the same reason Nynorsk goes to Bokmål: the two
+ * are close enough that a Slovak reader is better off in Czech than English.
+ * `in` is the tag ISO withdrew for Indonesian in 1989, which old Android and
+ * Java stacks still send.
  */
 const ALIASES: Record<string, string> = {
   zh: "zh-Hans",
@@ -98,6 +117,8 @@ const ALIASES: Record<string, string> = {
   pt: "pt-BR",
   no: "nb",
   nn: "nb",
+  sk: "cs",
+  in: "id",
 }
 
 /** Language tags a reader can actually be given. */
