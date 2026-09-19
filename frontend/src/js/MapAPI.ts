@@ -262,8 +262,15 @@ const DEM_SOURCE = "heatflask-dem"
 
 /* Mapterhorn: open global terrain in Terrarium encoding, served with CORS.
  * (The AWS Terrain Tiles bucket has the data too, but sends no CORS header,
- * so WebGL cannot read it.) */
+ * so WebGL cannot read it.) Its tilejson gives no maxzoom, so MapLibre assumes
+ * 22 and asks for tiles that 404 when zoomed in. Coverage is uneven: z12
+ * over all land, z16 over most of North America, Europe and New Zealand, z17
+ * only in patches (the Alps, Paris, Madrid). Above 16 the rare extra detail is
+ * invisible at our exaggeration, so we stop there and overzoom. Where the data
+ * stops at z12, z13-16 still 404, and MapLibre fills them from any coarser
+ * tile it has already loaded (TerrainTileManager.getSourceTile). */
 const DEM_TILEJSON = "https://tiles.mapterhorn.com/tilejson.json"
+const DEM_MAXZOOM = 16
 
 const TERRAIN_EXAGGERATION = 1.5
 /** The pitch terrain is shown at when it is switched on over a flat view */
@@ -274,6 +281,7 @@ function addTerrainSource(map: MLMap): void {
   map.addSource(DEM_SOURCE, {
     type: "raster-dem",
     url: DEM_TILEJSON,
+    maxzoom: DEM_MAXZOOM,
     encoding: "terrarium",
     tileSize: 512,
   })
