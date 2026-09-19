@@ -21,7 +21,7 @@ import {
   State,
 } from "./Model"
 
-import { parseURL } from "./URL"
+import { parseURL, bindURL } from "./URL"
 import { savedStyle, setsStyle } from "./MapDefaults"
 import { escapeHTML } from "./appUtil"
 import { watch } from "./DataBinding"
@@ -73,6 +73,9 @@ export async function start() {
     url: watch<URLParameters>(init.url),
   }
 
+  // The address bar follows the model from here on; see bindURL
+  bindURL(appState)
+
   // **** Map settings / bindings ****
   MapAPI.BindMap(map, appState)
   map.addControl(new LayerPicker(appState), "top-left")
@@ -118,72 +121,3 @@ export async function start() {
 
   return appState
 }
-
-// flags.onChange("zoomToSelection", zoomToSelectedPaths)
-// import * as ActivityCollection from "./DotLayer/ActivityCollection"
-
-// import { dotLayer } from "./DotLayerAPI"
-
-// import "./DotControls"
-// import "./Control.pathSelect"
-
-// import { makeQuery, abortQuery } from "./DataImport"
-// import * as table from "./Table"
-// import { queueTask } from "./appUtil"
-// import { getUrlString } from "./URL"
-
-// /*
-//  * Bind data-actions
-//  */
-// const userActions = {
-//   "selection-clear": table.clearSelections,
-//   "selection-render": openSelected,
-//   query: renderFromQuery,
-//   "abort-query": abortRender,
-//   login: login,
-//   logout: logout,
-//   delete: deleteAccount,
-//   "view-index": viewIndex,
-// }
-
-// function doAction(event) {
-//   const name = event.target.dataset.action,
-//     action = userActions[name]
-//   console.log(name)
-//   action && action()
-// }
-
-// for (const el of document.querySelectorAll("[data-action]")) {
-//   el.addEventListener("click", doAction)
-// }
-
-// export function openSelected(): void {
-//   const ids = Array.from(items.values())
-//     .filter((A) => A.selected)
-//     .map((A) => A.id)
-
-//   if (ids.length) {
-//     const argString = getUrlString({ id: ids.join("+") })
-//     const url = targetUser.id + argString
-//     window.open(url, "_blank")
-//   }
-// }
-
-// /* Rendering */
-// async function updateLayers(): Promise<void> {
-//   if (vParams.autozoom) {
-//     const to talBounds = await ActivityCollection.getLatLngBounds()
-
-//     if (totalBounds.isValid()) {
-//       map.fitBounds(totalBounds)
-//     }
-//   }
-
-//   dotLayer.reset()
-//   table.update()
-// }
-
-// // Make initial query if there is one
-// if (qParams.userid) {
-//   queueTask(renderFromQuery)
-// }

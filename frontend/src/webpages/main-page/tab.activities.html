@@ -20,15 +20,10 @@
 
   <br /><br />
 
-  <input
-    type="checkbox"
-    data-bind="zoomToSelection"
-    data-prop="checked"
-    data-class="flag"
-  />
+  <input type="checkbox" id="zoomToSelection" />
   <!-- The icons live in the string with the words: a translation decides
        where in the phrase they fall. The checkbox stays outside it, since
-       replacing that would drop its binding. -->
+       replacing that would drop its listener. -->
   <span data-i18n="tab.activities.zoomToSelection">
     <i class="fas fa-search-plus"></i> <i class="far fa-object-group"></i>
     <i class="fas fa-search-minus"></i> Zoom to selection

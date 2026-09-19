@@ -4,6 +4,7 @@
 import Geohash from "latlon-geohash"
 import { nextTask } from "./appUtil"
 import { STYLE_PARAMS, hasSavedStyle } from "./MapDefaults"
+import type { Live } from "./DataBinding"
 
 import {
   QueryParameters,
@@ -116,6 +117,18 @@ for (param in urlArgNames) {
   }
 }
 
+/**
+ * A date from a link, as epoch seconds. This app writes epoch seconds, but an
+ * older build wrote the date input's "2026-09-01" straight through, and
+ * people type dates by hand.
+ */
+function toEpoch(val?: string): number | undefined {
+  if (!val) return undefined
+  if (/^\d+$/.test(val)) return +val
+  const ms = Date.parse(val)
+  return isNaN(ms) ? undefined : Math.round(ms / 1000)
+}
+
 export function parseURL(urlString: string) {
   /* parse parameters from the current url */
   const urlParams: URLParameters = {}
@@ -157,8 +170,8 @@ export function parseURL(urlString: string) {
     else if (type === "activities" && urlParams.limit)
       qparams.quantity = +urlParams.limit
     else if (type === "dates") {
-      qparams.before = +urlParams.before
-      qparams.after = +urlParams.after
+      qparams.before = toEpoch(urlParams.before)
+      qparams.after = toEpoch(urlParams.after)
     } else if (type === "ids") qparams.ids = urlParams.ids
     else if (type === "key") qparams.key = urlParams.key
   }
@@ -289,6 +302,61 @@ async function setURL(url: URLParameters) {
   }
 }
 
-export function setURLfromQV(qvparams: QVParams) {
+function setURLfromQV(qvparams: QVParams) {
   return setURL(QVtoURL(qvparams))
+}
+
+/** Everything QVtoURL reads, and so everything the address bar depends on */
+const URL_VISUAL: (keyof VisualParameters)[] = [
+  "autozoom",
+  "geohash",
+  "pitch",
+  "bearing",
+  "baselayer",
+  "terrain",
+  "tau",
+  "T",
+  "sz",
+  "alpha",
+  "pw",
+  "cr",
+  "shadows",
+  "paused",
+]
+const URL_QUERY: (keyof QueryParameters)[] = [
+  "type",
+  "quantity",
+  "after",
+  "before",
+  "key",
+  "userid",
+]
+
+/**
+ * Keep the address bar in step with the model. This is the only thing that
+ * writes the URL: whatever changes a parameter -- a dial, the map moving, a
+ * query run -- changes the model, and the URL follows from here. It used to be
+ * written from wherever someone remembered to, which is how the dials came to
+ * leave it stale until the map next moved.
+ *
+ * A map move changes several parameters at once; they are written once.
+ */
+export function bindURL({
+  visual,
+  query,
+}: {
+  visual: Live<VisualParameters>
+  query: Live<QueryParameters>
+}): void {
+  let pending = false
+  const update = () => {
+    if (pending) return
+    pending = true
+    queueMicrotask(() => {
+      pending = false
+      setURLfromQV({ visual, query })
+    })
+  }
+  for (const p of URL_VISUAL) visual.onChange(p, update, false)
+  for (const p of URL_QUERY) query.onChange(p, update, false)
 }

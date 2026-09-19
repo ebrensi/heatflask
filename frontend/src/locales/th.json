@@ -16,7 +16,6 @@
   "tab.query.before": "ถึง:",
   "tab.query.autozoom": "ซูม <i class=\"hf hf-bullseye\"></i> ไปยังผลการค้นหาอัตโนมัติหลังนำเข้า",
   "tab.query.queryButton": "<i class=\"hf hf-cloud-download\"></i> ค้นหา",
-  "tab.query.abortImport": "<i class=\"hf hf-cancel-circle\"></i> ยกเลิกการนำเข้า",
   "tab.query.createAccount": "สร้างบัญชีและ/หรือเข้าสู่ระบบ",
   "tab.activities.title": "กิจกรรมที่แสดงอยู่",
   "tab.activities.clearSelection": "ล้างการเลือก",

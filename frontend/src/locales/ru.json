@@ -16,7 +16,6 @@
   "tab.query.before": "По:",
   "tab.query.autozoom": "После импорта автоматически приближать к запросу <i class=\"hf hf-bullseye\"></i>",
   "tab.query.queryButton": "<i class=\"hf hf-cloud-download\"></i> Запрос",
-  "tab.query.abortImport": "<i class=\"hf hf-cancel-circle\"></i> Прервать импорт",
   "tab.query.createAccount": "Создайте аккаунт или войдите.",
   "tab.activities.title": "Показанные активности",
   "tab.activities.clearSelection": "Снять выделение",

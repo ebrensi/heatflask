@@ -16,7 +16,6 @@
   "tab.query.before": "Do:",
   "tab.query.autozoom": "Po importu automaticky přiblížit <i class=\"hf hf-bullseye\"></i> na výsledky",
   "tab.query.queryButton": "<i class=\"hf hf-cloud-download\"></i> Načíst",
-  "tab.query.abortImport": "<i class=\"hf hf-cancel-circle\"></i> Přerušit import",
   "tab.query.createAccount": "Vytvoř si účet a/nebo se přihlas.",
   "tab.activities.title": "Zobrazené aktivity",
   "tab.activities.clearSelection": "Zrušit výběr",

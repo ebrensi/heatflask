@@ -16,7 +16,6 @@
   "tab.query.before": "Sampai:",
   "tab.query.autozoom": "Zoom otomatis <i class=\"hf hf-bullseye\"></i> ke hasil kueri setelah impor",
   "tab.query.queryButton": "<i class=\"hf hf-cloud-download\"></i> Kueri",
-  "tab.query.abortImport": "<i class=\"hf hf-cancel-circle\"></i> Batalkan Impor",
   "tab.query.createAccount": "Buat akun dan/atau masuk.",
   "tab.activities.title": "Aktivitas yang Ditampilkan",
   "tab.activities.clearSelection": "Hapus Pilihan",

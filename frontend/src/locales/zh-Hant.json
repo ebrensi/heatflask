@@ -16,7 +16,6 @@
   "tab.query.before": "結束:",
   "tab.query.autozoom": "匯入後自動縮放到查詢範圍 <i class=\"hf hf-bullseye\"></i>",
   "tab.query.queryButton": "<i class=\"hf hf-cloud-download\"></i> 查詢",
-  "tab.query.abortImport": "<i class=\"hf hf-cancel-circle\"></i> 中止匯入",
   "tab.query.createAccount": "請建立帳號或登入。",
   "tab.activities.title": "已顯示的活動",
   "tab.activities.clearSelection": "清除選取",

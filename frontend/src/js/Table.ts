@@ -31,9 +31,7 @@ let lastSelected: Activity | undefined
 
 /** Is the "Zoom to selection" box ticked? */
 function zoomToSelection(): boolean {
-  const el = <HTMLInputElement>(
-    document.querySelector('[data-bind="zoomToSelection"]')
-  )
+  const el = <HTMLInputElement>document.getElementById("zoomToSelection")
   return !!el && el.checked
 }
 
@@ -62,7 +60,7 @@ export function init(map: MLMap, appState: State): void {
     ?.addEventListener(PANE_OPEN, () => scrollIntoView(lastSelected))
 
   // ticking the box zooms straight away, not only on the next selection change
-  const zoomBox = document.querySelector('[data-bind="zoomToSelection"]')
+  const zoomBox = document.getElementById("zoomToSelection")
   if (zoomBox)
     zoomBox.addEventListener("change", () => {
       if (zoomToSelection()) zoomToSelected()

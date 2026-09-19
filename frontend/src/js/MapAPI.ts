@@ -22,7 +22,6 @@ import heatflask_logo from "url:../images/logo.png"
 
 import { MAPBOX_ACCESS_TOKEN } from "./Env"
 import { State, DefaultVisual } from "./Model"
-import { setURLfromQV } from "./URL"
 import { Dialog } from "./Dialog"
 import { escapeHTML } from "./appUtil"
 
@@ -397,7 +396,7 @@ export function setBaselayer(map: MLMap, name: string): void {
 }
 
 export function BindMap(map: MLMap, appState: State): void {
-  const { query, visual } = appState
+  const { visual } = appState
 
   map.on("style.load", () => {
     styleReady = true
@@ -422,29 +421,9 @@ export function BindMap(map: MLMap, appState: State): void {
   })
   setBaselayer(map, visual.baselayer)
 
-  visual.onChange(
-    "baselayer",
-    (name: string) => {
-      setBaselayer(map, name)
-      setURLfromQV({ visual, query })
-    },
-    false
-  )
+  visual.onChange("baselayer", (name: string) => setBaselayer(map, name), false)
 
-  visual.onChange(
-    "terrain",
-    (on: boolean) => {
-      setTerrain(map, !!on)
-      setURLfromQV({ visual, query })
-    },
-    false
-  )
-
-  /* The dials and the Shadows box change these, and until now the URL only
-   * caught up with them the next time the map moved: a link copied straight
-   * after turning a dial did not show what its sender saw. */
-  for (const p of ["tau", "T", "sz", "alpha", "pw", "cr", "shadows"] as const)
-    visual.onChange(p, () => setURLfromQV({ visual, query }), false)
+  visual.onChange("terrain", (on: boolean) => setTerrain(map, !!on), false)
 
   warnWhenBlocked(map)
 
@@ -461,7 +440,6 @@ export function BindMap(map: MLMap, appState: State): void {
      * such as autozoom's fitTo(). Once the user has taken the wheel, stop
      * auto-fitting so their chosen view is what gets saved to the URL. */
     if (e.originalEvent && visual.autozoom) visual.autozoom = false
-    setURLfromQV({ visual, query })
   })
 }
 

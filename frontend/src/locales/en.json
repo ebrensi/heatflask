@@ -16,7 +16,6 @@
   "tab.query.before": "Before:",
   "tab.query.autozoom": "Auto-Zoom <i class=\"hf hf-bullseye\"></i> to query after import",
   "tab.query.queryButton": "<i class=\"hf hf-cloud-download\"></i> Query",
-  "tab.query.abortImport": "<i class=\"hf hf-cancel-circle\"></i> Abort Import",
   "tab.query.createAccount": "Create an account and/or log in.",
   "tab.activities.title": "Rendered Activities",
   "tab.activities.clearSelection": "Clear Selection",

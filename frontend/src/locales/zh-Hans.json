@@ -16,7 +16,6 @@
   "tab.query.before": "结束:",
   "tab.query.autozoom": "导入后自动缩放到查询范围 <i class=\"hf hf-bullseye\"></i>",
   "tab.query.queryButton": "<i class=\"hf hf-cloud-download\"></i> 查询",
-  "tab.query.abortImport": "<i class=\"hf hf-cancel-circle\"></i> 中止导入",
   "tab.query.createAccount": "请创建账号或登录。",
   "tab.activities.title": "已显示的活动",
   "tab.activities.clearSelection": "清除选择",

@@ -16,7 +16,6 @@
   "tab.query.before": "Tot:",
   "tab.query.autozoom": "Na import automatisch inzoomen <i class=\"hf hf-bullseye\"></i> op de zoekopdracht",
   "tab.query.queryButton": "<i class=\"hf hf-cloud-download\"></i> Opvragen",
-  "tab.query.abortImport": "<i class=\"hf hf-cancel-circle\"></i> Import afbreken",
   "tab.query.createAccount": "Maak een account aan en/of log in.",
   "tab.activities.title": "Weergegeven activiteiten",
   "tab.activities.clearSelection": "Selectie wissen",

@@ -1,8 +1,8 @@
 import { icon } from "~/src/js/Icons"
 import { State } from "~/src/js/Model"
 import type { QueryParameters } from "~/src/js/Model"
-import { renderFromQuery, abortRender } from "~/src/js/Render"
-import { STRAVA_USER_URL } from "~/src/js/Env"
+import { renderFromQuery } from "~/src/js/Render"
+import { CURRENT_USER, STRAVA_USER_URL, URLS } from "~/src/js/Env"
 import { t } from "~/src/js/i18n"
 import CONTENT from "bundle-text:./tab.query.html"
 export { CONTENT }
@@ -10,11 +10,8 @@ export { CONTENT }
 export const ID = "QueryTab"
 export const ICON = icon("bars")
 
-/* These carried data-bind attributes that nothing processed: the only
- * [data-bind] walk in the codebase covers this tab's own form inputs and never
- * touches the header. So the avatar sat on its placeholder and the title
- * rendered the literal text "$TARGET_USER's map". SETUP fills them in by id --
- * the header is already in the DOM by the time it runs. */
+/* SETUP fills these in by id -- the header is already in the DOM by the time
+ * it runs. */
 export const TITLE = `
   <a id="query-user-link" href="#" target="_blank" rel="noopener">
     <img id="query-user-avatar" class="tab-avatar" alt="" />
@@ -40,63 +37,53 @@ function fillHeader(appState: State): void {
   if (link && user.id) link.href = STRAVA_USER_URL(user.id)
 }
 
-type CallbackFunction = (el: HTMLElement, S: State) => void
-type CallbackDispatch = Record<string, CallbackFunction>
+type QueryType = QueryParameters["type"]
 
-const OnChange: CallbackDispatch = {
-  /**
-   * Handle Query-Type change
-   */
-  queryType: (el, S) => {
-    const qtype = (<HTMLSelectElement>el).value
-    S.query.type = <QueryParameters["type"]>qtype
+/** The form fields each query type uses; the others are hidden */
+const FIELDS: Record<QueryType, string[]> = {
+  days: ["quantity-box"],
+  activities: ["quantity-box"],
+  ids: ["ids-box"],
+  dates: ["dates-box"],
+  key: ["key-box"],
+}
+const ALL_FIELDS = ["quantity-box", "ids-box", "dates-box", "key-box"]
 
-    const tabContentElement = document.getElementById(ID)
-    const qelements = tabContentElement.querySelectorAll("[data-qshow]")
-    for (const el of Array.from(qelements)) {
-      const toShow = el.getAttribute("data-qshow").split(",")
-      if (toShow.includes(qtype)) {
-        el.classList.add("show")
-      } else {
-        el.classList.remove("show")
-      }
-    }
-  },
-
-  autozoom: (el, S) => {
-    S.visual.autozoom = (<HTMLInputElement>el).checked
-  },
+function el<T extends HTMLElement = HTMLInputElement>(id: string): T {
+  return <T>document.getElementById(id)
 }
 
-const OnClick: CallbackDispatch = {
-  "button:query": (el, S) => {
-    runQuery(S)
-  },
-  "button:abort": () => {
-    abortRender()
-  },
-  "button:login": (el, S) => {
-    console.log("button:login", el, S)
-    // const currentUrl = window.location.href
-    window.location.href = "/authorize"
-  },
+function showFieldsFor(type: QueryType): void {
+  const shown = FIELDS[type] || []
+  for (const id of ALL_FIELDS) el(id).hidden = !shown.includes(id)
+}
+
+/* The model keeps query dates as epoch seconds, as the URL does; a date input
+ * wants "YYYY-MM-DD". Both are taken as UTC, as the backend takes them. */
+function toDateInput(epoch?: number): string {
+  return epoch ? new Date(epoch * 1000).toISOString().slice(0, 10) : ""
+}
+function fromDateInput(value: string): number | undefined {
+  const ms = Date.parse(value)
+  return isNaN(ms) ? undefined : ms / 1000
 }
 
 /**
- * Pull the current form values into the model, then run the query.
- *
- * The [data-bind] inputs are not synced to appState as the user edits them --
- * only queryType and autozoom have change handlers -- so they are collected
- * here, at the point of use.
+ * The form is a draft: nothing in it reaches the model until the query runs,
+ * so the URL -- which follows the model -- always describes the query that
+ * was actually made, never one half-typed.
  */
-function runQuery(S: State): void {
-  const fromDom = getQparamsFromDom().query
-  if (fromDom) {
-    const target = <Record<string, unknown>>(<unknown>S.query)
-    for (const [key, value] of Object.entries(fromDom)) {
-      if (value === "" || value === null || value === undefined) continue
-      target[key] = key === "quantity" ? +value : value
-    }
+function runQuery({ query }: State): void {
+  const type = <QueryType>el<HTMLSelectElement>("queryType").value
+  query.type = type
+  if (type === "days" || type === "activities")
+    query.quantity = +el("quantity").value
+  else if (type === "ids")
+    query.ids = el<HTMLTextAreaElement>("query-ids").value
+  else if (type === "key") query.key = el("query-key").value.trim()
+  else if (type === "dates") {
+    query.after = fromDateInput(el("date-after").value)
+    query.before = fromDateInput(el("date-before").value)
   }
   renderFromQuery().catch((e) => console.error("query failed:", e))
 }
@@ -105,128 +92,57 @@ function runQuery(S: State): void {
  * This runs when all sidebar HTML is in place and we have a model State
  */
 export function SETUP(appState: State) {
-  const tabContentElement = document.getElementById(ID)
-
+  const { query, visual } = appState
   fillHeader(appState)
 
-  // Set up change and click listeners
-  tabContentElement.addEventListener("change", (e: Event) => {
-    const el = <HTMLElement>e.target
-    const onChangeFunc = OnChange[el.id]
-    if (onChangeFunc) {
-      onChangeFunc(el, appState)
-    }
-  })
+  /* --- model -> form, once: after this the form is the reader's ---------- */
 
-  tabContentElement.addEventListener("click", (e: Event) => {
-    const el = <HTMLElement>e.target
-    const onClickFunc = OnClick[el.id]
-    if (onClickFunc) {
-      onClickFunc(el, appState)
-    }
-  })
+  const typeSelect = el<HTMLSelectElement>("queryType")
+  const after = el("date-after")
+  const before = el("date-before")
+  const autozoom = el("autozoom")
 
-  const afterDateEl = <HTMLInputElement>document.getElementById("date-after")
-  const beforeDateEl = <HTMLInputElement>document.getElementById("date-before")
-  afterDateEl.addEventListener(
-    "change",
-    () => (beforeDateEl.min = afterDateEl.value)
-  )
-  beforeDateEl.addEventListener(
-    "change",
-    () => (afterDateEl.max = beforeDateEl.value)
+  typeSelect.value = query.type
+  if (query.quantity) el("quantity").value = String(query.quantity)
+  el<HTMLTextAreaElement>("query-ids").value = query.ids || ""
+  el("query-key").value = query.key || ""
+  after.value = toDateInput(query.after)
+  before.value = toDateInput(query.before)
+  showFieldsFor(query.type)
+
+  typeSelect.addEventListener("change", () =>
+    showFieldsFor(<QueryType>typeSelect.value)
   )
 
-  /*
-   * If the user hits enter in tbe number field, make the query
-   */
-  document.getElementById("quantity").addEventListener("keypress", (event) => {
-    if (event.key === "Enter") {
-      appState.query.quantity = +(<HTMLInputElement>event.target).value
-      runQuery(appState)
-    }
+  /* The date pickers keep each other honest: after can't be later than before */
+  after.addEventListener("change", () => (before.min = after.value))
+  before.addEventListener("change", () => (after.max = before.value))
+
+  /* --- running it -------------------------------------------------------- */
+
+  el("query-run").addEventListener("click", () => runQuery(appState))
+
+  // Enter in the number field runs the query
+  el("quantity").addEventListener("keypress", (event) => {
+    if (event.key === "Enter") runQuery(appState)
   })
 
-  //  Initialize DOM element values with those from appState paramters
-  setDomFromParams(appState, tabContentElement)
-  tabContentElement.dispatchEvent(new Event("change"))
-}
+  /* --- auto-zoom: a live setting, not part of the draft ------------------- */
 
-type TT<k extends keyof State> = [k, keyof State[k]]
-type ValidPair = TT<keyof State>
+  autozoom.checked = !!visual.autozoom
+  autozoom.addEventListener("change", () => {
+    visual.autozoom = autozoom.checked
+  })
+  // taking the map by hand turns it off (MapAPI.ts); the box should say so
+  visual.onChange("autozoom", (on: boolean) => (autozoom.checked = !!on), false)
 
-function setDomFromParams(appState: State, baseElement?: HTMLElement) {
-  const elements = (baseElement || document).querySelectorAll("[data-bind]")
-  for (const el of Array.from(elements)) {
-    const key = el.getAttribute("data-bind")
-    const [paramStr, propOrAttr] = key.split(":")
-    const [pclass, pfield] = <ValidPair>paramStr.split(".")
-    const value = appState[pclass][pfield]
-    if (value !== undefined) {
-      const isAttr = propOrAttr[0] === "*"
-      // Depending on whether this is a property or an attribute
-      if (isAttr) {
-        const attr = propOrAttr.slice(1)
-        el.setAttribute(attr, String(value))
-      } else {
-        const prop = propOrAttr
-        el[prop] = value
-      }
-    }
-  }
-  const querytypeSelectorEl = document.getElementById("queryType")
-  OnChange["queryType"](querytypeSelectorEl, appState)
+  /* --- a visitor gets a way in ------------------------------------------- */
 
-  const fshow_elements = (baseElement || document).querySelectorAll(
-    "[data-fshow$=authenticated]"
-  )
-  for (const el of Array.from(fshow_elements)) {
-    const value = el.getAttribute("data-fshow")
-    const authenticated = !!appState.currentUser
-    const wantsAuthenticated = value[0] !== "!"
-    if (authenticated && wantsAuthenticated) {
-      el.classList.add("show")
-    } else {
-      el.classList.remove("show")
-    }
+  if (!CURRENT_USER) {
+    el("query-login").hidden = false
+    el("query-login-button").addEventListener("click", () => {
+      const here = window.location.pathname + window.location.search
+      window.location.href = `${URLS.login}?state=${encodeURIComponent(here)}`
+    })
   }
 }
-
-export function getQparamsFromDom(baseElement?: HTMLElement) {
-  baseElement = baseElement || document.getElementById(ID)
-  const elements = baseElement.querySelectorAll('[data-bind^="query"]')
-  const result: Record<string, Record<string, any>> = {}
-  for (const el of Array.from(elements)) {
-    const key = el.getAttribute("data-bind")
-    const [paramStr, propOrAttr] = key.split(":")
-    const [pclass, pfield] = paramStr.split(".")
-    const isAttr = propOrAttr[0] === "*"
-    const value = isAttr
-      ? el.getAttribute(propOrAttr.slice(1))
-      : el[<keyof typeof el>propOrAttr]
-    if (!result[pclass]) {
-      result[pclass] = {}
-    }
-    result[pclass][pfield] = value
-  }
-  return result
-}
-
-// const qParams: QueryParameters = { ...S.query, ...getQparamsFromDom() }
-
-// function renderFromQuery() {
-//   const query = {
-//     [qParams.userid]: getCurrentQuery(),
-//   }
-//   // console.log(`making query: ${JSON.stringify(query)}`)
-
-//   makeQuery(query, () => {
-//     flags.importing = false
-//     const num = items.size
-//     const msg = `done! ${num} activities imported`
-//     document.querySelectorAll(".info-message").forEach((el) => {
-//       el.innerHTML = msg
-//     })
-//     updateLayers()
-//   })
-// }

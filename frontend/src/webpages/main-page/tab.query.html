@@ -2,18 +2,13 @@
 
 <h3 data-i18n="tab.query.heading">Activities Query:</h3>
 
-<span data-qshow="days,activities">
-  <input
-    id="quantity"
-    type="number"
-    value="0"
-    min="1"
-    max="9999"
-    data-bind="query.quantity:value"
-  />
+<!-- Which of the fields below shows depends on the query type; tab.query.ts
+     unhides the ones that type uses -->
+<span id="quantity-box" hidden>
+  <input id="quantity" type="number" value="0" min="1" max="9999" />
 </span>
 
-<select id="queryType" data-bind="query.type:value">
+<select id="queryType">
   <option value="days" data-i18n="tab.query.optDays">recent days</option>
   <option value="activities" selected data-i18n="tab.query.optActivities">
     recent activities
@@ -25,33 +20,33 @@
 
 <br />
 
-<div data-qshow="key">
-  <input type="text" value="" data-bind="query.key:value" />
+<div id="key-box" hidden>
+  <input type="text" id="query-key" value="" />
 </div>
 
-<div data-qshow="ids">
+<div id="ids-box" hidden>
   <textarea
+    id="query-ids"
     autocomplete="on"
     data-i18n-placeholder="tab.query.idsPlaceholder"
     placeholder="enter activity ids here"
     spellcheck="false"
-    data-bind="query.ids:value"
   >
   </textarea>
 </div>
 
-<div data-qshow="dates">
+<div id="dates-box" hidden>
   <span data-i18n="tab.query.after">After:</span>
-  <input type="date" id="date-after" data-bind="query.after:value" />
+  <input type="date" id="date-after" />
   <br />
   <span data-i18n="tab.query.before">Before:</span>
-  <input type="date" id="date-before" data-bind="query.before:value" />
+  <input type="date" id="date-before" />
 </div>
 
 <br />
 
 <label>
-  <input type="checkbox" id="autozoom" data-bind="visual.autozoom:checked" />
+  <input type="checkbox" id="autozoom" />
   <span data-i18n="tab.query.autozoom">
     Auto-Zoom <i class="hf hf-bullseye"></i> to query after import
   </span>
@@ -62,43 +57,25 @@
 
 <br />
 
-<!-- display only while not importing -->
 <button
-  id="button:query"
+  id="query-run"
   type="button"
-  data-mshow="!importing"
   class="btn btn-a btn-sm smooth"
   data-i18n="tab.query.queryButton"
 >
   <i class="hf hf-cloud-download"></i>
   Query
 </button>
-<!-- ------------------------------- -->
-
-<div data-fshow="importing">
-  <!-- display only while importing  -->
-  <div class="import-progress">
-    <div class="progress msgbox"></div>
-    <progress class="progbar"></progress>
-  </div>
-  <br />
-  <button
-    type="button"
-    class="btn btn-c btn-sm smooth"
-    id="button:abort"
-    data-i18n="tab.query.abortImport"
-  >
-    <i class="hf hf-cancel-circle"></i>
-    Abort Import
-  </button>
-</div>
 
 <br />
+<br />
 
-<!-- Displayed only if current-user id is not set (not logged-in) -->
-<div data-fshow="!authenticated">
+<!-- Only for a visitor who is not logged in -->
+<div id="query-login" hidden>
   <span data-i18n="tab.query.createAccount"
     >Create an account and/or log in.</span
   ><br />
-  <button class="strava-auth" id="button:login"></button>
+  <button class="strava-auth" id="query-login-button"></button>
 </div>
+
+<br />

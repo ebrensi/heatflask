@@ -16,7 +16,6 @@
   "tab.query.before": "Før:",
   "tab.query.autozoom": "Zoom automatisk <i class=\"hf hf-bullseye\"></i> til utvalget etter import",
   "tab.query.queryButton": "<i class=\"hf hf-cloud-download\"></i> Hent",
-  "tab.query.abortImport": "<i class=\"hf hf-cancel-circle\"></i> Avbryt import",
   "tab.query.createAccount": "Opprett en konto og/eller logg inn.",
   "tab.activities.title": "Viste aktiviteter",
   "tab.activities.clearSelection": "Fjern utvalg",

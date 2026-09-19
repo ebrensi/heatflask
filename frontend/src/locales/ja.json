@@ -16,7 +16,6 @@
   "tab.query.before": "終了:",
   "tab.query.autozoom": "読み込み後、検索範囲に自動ズーム <i class=\"hf hf-bullseye\"></i>",
   "tab.query.queryButton": "<i class=\"hf hf-cloud-download\"></i> 検索",
-  "tab.query.abortImport": "<i class=\"hf hf-cancel-circle\"></i> 読み込みを中止",
   "tab.query.createAccount": "アカウントを作成、またはログインしてください。",
   "tab.activities.title": "表示中のアクティビティ",
   "tab.activities.clearSelection": "選択を解除",

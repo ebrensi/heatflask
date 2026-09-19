@@ -16,7 +16,6 @@
   "tab.query.before": "Đến:",
   "tab.query.autozoom": "Tự động thu phóng <i class=\"hf hf-bullseye\"></i> tới kết quả sau khi nhập",
   "tab.query.queryButton": "<i class=\"hf hf-cloud-download\"></i> Truy vấn",
-  "tab.query.abortImport": "<i class=\"hf hf-cancel-circle\"></i> Hủy nhập",
   "tab.query.createAccount": "Tạo tài khoản và/hoặc đăng nhập.",
   "tab.activities.title": "Hoạt động đang hiển thị",
   "tab.activities.clearSelection": "Bỏ chọn",

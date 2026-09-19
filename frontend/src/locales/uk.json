@@ -16,7 +16,6 @@
   "tab.query.before": "До:",
   "tab.query.autozoom": "Після імпорту автоматично наблизити <i class=\"hf hf-bullseye\"></i> до результатів",
   "tab.query.queryButton": "<i class=\"hf hf-cloud-download\"></i> Завантажити",
-  "tab.query.abortImport": "<i class=\"hf hf-cancel-circle\"></i> Перервати імпорт",
   "tab.query.createAccount": "Створіть обліковий запис і/або увійдіть.",
   "tab.activities.title": "Показані активності",
   "tab.activities.clearSelection": "Скасувати вибір",

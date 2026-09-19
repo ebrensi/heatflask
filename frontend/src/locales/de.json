@@ -16,7 +16,6 @@
   "tab.query.before": "Bis:",
   "tab.query.autozoom": "Nach dem Import automatisch auf die Abfrage zoomen <i class=\"hf hf-bullseye\"></i>",
   "tab.query.queryButton": "<i class=\"hf hf-cloud-download\"></i> Abfragen",
-  "tab.query.abortImport": "<i class=\"hf hf-cancel-circle\"></i> Import abbrechen",
   "tab.query.createAccount": "Konto anlegen oder anmelden.",
   "tab.activities.title": "Angezeigte Aktivitäten",
   "tab.activities.clearSelection": "Auswahl aufheben",
