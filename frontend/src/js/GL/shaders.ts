@@ -296,12 +296,17 @@ void main() {
  *
  *   1. The dots are drawn, hard-edged, into an offscreen one-channel buffer
  *      with blendEquation(MAX), so overlapping dots cover a pixel once.
- *   2. That silhouette is blurred horizontally into a second buffer.
- *   3. It is blurred vertically on the way onto the map, offset, and the map
- *      is darkened by the result.
+ *   2. That silhouette is blurred horizontally into a second buffer,
+ *   3. and that vertically back into the first.
+ *   4. The result is stretched over the map, offset, and darkens it.
+ *
+ * The buffers are a fraction of the map's resolution (SHADOW_SCALE), and all
+ * the blurring happens there, so the one pass at full resolution, 4, reads a
+ * single texel per pixel, filtered. It covers the whole map whether there are
+ * dots or not; blurring in it cost several milliseconds a frame on an iGPU.
  *
  * The blur is a Gaussian of standard deviation u_sigma source texels, as
- * CSS's drop-shadow blur radius is twice the standard deviation. Both blur
+ * CSS's drop-shadow blur radius is twice the standard deviation. All three
  * passes use this shader, on one oversized triangle that covers the viewport;
  * no vertex buffer is needed.
  * ---------------------------------------------------------------------- */
@@ -324,13 +329,20 @@ uniform vec2 u_viewport;   // the target's size, in its pixels
 uniform vec2 u_offset;     // target pixels to shift the source by
 uniform vec2 u_step;       // one source texel along the blur, in uv
 uniform float u_sigma;     // in source texels
-uniform float u_final;     // 1 for the pass onto the map
+uniform float u_final;     // 1 for the pass onto the map: no blur
 uniform vec4 u_color;      // the shadow's, premultiplied
 
 out vec4 fragColor;
 
 void main() {
   vec2 uv = (gl_FragCoord.xy - u_offset) / u_viewport;
+  if (u_final > 0.5) {
+    float a = texture(u_source, uv).r;
+    if (a <= 0.0) discard;
+    fragColor = u_color * a;
+    return;
+  }
+
   float sigma = max(u_sigma, 0.01);
   int radius = min(int(ceil(3.0 * sigma)), MAX_RADIUS);
   float sum = 0.0;
@@ -342,13 +354,6 @@ void main() {
     sum += w * texture(u_source, uv + x * u_step).r;
     weights += w;
   }
-  float a = sum / weights;
-
-  if (u_final < 0.5) {
-    fragColor = vec4(a);
-    return;
-  }
-  if (a <= 0.0) discard;
-  fragColor = u_color * a;
+  fragColor = vec4(sum / weights);
 }
 `
