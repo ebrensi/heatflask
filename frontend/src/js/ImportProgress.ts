@@ -1,4 +1,9 @@
 /*
+ * Heatflask -- Copyright (C) 2016-2026 Efrem Rensi
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ * This file is part of Heatflask. See /LICENSE for terms.
+ */
+/*
  * ImportProgress -- the dialog that shows while activities are coming in.
  *
  * There is a real wait here: a first-time index import walks the athlete's

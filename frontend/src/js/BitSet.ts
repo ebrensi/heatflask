@@ -1,3 +1,11 @@
+/*
+ * Heatflask -- Copyright (C) 2016-2026 Efrem Rensi
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ * This file is part of Heatflask. See /LICENSE for terms.
+ *
+ * Adapted from TypedFastBitSet.js -- Copyright (c) Daniel Lemire
+ * (Apache-2.0). See /THIRD-PARTY.md.
+ */
 /**  JavaScript Bit array
  */
 

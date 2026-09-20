@@ -8,6 +8,36 @@ If you mostly know what you are doing and you are on a Linux based operating sys
   * `heatflask-frontend-watch` builds the frontend TypeScript and rebuilds it as you modify the frontend files; `heatflask-frontend-build` builds it once.  See [`./frontend/package.json`](./frontend/package.json).
 
 
+## Contributor terms
+
+Patches are welcome. Before I can merge one, I need two things from you, both
+of which are covered by a single line in your commit.
+
+**1. Sign off on your commits.** Commit with `git commit -s`, which appends a
+`Signed-off-by:` line. That line means you certify the
+[Developer Certificate of Origin](https://developercertificate.org) (also kept
+in [`/DCO`](./DCO)): in short, that the work is yours to give, or that you
+received it under a compatible license, and that you understand the
+contribution and your name are a matter of public record.
+
+**2. Contributions are licensed to the project, and to me, on these terms.**
+By submitting a contribution you license it under
+[AGPL-3.0-or-later](./LICENSE) like the rest of Heatflask, and you also grant
+me (Efrem Rensi) a perpetual, worldwide, non-exclusive, royalty-free,
+irrevocable and sublicensable license to use, reproduce, modify and distribute
+your contribution, **including the right to license it under terms other than
+the AGPL**. You keep the copyright in what you wrote; this is a license to me,
+not a transfer.
+
+That second point exists for a specific and narrow reason. Heatflask is
+AGPL-licensed, which does not suit every company that might want to use the
+code, so I offer commercial licenses on request. I can only do that for code I
+hold the rights to relicense. Without this grant, a single merged patch would
+make that impossible for the whole project, and I would have to turn
+contributions away. It does not let me take Heatflask itself proprietary: every
+version released under the AGPL stays available under the AGPL, permanently, to
+everyone.
+
 ## Code Style Guidelines
 ### Client-side (frontend)
 [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier)

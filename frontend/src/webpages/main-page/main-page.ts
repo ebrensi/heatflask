@@ -1,4 +1,9 @@
 /*
+ * Heatflask -- Copyright (C) 2016-2026 Efrem Rensi
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ * This file is part of Heatflask. See /LICENSE for terms.
+ */
+/*
     This should be the last imported CSS so that the rules in it over-ride
     everything before.
 

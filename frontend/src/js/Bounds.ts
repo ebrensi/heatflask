@@ -1,3 +1,8 @@
+/*
+ * Heatflask -- Copyright (C) 2016-2026 Efrem Rensi
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ * This file is part of Heatflask. See /LICENSE for terms.
+ */
 type BoundsData = [xmin: number, ymin: number, xmax: number, ymax: number]
 type RectObj = { x: number; y: number; w: number; h: number }
 

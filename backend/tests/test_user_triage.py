@@ -1,3 +1,6 @@
+# Heatflask -- Copyright (C) 2016-2026 Efrem Rensi
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# This file is part of Heatflask. See /LICENSE for terms.
 """
 Users.triage: inactive users are deauthorized before their record (and with it
 the only token that can revoke our access) is dropped.

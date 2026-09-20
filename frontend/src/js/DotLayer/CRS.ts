@@ -1,3 +1,11 @@
+/*
+ * Heatflask -- Copyright (C) 2016-2026 Efrem Rensi
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ * This file is part of Heatflask. See /LICENSE for terms.
+ *
+ * Adapted from Leaflet -- Copyright (c) 2010-2026, Volodymyr Agafonkin;
+ * Copyright (c) 2010-2011, CloudMade (BSD-2-Clause). See /THIRD-PARTY.md.
+ */
 // This is a streamlined version of Leaflet's EPSG:3857 crs,
 // which can run independently of Leaflet.js (i.e. in a worker thread)
 //  latlngpt is a a 2d-array [lat,lng] rather than a latlng object

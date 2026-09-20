@@ -1,4 +1,9 @@
 /*
+ * Heatflask -- Copyright (C) 2016-2026 Efrem Rensi
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ * This file is part of Heatflask. See /LICENSE for terms.
+ */
+/*
  * i18n -- the message catalog, and the code that applies it to the DOM.
  *
  * Every language is bundled rather than fetched, English included. English is

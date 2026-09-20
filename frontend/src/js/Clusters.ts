@@ -1,4 +1,9 @@
 /*
+ * Heatflask -- Copyright (C) 2016-2026 Efrem Rensi
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ * This file is part of Heatflask. See /LICENSE for terms.
+ */
+/*
  * Clusters -- markers for activities too small on the screen to be seen.
  *
  * Zoomed out far enough, an activity's path and dots shrink to a speck, or to

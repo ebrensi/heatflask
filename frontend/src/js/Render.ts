@@ -1,4 +1,9 @@
 /*
+ * Heatflask -- Copyright (C) 2016-2026 Efrem Rensi
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ * This file is part of Heatflask. See /LICENSE for terms.
+ */
+/*
  * Render -- run an activity query and put the result on the map.
  *
  * This lives outside UI.ts so that the query tab can trigger a render without

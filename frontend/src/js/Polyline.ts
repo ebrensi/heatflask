@@ -1,3 +1,12 @@
+/*
+ * Heatflask -- Copyright (C) 2016-2026 Efrem Rensi
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ * This file is part of Heatflask. See /LICENSE for terms.
+ *
+ * Adapted from Project-OSRM -- Copyright (c) 2017, Project OSRM
+ * contributors (BSD-2-Clause), and from PolylineEncoder.js by Mark
+ * McClure. See /THIRD-PARTY.md.
+ */
 /** Some functions for decoding Google's Polyline format into numbers
  * This is adapted from the implementation in Project-OSRM.
  * Based off of [the offical Google document](https://developers.google.com/maps/documentation/utilities/polylinealgorithm)

@@ -1,3 +1,8 @@
+/*
+ * Heatflask -- Copyright (C) 2016-2026 Efrem Rensi
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ * This file is part of Heatflask. See /LICENSE for terms.
+ */
 type DiffArray = Uint8Array | Int8Array | Int16Array | Int32Array
 
 function decoded_length(enc: DiffArray, rl_marker: number) {

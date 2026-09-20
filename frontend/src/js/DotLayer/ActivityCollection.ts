@@ -1,4 +1,9 @@
 /*
+ * Heatflask -- Copyright (C) 2016-2026 Efrem Rensi
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ * This file is part of Heatflask. See /LICENSE for terms.
+ */
+/*
  *  ActivityCollection is a some methods for managing a collection of Activity objects.
  *  Since this might running inside a worker, we cannot assume access to anything
  *  on the main thread.

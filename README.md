@@ -25,9 +25,31 @@ Heatflask is free, and built and run by one person. If it's worth something to y
 
 ## License
 
-This project is licensed under GNU General Public License v3.0 [(GNU GPLv3)](http://choosealicense.com/licenses/gpl-3.0).
+Heatflask is free software, licensed under the GNU Affero General Public
+License, version 3 or later [(AGPL-3.0-or-later)](https://www.gnu.org/licenses/agpl-3.0.html).
+The full text is in [`/LICENSE`](/LICENSE).
 
-Any user is free to suggest modifications, fork this repo, and/or make pull requests.  You are not free to use my code in a project that will make money.  If you feel you can improve on my ideas in your own project, do me a favor and reference my work and compensate me in some way that you think is fair.  Thanks!
+You are free to use, study, modify and share this code, including
+commercially. What the AGPL asks in return is reciprocity: if you distribute a
+modified version, **or run one as a network service**, the people using it must
+be able to get your version's complete source under this same license. That
+network clause (section 13) is the point — it is what keeps a modified
+Heatflask from being run as a closed service.
+
+Previous releases were licensed under the GPLv3, and anyone who received them
+under those terms keeps them.
+
+A few files are adapted from other projects under permissive licenses; see
+[`/THIRD-PARTY.md`](/THIRD-PARTY.md).
+
+### Commercial licensing
+
+If the AGPL doesn't work for you — for example, you want to build Heatflask's
+code into a product without releasing your own source — I am open to licensing
+it to you under different terms. [Get in touch](mailto:info@heatflask.com).
+
+I would also appreciate being credited if Heatflask's ideas turn up in your
+work, even where nothing legally requires it.
 
 Copyright (c) 2016-2026 [Efrem Rensi](mailto:info@heatflask.com)
 

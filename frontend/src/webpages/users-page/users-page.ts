@@ -1,4 +1,9 @@
 /*
+ * Heatflask -- Copyright (C) 2016-2026 Efrem Rensi
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ * This file is part of Heatflask. See /LICENSE for terms.
+ */
+/*
  * The user listing at /users: every registered user, with the operational
  * columns (login count, last login, last index access, shared). Admin only --
  * there used to be a public directory here too, of athletes who had made

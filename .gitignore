@@ -132,3 +132,7 @@ backend/activate
 frontend/dist/*
 !frontend/dist/README.md
 !frontend/dist/robots.txt
+
+.direnv
+.claude
+.envrc

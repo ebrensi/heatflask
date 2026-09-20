@@ -1,3 +1,11 @@
+/*
+ * Heatflask -- Copyright (C) 2016-2026 Efrem Rensi
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ * This file is part of Heatflask. See /LICENSE for terms.
+ *
+ * Adapted from simplify.js -- Copyright (c) 2017, Vladimir Agafonkin
+ * (BSD-2-Clause). See /THIRD-PARTY.md.
+ */
 /*  Simplify
     Adapted from V. Agafonkin's simplify.js implementation of
     Douglas-Peucker simplification algorithm

@@ -1,4 +1,9 @@
 /*
+ * Heatflask -- Copyright (C) 2016-2026 Efrem Rensi
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ * This file is part of Heatflask. See /LICENSE for terms.
+ */
+/*
  * GLSL for HeatflaskLayer. WebGL2 (GLSL ES 3.00).
  *
  * Positions arrive in zoom-0 world pixels (the world is 256px square)

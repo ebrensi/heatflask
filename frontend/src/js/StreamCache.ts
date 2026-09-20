@@ -1,4 +1,9 @@
 /*
+ * Heatflask -- Copyright (C) 2016-2026 Efrem Rensi
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ * This file is part of Heatflask. See /LICENSE for terms.
+ */
+/*
  * StreamCache -- keep activity streams in the browser, the way tiles are kept.
  *
  * Streams are the whole cost of a render: about 12KB of packed bytes each,

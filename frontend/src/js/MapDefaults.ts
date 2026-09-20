@@ -1,4 +1,9 @@
 /*
+ * Heatflask -- Copyright (C) 2016-2026 Efrem Rensi
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ * This file is part of Heatflask. See /LICENSE for terms.
+ */
+/*
  * MapDefaults -- the map style a reader starts with, if they saved one.
  *
  * Only the style: basemap, terrain and the animation settings. Where the map

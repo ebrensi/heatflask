@@ -1,5 +1,10 @@
 #!/usr/bin/env node
 /*
+ * Heatflask -- Copyright (C) 2016-2026 Efrem Rensi
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ * This file is part of Heatflask. See /LICENSE for terms.
+ */
+/*
  * Keep the catalogs and the source honest about each other.
  *
  * Against en.json, which is the source of truth:
