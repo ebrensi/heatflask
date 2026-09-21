@@ -10,7 +10,9 @@ from sanic.exceptions import SanicException
 import sanic
 import msgpack
 import asyncio
+import time
 from contextlib import aclosing
+from dataclasses import dataclass, field
 
 from logging import getLogger
 
@@ -34,19 +36,96 @@ I = Index.ActivitySummaryFields  # noqa: E741  (a namespace alias, as U is below
 U = Users.UserField
 
 
+@dataclass
+class QuerySummary:
+    """What one POST /activities asked for and got, for its History entry"""
+
+    owner: int | None = None
+    streams: bool = False
+    # the browser's own cache: activities it asked us not to send
+    excluded: int = 0
+    # activities the top-up found on Strava before the query ran
+    new: int = 0
+    # matched the query, and of those, sent before the response ended
+    activities: int = 0
+    sent: int = 0
+    counts: Streams.QueryCounts = field(default_factory=Streams.QueryCounts)
+    outcome: str = "ok"
+    seconds: float = 0.0
+
+    def message(self, viewer: int | None) -> str:
+        what = "map" if self.streams else "list"
+        if self.owner is None:
+            what += " of all athletes"
+        who = "owner" if viewer and viewer == self.owner else (viewer or "anon")
+        parts = [f"{self.activities} activities"]
+        if self.excluded:
+            parts[0] += f" (+{self.excluded} already in the browser)"
+        if self.streams and self.activities:
+            parts.append(
+                f"{self.counts.cached} cached + {self.counts.fetched} from Strava"
+            )
+        if self.new:
+            parts.append(f"{self.new} new on Strava")
+        if self.outcome != "ok":
+            parts.append(self.outcome)
+            if self.sent < self.activities:
+                parts.append(f"sent {self.sent}")
+        parts.append(f"{self.seconds:.1f}s")
+        return f"{what}, viewed by {who}: " + ", ".join(parts)
+
+    def stats(self) -> dict:
+        return {
+            "streams": self.streams,
+            "excluded": self.excluded,
+            "new": self.new,
+            "activities": self.activities,
+            "sent": self.sent,
+            "cached": self.counts.cached,
+            "fetched": self.counts.fetched,
+            "outcome": self.outcome,
+            "seconds": round(self.seconds, 2),
+        }
+
+
 @bp.post("/")
 @session_cookie(get=True)
-@History.logged
 async def query(request: SessionRequest):
     """
     Get the activity list JSON for currently logged-in user
+
+    Recorded in History once it is over, however it ended: what was asked for
+    and what it cost only exist by then. It used to be recorded on the way in,
+    which gave the path and the viewer and nothing else.
     """
+    summary = QuerySummary()
+    t0 = time.monotonic()
+    try:
+        await run_query(request, summary)
+    except asyncio.CancelledError:
+        # Sanic cancels the handler when the client goes away
+        summary.outcome = "closed by the browser"
+        raise
+    except Exception as e:
+        summary.outcome = f"failed: {e}"
+        raise
+    finally:
+        summary.seconds = time.monotonic() - t0
+        _, viewer = History.viewer_of(request)
+        History.log_query(
+            request, summary.owner, summary.message(viewer), summary.stats()
+        )
+
+
+async def run_query(request: SessionRequest, summary: QuerySummary):
     query = request.json
 
     streams = query.pop("streams", False)
     # The activity list asks for this to show which activities we hold streams
     # for. Off by default, so the render path never pays for the extra lookup.
     stream_status = query.pop("stream_status", False)
+    summary.streams = bool(streams)
+    summary.excluded = len(query.get("exclude_ids") or [])
     response = await request.respond(content_type="application/msgpack")
 
     def sendPacked(doc):
@@ -62,6 +141,7 @@ async def query(request: SessionRequest):
     target_user_id = query.get("user_id")
     target_user = None
     if target_user_id:
+        summary.owner = int(target_user_id)
         target_user = await Users.get(target_user_id)
         if not target_user:
             raise SanicException(
@@ -82,6 +162,7 @@ async def query(request: SessionRequest):
         else:
             # Someone else's map, and they have not chosen to share it. Refused
             # before anything below can import their index with their token.
+            summary.outcome = "refused: private"
             await sendPacked(
                 {
                     "error": "This athlete's map is private"
@@ -115,6 +196,7 @@ async def query(request: SessionRequest):
             # owner of the index, at most once per UPDATE_INTERVAL.
             if await Index.due_for_update(target_user_id):
                 added = await Index.update_user_entries(**target_user)
+                summary.new = added or 0
                 if added:
                     await sendPacked({"msg": f"{added} new activities"})
 
@@ -133,6 +215,7 @@ async def query(request: SessionRequest):
         await sendPacked({"delete": query_result["delete"]})
 
     summaries = query_result["docs"]
+    summary.activities = len(summaries)
     await sendPacked({"count": len(summaries)})
 
     info = {"atypes": Strava.ATYPES, "polyline_precision": Streams.POLYLINE_PRECISION}
@@ -159,13 +242,16 @@ async def query(request: SessionRequest):
     if not streams:
         for A in summaries:
             await sendPacked(A)
+            summary.sent += 1
         return
 
     summaries_lookup = {A[I.ACTIVITY_ID]: A for A in summaries}
     ids = list(summaries_lookup.keys())
 
     user = await Users.get(target_user_id)
-    streams_iter = Streams.aiter_query(activity_ids=ids, user=user)
+    streams_iter = Streams.aiter_query(
+        activity_ids=ids, user=user, counts=summary.counts
+    )
     items = with_wait_notices(streams_iter, sendPacked)
     try:
         async with aclosing(items):
@@ -173,7 +259,9 @@ async def query(request: SessionRequest):
                 A = summaries_lookup[aid]
                 A["mpk"] = packed_streams
                 await sendPacked(A)
+                summary.sent += 1
     except Strava.RateLimitExceeded as e:
+        summary.outcome = "rate limit"
         await sendPacked({"error": e.message})
 
 

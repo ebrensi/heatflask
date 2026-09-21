@@ -16,8 +16,9 @@ import aiohttp
 import pytest
 from sanic import Sanic
 
-from heatflask import History, Streams, Users
+from heatflask import History, Index, Streams, Users
 from heatflask.webserver import sessions
+from heatflask.webserver.bp import activities as activities_bp
 from heatflask.webserver.bp import auth as auth_bp
 from heatflask.webserver.bp import history as history_bp
 
@@ -165,6 +166,121 @@ async def test_admins_are_not_logged(history):
     History.log_request(FakeRequest(admin=True, user=1))
     await drain()
     assert history.docs == []
+
+
+async def test_a_query_is_filed_under_whose_activities_they_were(history):
+    History.log_query(FakeRequest(), 12, "map, viewed by anon: ...", {"sent": 3})
+    History.log_query(FakeRequest(user=5), 12, "map, viewed by 5: ...", {"sent": 1})
+    History.log_query(FakeRequest(admin=True, user=1), 12, "mine", {})
+    await drain()
+
+    anon, viewer = history.docs
+    assert anon["user"] == viewer["user"] == 12
+    assert anon["stats"] == {"sent": 3, "viewer": None}
+    assert viewer["stats"]["viewer"] == 5
+
+
+def test_a_query_summary_says_what_it_cost():
+    s = activities_bp.QuerySummary(owner=12, streams=True, activities=312, sent=312)
+    s.counts.cached, s.counts.fetched = 300, 12
+    s.seconds = 4.06
+    assert s.message(None) == (
+        "map, viewed by anon: 312 activities, 300 cached + 12 from Strava, 4.1s"
+    )
+    assert s.message(12).startswith("map, viewed by owner:")
+    assert s.message(5).startswith("map, viewed by 5:")
+
+    s.outcome, s.sent = "closed by the browser", 150
+    assert "closed by the browser, sent 150, 4.1s" in s.message(None)
+
+    everyone = activities_bp.QuerySummary(activities=200, excluded=40)
+    assert everyone.message(5) == (
+        "list of all athletes, viewed by 5: 200 activities"
+        " (+40 already in the browser), 0.0s"
+    )
+
+
+@pytest.fixture
+async def query_route(monkeypatch, sanic_server, history):
+    """POST /activities with Index, Users and Streams faked; returns the entry"""
+    athletes = {12: {"_id": 12, "p": False}, 13: {"_id": 13, "p": True}}
+
+    async def fake_query(**kwargs):
+        return {"docs": [{"_id": i} for i in range(5)]}
+
+    async def get_user(uid):
+        return athletes.get(int(uid)) if uid else None
+
+    async def yes(*args, **kwargs):
+        return True
+
+    async def no(*args, **kwargs):
+        return False
+
+    async def no_progress(uid):
+        return
+        yield
+
+    async def sharing_ids():
+        return [12]
+
+    async def aiter_query(activity_ids, user=None, counts=None):
+        counts.cached = 2
+        for aid in activity_ids:
+            if aid >= 2:
+                counts.fetched += 1
+            yield aid, b"x"
+
+    monkeypatch.setattr(Index, "query", fake_query)
+    monkeypatch.setattr(Index, "has_user_entries", yes)
+    monkeypatch.setattr(Index, "due_for_update", no)
+    monkeypatch.setattr(Index, "import_index_progress", no_progress)
+    monkeypatch.setattr(Users, "get", get_user)
+    monkeypatch.setattr(Users, "sharing_ids", sharing_ids)
+    monkeypatch.setattr(Streams, "aiter_query", aiter_query)
+
+    app = Sanic(f"history_query_test_{time.monotonic_ns()}")
+    app.blueprint(activities_bp.bp)
+    url = f"{await sanic_server(app)}/activities/"
+
+    async def post(body):
+        history.docs.clear()
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=body) as r:
+                await r.read()
+        for _ in range(50):
+            if history.docs:
+                break
+            await asyncio.sleep(0.01)
+        (entry,) = history.docs
+        return entry
+
+    return post
+
+
+async def test_a_map_query_is_recorded_once_it_is_over(query_route):
+    entry = await query_route({"user_id": 12, "streams": True, "exclude_ids": [9]})
+
+    assert entry["kind"] == History.Kind.REQUEST
+    assert entry["user"] == 12
+    assert entry["msg"].startswith(
+        "map, viewed by anon: 5 activities (+1 already in the browser),"
+        " 2 cached + 3 from Strava,"
+    )
+    stats = entry["stats"]
+    assert stats["viewer"] is None
+    assert (stats["activities"], stats["sent"]) == (5, 5)
+    assert (stats["cached"], stats["fetched"]) == (2, 3)
+    assert stats["outcome"] == "ok"
+    # the path and method said nothing the route does not
+    assert "path" not in entry and "method" not in entry
+
+
+async def test_a_refused_map_is_recorded_as_refused(query_route):
+    entry = await query_route({"user_id": 13, "streams": True})
+    assert entry["user"] == 13
+    assert entry["stats"]["outcome"] == "refused: private"
+    assert "refused: private" in entry["msg"]
 
 
 def test_read_cost_counts_what_strava_charged(limiter):

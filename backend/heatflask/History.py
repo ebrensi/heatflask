@@ -35,7 +35,6 @@ history entry and nothing more.
 
 import asyncio
 import datetime
-import functools
 import os
 import types
 from logging import getLogger
@@ -124,6 +123,19 @@ def record_soon(kind: str, msg: str, user: Optional[int] = None, **extra) -> Non
     task.add_done_callback(myBox.tasks.discard)
 
 
+def viewer_of(request) -> tuple[bool, Optional[int]]:
+    """
+    (is_admin, user id or None) for whoever made this request.
+
+    Requires session_cookie() to have run first -- that is what puts
+    current_user and is_admin on request.ctx. Anywhere else it reads as an
+    anonymous non-admin rather than raising.
+    """
+    ctx = getattr(request, "ctx", None)
+    user = getattr(ctx, "current_user", None)
+    return getattr(ctx, "is_admin", False), (user["_id"] if user else None)
+
+
 def log_request(request, msg: Optional[str] = None, **extra) -> None:
     """
     Record one request.
@@ -131,17 +143,11 @@ def log_request(request, msg: Optional[str] = None, **extra) -> None:
     Admins are skipped, as they were in 2020: the log is there to show what
     other people are doing with the app, and browsing it yourself should not
     push the evidence out of it.
-
-    Requires session_cookie() to have run first -- that is what puts
-    current_user and is_admin on request.ctx -- so this decorator goes below
-    it in the stack. It defaults to not-an-admin rather than raising if it is
-    used anywhere else.
     """
-    ctx = getattr(request, "ctx", None)
-    if getattr(ctx, "is_admin", False):
+    is_admin, viewer = viewer_of(request)
+    if is_admin:
         return
 
-    user = getattr(ctx, "current_user", None)
     path = request.path
     if request.query_string:
         path = f"{path}?{request.query_string}"
@@ -149,22 +155,28 @@ def log_request(request, msg: Optional[str] = None, **extra) -> None:
     record_soon(
         Kind.REQUEST,
         msg or path,
-        user=user["_id"] if user else None,
+        user=viewer,
         path=request.path,
         method=request.method,
         **extra,
     )
 
 
-def logged(func):
-    """Route decorator: record the request, then serve it."""
+def log_query(request, owner: Optional[int], msg: str, stats: dict) -> None:
+    """
+    Record one activity query, once it has finished.
 
-    @functools.wraps(func)
-    async def decorated_function(request, *args, **kwargs):
-        log_request(request)
-        return await func(request, *args, **kwargs)
-
-    return decorated_function
+    Unlike log_request, the entry's user is the athlete whose activities were
+    asked for, not whoever asked: a map is usually looked at by someone
+    anonymous, so "anon asked for /activities" said nothing, while "athlete 12
+    was looked at, and it cost 40 Strava reads" is the thing worth knowing.
+    The viewer goes in `stats`, along with the counts that `msg` spells out.
+    Admins are skipped, as in log_request.
+    """
+    is_admin, viewer = viewer_of(request)
+    if is_admin:
+        return
+    record_soon(Kind.REQUEST, msg, user=owner, stats=dict(stats, viewer=viewer))
 
 
 class ReadCost:

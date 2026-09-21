@@ -72,3 +72,26 @@ async def test_query_where_no_stream_can_be_fetched(
     fake.no_streams = {1, 2}
     got = [x async for x in Streams.aiter_query(activity_ids=[1, 2], user=make_user())]
     assert got == []
+
+
+async def test_query_counts_where_its_streams_came_from(
+    limiter, strava_server, monkeypatch
+):
+    await strava_server()
+    coll = FakeCollection([{"_id": i, "mpk": b"x"} for i in range(1000, 1004)])
+
+    async def get_collection():
+        return coll
+
+    monkeypatch.setattr(Streams, "get_collection", get_collection)
+
+    counts = Streams.QueryCounts()
+    ids = [1000, 1001, 1002, 1003] + list(range(6))
+    got = [
+        x
+        async for x in Streams.aiter_query(
+            activity_ids=ids, user=make_user(), counts=counts
+        )
+    ]
+    assert len(got) == 10
+    assert (counts.cached, counts.fetched) == (4, 6)

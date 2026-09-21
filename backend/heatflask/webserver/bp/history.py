@@ -51,13 +51,20 @@ def render_row(entry: dict, now: datetime.datetime) -> str:
     user = entry.get("user")
     kind = entry.get("kind", "")
 
-    # everything the entry carries beyond the named columns
-    extra = " ".join(f"{k}={v}" for k, v in sorted(entry.items()) if k not in COLUMNS)
+    # Everything else the entry carries, except nested documents: those are
+    # the numbers a message already spells out, kept whole for ?output=json
+    extra = " ".join(
+        f"{k}={v}"
+        for k, v in sorted(entry.items())
+        if k not in COLUMNS and not isinstance(v, dict)
+    )
 
+    # Nobody in particular: an entry about every athlete, or by someone who
+    # was not logged in, and its message says which
     user_cell = (
         f'<a href="/{user}">{user}</a>'
         if user is not None
-        else '<span class="anon">anon</span>'
+        else '<span class="anon">&mdash;</span>'
     )
 
     return (

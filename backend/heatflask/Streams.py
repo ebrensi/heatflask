@@ -14,6 +14,7 @@ import msgpack
 import polyline
 import asyncio
 import types
+from dataclasses import dataclass
 from pymongo.errors import BulkWriteError
 from typing import TypedDict, AsyncGenerator
 
@@ -219,12 +220,24 @@ async def strava_import(
             )
 
 
+@dataclass
+class QueryCounts:
+    """Where aiter_query's streams came from, filled in as it goes"""
+
+    cached: int = 0
+    fetched: int = 0
+
+
 async def aiter_query(
-    activity_ids: list[int], user=None
+    activity_ids: list[int], user=None, counts: QueryCounts | None = None
 ) -> AsyncGenerator[StreamsQueryResult, None]:
     """
     Yield streams for these activities: first whatever Mongo already holds,
     then the rest as Strava sends them.
+
+    Pass `counts` to learn how many were found in Mongo and how many fetched
+    from Strava. It is kept up to date as the query runs, so it is still
+    right about a query that was stopped part way.
 
     The Strava import gets a head start, running while the local results are
     sent. Stop early with aclose(), which stops the import too.
@@ -246,6 +259,8 @@ async def aiter_query(
         (doc["_id"], doc["mpk"]) async for doc in cursor
     ]
     mongo_result_ids = [_id for _id, mpk in local_result]
+    if counts is not None:
+        counts.cached = len(local_result)
 
     if mongo_result_ids:
         # Reset the TTL clock for the streams we are about to serve
@@ -277,9 +292,13 @@ async def aiter_query(
             fetched = await first_fetch
             if fetched is not None:
                 imported += 1
+                if counts is not None:
+                    counts.fetched = imported
                 yield fetched
                 async for item in streams_import:
                     imported += 1
+                    if counts is not None:
+                        counts.fetched = imported
                     yield item
 
             log.debug(
