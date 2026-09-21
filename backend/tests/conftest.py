@@ -7,7 +7,7 @@ Shared fixtures: a fake Strava, a fresh rate limiter with windows shrunk from
 
 Run from the repo root, inside the dev shell (numpy needs its libraries):
 
-    nix develop -c bash -c "source backend/.venv/heatflask/bin/activate && pytest backend/tests"
+    nix develop -c heatflask-test
 
 Nothing touches the network beyond 127.0.0.1. test_privacy.py uses a MongoDB
 on localhost if one is running, in a throwaway database, and skips otherwise;

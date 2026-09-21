@@ -1,5 +1,5 @@
 # Heatflask backend
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 This is the server-side code for [Heatflask](https://www.heatflask.com ).  It is written in Python using the [Sanic](https://sanic.dev/en/guide/) framework.  I called the app Heatflask because it originally made heatmaps from [Strava](https://www.strava.com) data using Flask as the backend.  It made more sense to have an Async backend so I went with Sanic.
 
@@ -43,6 +43,9 @@ If there are any problems getting this working, please create an [issue](https:/
 
 
 ### Code style guidelines
-We use [Flake8](https://flake8.pycqa.org/en/latest/#) linter and [Black](https://black.readthedocs.io/en/stable) formatting.
+Python code is linted and formatted with [Ruff](https://docs.astral.sh/ruff/), which
+replaced Flake8 and Black and produces byte-identical formatting to Black. It is
+configured in [`pyproject.toml`](./pyproject.toml) and comes from the Nix dev shell,
+so there is nothing to pip-install. The pre-commit hook formats staged files with it.
 
 

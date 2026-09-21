@@ -1,0 +1,47 @@
+# Heatflask -- Copyright (C) 2016-2026 Efrem Rensi
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Configuration for the backend's Python tooling, in one file instead of the
+# three it used to take (.flake8, .black-format, pytest.ini).
+#
+# There is deliberately no [project] table. Heatflask is not installed as a
+# package; it is run from this directory, by the Dockerfile's CMD and by
+# heatflask-run. Adding one would mean a build backend and an install step
+# that nothing needs.
+#
+# The tools themselves are not listed here either. They come from the Nix dev
+# shell (see /flake.nix), which is the development environment; only the
+# application's runtime dependencies are pip-installed, into a venv that
+# mirrors what the Dockerfile builds.
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+extend-exclude = [".venv"]
+
+[tool.ruff.lint]
+# Flake8 parity, on purpose. This is what the old .flake8 selected, so
+# switching formatters changed no verdicts. Ruff's own default rule set flags
+# about 150 more things in this codebase; adopting any of them is a separate
+# decision, to be made when there is an appetite for it, rather than a side
+# effect of replacing Black.
+#
+# One verdict did change: E203 (whitespace before ':') is gone, because it
+# contradicts what the formatter does with slices. Flake8 needed it silenced
+# too; Ruff simply does not offer it outside preview.
+select = ["E", "W", "F"]
+
+[tool.ruff.format]
+# Ruff's formatter is a drop-in for Black, and on this codebase the output is
+# identical in all 40 files. Defaults are Black's defaults.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.mypy]
+python_version = "3.13"
+# Sanic, pymongo and polyline ship types unevenly, and this is not wired into
+# the hook or CI -- it is here so `python -m mypy heatflask` is usable at all.
+ignore_missing_imports = true

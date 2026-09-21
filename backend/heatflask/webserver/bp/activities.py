@@ -30,7 +30,7 @@ log.setLevel("INFO")
 log.propagate = True
 
 bp = sanic.Blueprint("activities", url_prefix="/activities")
-I = Index.ActivitySummaryFields
+I = Index.ActivitySummaryFields  # noqa: E741  (a namespace alias, as U is below)
 U = Users.UserField
 
 

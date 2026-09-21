@@ -16,6 +16,19 @@
 
         # Python 3.13. The floor is set by numpy 2.5, which requires >= 3.12.
         # Sanic 25.12 supports 3.10-3.14 and pymongo 4.18 supports 3.9-3.14.
+        #
+        # The dev shell is the development environment, so the development
+        # tools come from here rather than from a requirements-dev.txt. Only
+        # the application's runtime dependencies are pip-installed, into a
+        # venv, because that venv mirrors what the Dockerfile builds and the
+        # versions that reach production should come from one place.
+        #
+        # These four import the application to do their work, so they have to
+        # see its pip-installed dependencies. heatflask-setup builds the venv
+        # with --system-site-packages, which makes this environment visible
+        # from inside it, and they are invoked as `python -m ...` from there
+        # (see heatflask-test) rather than by their own console scripts, which
+        # would run under this interpreter and not find sanic.
         pythonEnv = pkgs.python313.withPackages (ps: with ps; [
           pip
           setuptools
@@ -23,7 +36,10 @@
           virtualenv
 
           # Development tools
-          black
+          pytest
+          pytest-asyncio
+          mypy
+          pdoc
           ipython
         ]);
 
@@ -54,29 +70,31 @@
           ${mongoDataDir}
           mkdir -p "$MONGO_DATA_DIR"
 
-          # backend/.venv/heatflask, not a bare .venv: that is the path the
-          # pre-commit hook runs Black from, and what .gitignore excludes
+          # backend/.venv/heatflask, not a bare .venv: that is what
+          # .gitignore excludes
           if [ ! -d "backend/.venv/heatflask" ]; then
             echo "Creating Python virtual environment..."
-            python -m venv backend/.venv/heatflask
+            # --system-site-packages so that pytest, mypy and pdoc, which the
+            # dev shell provides, can see the dependencies pip installs here.
+            python -m venv --system-site-packages backend/.venv/heatflask
             source backend/.venv/heatflask/bin/activate
             pip install --upgrade pip setuptools wheel
             echo "Installing backend dependencies..."
             pip install -r backend/requirements.txt
-            pip install -r backend/requirements-dev.txt
             deactivate
           fi
 
           ( ${frontendInstall} )
 
           # The pre-commit hook in .githooks formats staged files with
-          # Prettier and Black.
+          # Prettier and Ruff.
           git config core.hooksPath .githooks
 
           echo "Setup complete!"
           echo ""
           echo "  heatflask-start-services   # start MongoDB"
           echo "  heatflask-run              # run the Sanic server"
+          echo "  heatflask-test             # run the backend tests"
         '';
 
         startServicesScript = pkgs.writeShellScriptBin "heatflask-start-services" ''
@@ -151,6 +169,27 @@
           exec python -m heatflask.webserver.serve "''${@}"
         '';
 
+        # Tests run from inside the venv, as `python -m pytest`: pytest comes
+        # from the dev shell and the application's dependencies come from the
+        # venv, and only the venv's interpreter can see both. Running the
+        # `pytest` console script instead would use the dev shell's
+        # interpreter, which cannot import sanic.
+        testScript = pkgs.writeShellScriptBin "heatflask-test" ''
+          if [ ! -d "backend/.venv/heatflask" ]; then
+            echo "ERROR: no virtual environment. Run 'heatflask-setup' first."
+            exit 1
+          fi
+          cd backend || exit 1
+          source .venv/heatflask/bin/activate
+
+          # Strava.py reads these at import; conftest.py sets them too, but
+          # only after pytest has started collecting.
+          export STRAVA_CLIENT_ID=''${STRAVA_CLIENT_ID:-1}
+          export STRAVA_CLIENT_SECRET=''${STRAVA_CLIENT_SECRET:-test-secret}
+
+          exec python -m pytest "''${@}"
+        '';
+
         # Frontend. Note there is no asc-build step: the AssemblyScript/WASM
         # layer is being removed, and npm ci needs --ignore-scripts because the
         # three GitHub fork dependencies run `prepare` on install and pull in
@@ -198,6 +237,11 @@
             # numpy and other binary wheels link against libstdc++ at runtime
             stdenv.cc.cc.lib
 
+            # Linting and formatting for Python, replacing black and
+            # flake8. It parses rather than imports, so unlike pytest it
+            # needs nothing from the venv.
+            ruff
+
             # Node.js for frontend assets
             nodejs_22
 
@@ -214,6 +258,7 @@
             startServicesScript
             stopServicesScript
             runAppScript
+            testScript
             frontendBuildScript
             frontendWatchScript
           ];
@@ -241,6 +286,7 @@
             echo "  heatflask-start-services   - start MongoDB"
             echo "  heatflask-stop-services    - stop MongoDB"
             echo "  heatflask-run              - run the Sanic backend"
+            echo "  heatflask-test             - run the backend tests"
             echo "  heatflask-frontend-build   - build the frontend once"
             echo "  heatflask-frontend-watch   - rebuild the frontend on change"
             echo ""

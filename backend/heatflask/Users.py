@@ -11,8 +11,7 @@ import pymongo
 from pymongo import DESCENDING
 
 import types
-from typing import Final, TypedDict
-import asyncio
+from typing import Final
 from aiohttp import ClientResponseError
 from . import DataAPIs
 from . import History

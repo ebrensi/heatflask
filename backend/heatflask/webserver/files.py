@@ -59,7 +59,8 @@ async def load_templates(app: Sanic):
         # replacing it with nothing and then serving KeyError 500s until the
         # next reload happens to arrive.
         log.warning(
-            "no templates found in %s (build in progress?); keeping the %d already loaded",
+            "no templates found in %s (build in progress?);"
+            " keeping the %d already loaded",
             FRONTEND_DIST_DIR,
             len(templates),
         )

@@ -47,9 +47,19 @@ Front-end code is TypeScript. It is typechecked with `npm run typecheck`, linted
 When you install frontend dependencies with `npm install`, TypeScript, ESLint and Prettier are installed for you as dev-dependencies and convenient `npm` scripts to use them are defined in [`package.json`](/frontend/package.json). You can then integrate it with whatever IDE you like.
 
 ### Server-side (backend)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-The code in this repo conforms to [Flake8](https://flake8.pycqa.org/en/latest/#) lint rules and is auto-formatted with [Black](https://black.readthedocs.io/en/stable).
+Python code is linted and auto-formatted with [Ruff](https://docs.astral.sh/ruff/), a
+single tool in place of Flake8 and Black. Its rule selection is deliberately Flake8's,
+and its formatter is a drop-in for Black, so nothing about the house style changed when
+it replaced them. Configuration lives in [`backend/pyproject.toml`](/backend/pyproject.toml),
+alongside the pytest and mypy settings.
+
+Ruff, pytest, mypy and pdoc are provided by the Nix dev shell rather than by a
+`requirements-dev.txt`, which no longer exists. `backend/requirements.txt` is only the
+application's runtime dependencies, and is what the Dockerfile installs.
+
+Run the backend tests with `heatflask-test` inside `nix develop`.
 
 
 ## Versioning

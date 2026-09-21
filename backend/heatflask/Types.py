@@ -6,5 +6,8 @@ from sanic.response import BaseHTTPResponse as SanicResponse
 
 from typing import NewType
 
+# Re-exported for annotating handlers without importing Sanic everywhere.
+__all__ = ["SanicRequest", "SanicResponse", "epoch", "urlstr"]
+
 epoch = NewType("epoch", int)
 urlstr = NewType("urlstr", str)

@@ -12,7 +12,6 @@ is gone and what is left is the operator's view of who is registered.
 """
 
 import sanic.response as Response
-from sanic.exceptions import SanicException
 import sanic
 
 from logging import getLogger

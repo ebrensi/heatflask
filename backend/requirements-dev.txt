@@ -1,7 +1,0 @@
-# dev
-black~=26.5.0     # Formatting
-flake8~=7.3.0     # Linting
-mypy~=2.3.0       # Type checking
-pdoc~=16.0.0      # API docs
-pytest~=9.1.0           # Tests (backend/tests)
-pytest-asyncio~=1.4.0
