@@ -1,0 +1,60 @@
+# Checks that actually run.
+#
+# What this replaces did not. It gated every job on a `changedfiles` job that
+# diffed against `github.event.pull_request.base.sha`, which is empty on a
+# push, so on every push to main the diff came back empty, every `if:
+# contains(...)` was false, and the run went green in seven seconds having
+# done nothing. Flake8 was never wired up at all, and the tests have never run
+# in CI.
+#
+# Everything here runs inside `nix develop`, so CI uses the same Python, Node,
+# Ruff and pytest as the dev shell and there is one place to change a version.
+# That is the point: the workflow this replaces had drifted to Node 16 and
+# Python 3.10 while production ran 22 and 3.13, and nothing made that visible.
+
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Lint, typecheck and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      # Also exercises the documented onboarding path on every push: if
+      # heatflask-setup breaks, this is where it shows up, rather than on
+      # someone's first clone.
+      - name: Set up (venv, frontend deps, hooks)
+        run: nix develop -c heatflask-setup
+
+      - name: Ruff format
+        run: nix develop -c ruff format --check backend/heatflask backend/tests
+
+      - name: Ruff lint
+        run: nix develop -c ruff check backend/heatflask backend/tests
+
+      - name: Prettier
+        run: nix develop -c bash -c "cd frontend && npx prettier --check 'src/**/*.ts'"
+
+      - name: TypeScript
+        run: nix develop -c bash -c "cd frontend && npm run typecheck"
+
+      # test_privacy.py wants a MongoDB on localhost and skips without one;
+      # nothing else needs a service, and nothing reaches the network.
+      - name: Backend tests
+        run: nix develop -c heatflask-test
