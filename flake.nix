@@ -174,8 +174,8 @@
           exec python -m heatflask.webserver.serve "''${@}"
         '';
 
-        # Regenerate backend/requirements.lock from backend/requirements.txt,
-        # which is the only file edited by hand. --universal resolves for every
+        # Regenerate backend/requirements.lock from the dependencies declared
+        # in backend/pyproject.toml, which is the file edited by hand. --universal resolves for every
         # platform at once, with environment markers, so the one lock serves
         # Linux, macOS and the Docker image alike.
         #
@@ -184,7 +184,7 @@
         # contributor needs.
         lockScript = pkgs.writeShellScriptBin "heatflask-lock" ''
           set -e
-          ${pkgs.uv}/bin/uv pip compile backend/requirements.txt \
+          ${pkgs.uv}/bin/uv pip compile backend/pyproject.toml \
             --universal \
             --generate-hashes \
             --python-version 3.13 \

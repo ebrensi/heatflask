@@ -52,7 +52,7 @@ requires them to state.
 ## Runtime dependencies
 
 Dependencies installed from npm and PyPI are not vendored here and keep their
-own licenses; see `frontend/package.json` and `backend/requirements.txt`. As of
+own licenses; see `frontend/package.json` and `backend/pyproject.toml`. As of
 this writing the frontend's runtime dependencies are MapLibre GL JS
 (BSD-3-Clause), sidebar-v2 (MIT), latlon-geohash (MIT), @msgpack/msgpack (ISC)
 and mediabunny (MPL-2.0). MPL-2.0 is a file-level copyleft: modifications to

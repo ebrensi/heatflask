@@ -53,11 +53,11 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app/backend
 
-# requirements.lock, not requirements.txt: every package pinned to an exact
+# A lock, not a range: every package pinned to an exact
 # version and verified against a hash, so two builds of this commit install
 # byte-identical dependencies and a compromised or re-uploaded package on
-# PyPI fails the build instead of entering the image. requirements.txt is the
-# hand-edited input; heatflask-lock regenerates the lock from it.
+# PyPI fails the build instead of entering the image. backend/pyproject.toml
+# declares the dependencies; heatflask-lock compiles the lock from it.
 COPY backend/requirements.lock ./
 RUN pip install --require-hashes -r requirements.lock
 

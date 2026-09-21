@@ -1,18 +1,43 @@
 # Heatflask -- Copyright (C) 2016-2026 Efrem Rensi
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# Configuration for the backend's Python tooling, in one file instead of the
-# three it used to take (.flake8, .black-format, pytest.ini).
+# The backend's dependencies and tooling, in one file instead of the four it
+# used to take (requirements.txt, .flake8, .black-format, pytest.ini).
 #
-# There is deliberately no [project] table. Heatflask is not installed as a
-# package; it is run from this directory, by the Dockerfile's CMD and by
-# heatflask-run. Adding one would mean a build backend and an install step
-# that nothing needs.
-#
-# The tools themselves are not listed here either. They come from the Nix dev
-# shell (see /flake.nix), which is the development environment; only the
-# application's runtime dependencies are pip-installed, into a venv that
-# mirrors what the Dockerfile builds.
+# Development tools are deliberately absent: they come from the Nix dev shell
+# (see /flake.nix), which is the development environment. Only the runtime
+# dependencies below are pip-installed, into a venv that mirrors what the
+# Dockerfile builds -- and both install requirements.lock, which heatflask-lock
+# generates from this file. Nothing installs from here directly.
+
+[project]
+name = "heatflask"
+# dynamic, and there is no build backend to resolve it, which is deliberate:
+# PEP 621 requires a version here, Heatflask's version lives in /VERSION and
+# means something specific (see docs/VERSIONING.md), and a second copy would
+# only drift. Declaring it dynamic satisfies the spec without inventing one.
+# uv reads the dependencies below regardless.
+dynamic = ["version"]
+requires-python = ">=3.13"
+
+dependencies = [
+  "python-dateutil~=2.9.0",
+
+  "sanic~=25.12.0",
+  "sanic-ext~=25.12.0",
+  "numpy~=2.5.0",
+
+  # pymongo 4.13+ ships the async driver natively, replacing motor,
+  # which was deprecated 2026-05-14 (critical fixes only until 2027-05-14).
+  # Not pymongo[srv]: 4.18 has no such extra (uv warns about it) because
+  # dnspython, which mongodb+srv:// URLs need, is now a base dependency.
+  "pymongo~=4.18.0",
+
+  "aiohttp[speedups]~=3.14.0",
+
+  "msgpack~=1.2.0",
+  "polyline~=2.0.0",
+]
 
 [tool.ruff]
 line-length = 88

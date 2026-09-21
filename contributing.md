@@ -62,14 +62,13 @@ it replaced them. Configuration lives in [`backend/pyproject.toml`](/backend/pyp
 alongside the pytest and mypy settings.
 
 Ruff, pytest, mypy and pdoc are provided by the Nix dev shell rather than by a
-`requirements-dev.txt`, which no longer exists. `backend/requirements.txt` is only the
-application's runtime dependencies.
+`requirements-dev.txt`, which no longer exists.
 
 Run the backend tests with `heatflask-test` inside `nix develop`.
 
-Python dependencies are pinned and hash-checked in `backend/requirements.lock`, which is
-generated from `backend/requirements.txt`. Edit the latter, then run `heatflask-lock` and
-recreate the venv. See [`backend/README.md`](/backend/README.md#dependencies).
+Python dependencies are declared in [`backend/pyproject.toml`](/backend/pyproject.toml) and
+pinned with hashes into `backend/requirements.lock`. Edit the former, then run
+`heatflask-lock` and recreate the venv. See [`backend/README.md`](/backend/README.md#dependencies).
 
 
 ## Versioning

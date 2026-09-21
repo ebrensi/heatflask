@@ -24,9 +24,9 @@ It only creates the virtual environment if there isn't one, so after a dependenc
 
 ### Dependencies
 
-`requirements.txt` is the hand-edited list of what the app needs, with loose version ranges. `requirements.lock` is generated from it and is what actually gets installed, in development and in the Docker image alike: every package pinned to an exact version and checked against a hash, so two builds of the same commit install exactly the same code and a tampered-with package on PyPI fails the install instead of reaching production.
+Dependencies are declared in [`pyproject.toml`](./pyproject.toml), under `[project]`, with loose version ranges. `requirements.lock` is generated from that and is what actually gets installed, in development and in the Docker image alike: every package pinned to an exact version and checked against a hash, so two builds of the same commit install exactly the same code and a tampered-with package on PyPI fails the install instead of reaching production.
 
-After editing `requirements.txt`, regenerate the lock and rebuild the venv:
+After editing the dependencies, regenerate the lock and rebuild the venv:
 
 ```
 heatflask-lock
