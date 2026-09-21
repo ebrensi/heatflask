@@ -18,12 +18,16 @@ import { activity_icon, activityURL } from "./Strava"
 import * as ActivityCollection from "./DotLayer/ActivityCollection"
 import { dotLayer } from "./DotLayerAPI"
 import { fitTo } from "./Render"
-import { closePopupIfUnselected } from "./ActivityPopup"
+import {
+  activityPopup,
+  closePopupIfUnselected,
+  popupActivity,
+} from "./ActivityPopup"
 import { PANE_OPEN } from "./Sidebar"
 import { t, getLocale } from "./i18n"
 import { distance, UNITS_CHANGE } from "./Units"
 
-import type { Map as MLMap } from "maplibre-gl"
+import type { Map as MLMap, LngLatLike } from "maplibre-gl"
 import type { Activity } from "./DotLayer/Activity"
 import type { ActivityType } from "./Strava"
 import type { State } from "./Model"
@@ -89,13 +93,40 @@ function toggle(id: number, row: HTMLElement): void {
  * `last` is the activity the user most recently selected; its row is brought
  * into view. Deselecting scrolls nothing, so pass nothing, or an activity
  * that is no longer selected.
+ *
+ * The popup identifies `last` when given a place `at` to put it, which a box
+ * selection on the map has. And whenever exactly one activity is left
+ * selected, however it came to be, the list scrolls to it and the popup
+ * identifies it.
  */
-export function selectionChanged(last?: Activity): void {
+export function selectionChanged(last?: Activity, at?: LngLatLike): void {
+  const sel = selected()
+  if (sel.length === 1 && sel[0] !== last) {
+    last = sel[0]
+    at = undefined
+  }
   if (last?.selected) lastSelected = last
   redrawSelection()
   closePopupIfUnselected()
   scrollIntoView(last)
   if (zoomToSelection()) zoomToSelected()
+  const identify = at || sel.length === 1
+  if (identify && last?.selected && popupActivity() !== last)
+    showPopup(last, at)
+}
+
+/**
+ * Pop up A's details where it can be seen: at `at`, else somewhere on A that
+ * is on screen, else the middle of its bounds -- which is where the map is
+ * headed if it zooms to the selection.
+ */
+function showPopup(A: Activity, at?: LngLatLike): void {
+  if (!_map) return
+  if (!at && !zoomToSelection()) {
+    const p = dotLayer?.screenPointOf(A)
+    if (p) at = _map.unproject(p)
+  }
+  activityPopup(_map, A, at)
 }
 
 /** How long scrolling to a row takes, however far it is, in ms */

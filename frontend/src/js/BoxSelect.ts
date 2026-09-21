@@ -26,7 +26,6 @@
 
 import * as Table from "./Table"
 import { icon } from "./Icons"
-import { activityPopup } from "./ActivityPopup"
 import { dotLayer } from "./DotLayerAPI"
 import { ButtonControl } from "./MapControls"
 
@@ -164,12 +163,10 @@ export function addBoxSelect(map: MLMap): void {
       if (A.selected && (!newest || (A.ts || 0) > (newest.ts || 0))) newest = A
 
     Table.update()
-    Table.selectionChanged(newest)
-
     /* The popup goes on the activity where it crossed the box, which is on
      * screen, rather than at the middle of the activity, which zoomed in
      * often isn't. */
-    if (newest) activityPopup(map, newest, map.unproject(found.get(newest)))
+    Table.selectionChanged(newest, newest && map.unproject(found.get(newest)))
   }
 
   /* The browser follows a drag with a click. MapLibre would take it for a

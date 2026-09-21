@@ -943,33 +943,48 @@ export class HeatflaskLayer implements CustomLayerInterface {
     const found = new Map<Activity, [number, number]>()
     if (!this.ready) return found
 
-    const { clientWidth: w, clientHeight: h } = this.map.getCanvas()
     const [xmin, xmax] = x0 < x1 ? [x0, x1] : [x1, x0]
     const [ymin, ymax] = y0 < y1 ? [y0, y1] : [y1, y0]
-    const m = this.matrix
-    const zScale = this.zScale()
-
     for (const A of ActivityCollection.inViewItems()) {
-      const segMask = A.segMask
-      if (!segMask) continue
-      const idxArray = A.idxArray[segMask.zoom]
-      const px = A.streams.px
-      for (let j = 0; j < idxArray.length; j++) {
-        const idx = idxArray[j]
-        const x = px[2 * idx] - this.ox
-        const y = px[2 * idx + 1] - this.oy
-        const z = A.zAt(idx) * zScale
-        const cw = m[3] * x + m[7] * y + m[11] * z + m[15]
-        if (cw <= 0) continue
-        const sx = ((m[0] * x + m[4] * y + m[8] * z + m[12]) / cw + 1) * 0.5 * w
-        const sy = (1 - (m[1] * x + m[5] * y + m[9] * z + m[13]) / cw) * 0.5 * h
-        if (sx >= xmin && sx <= xmax && sy >= ymin && sy <= ymax) {
-          found.set(A, [sx, sy])
-          break
-        }
-      }
+      const p = this.firstPointIn(A, xmin, ymin, xmax, ymax)
+      if (p) found.set(A, p)
     }
     return found
+  }
+
+  /** A drawn point of A's that is on screen, in CSS pixels relative to the
+   * map container, or undefined if none is */
+  screenPointOf(A: Activity): [number, number] | undefined {
+    if (!this.ready) return
+    const { clientWidth: w, clientHeight: h } = this.map.getCanvas()
+    return this.firstPointIn(A, 0, 0, w, h)
+  }
+
+  private firstPointIn(
+    A: Activity,
+    xmin: number,
+    ymin: number,
+    xmax: number,
+    ymax: number
+  ): [number, number] | undefined {
+    const segMask = A.segMask
+    if (!segMask) return
+    const { clientWidth: w, clientHeight: h } = this.map.getCanvas()
+    const m = this.matrix
+    const zScale = this.zScale()
+    const idxArray = A.idxArray[segMask.zoom]
+    const px = A.streams.px
+    for (let j = 0; j < idxArray.length; j++) {
+      const idx = idxArray[j]
+      const x = px[2 * idx] - this.ox
+      const y = px[2 * idx + 1] - this.oy
+      const z = A.zAt(idx) * zScale
+      const cw = m[3] * x + m[7] * y + m[11] * z + m[15]
+      if (cw <= 0) continue
+      const sx = ((m[0] * x + m[4] * y + m[8] * z + m[12]) / cw + 1) * 0.5 * w
+      const sy = (1 - (m[1] * x + m[5] * y + m[9] * z + m[13]) / cw) * 0.5 * h
+      if (sx >= xmin && sx <= xmax && sy >= ymin && sy <= ymax) return [sx, sy]
+    }
   }
 
   /* ------------------------------------------------------------------ *

@@ -8,7 +8,8 @@
  *
  * A port of master's activityDataPopup(): name, type and local start time,
  * distance and elapsed time, speed or pace, and links to the activity on
- * Strava and on its own Heatflask map.
+ * Strava and on its own Heatflask map. Distance and speed are in the
+ * reader's units only (see Units.ts), and follow them when they change.
  *
  * Speed and pace are over moving time, as master showed them (it used Strava's
  * average_speed). Index entries made before moving time was stored fall back to
@@ -21,34 +22,35 @@ import { href, HHMMSS, escapeHTML } from "./appUtil"
 import { activityURL, activity_vtype } from "./Strava"
 import { heatflaskURL } from "./Table"
 import { getLocale } from "./i18n"
-import { isMetric } from "./Units"
+import { distance, UNITS_CHANGE } from "./Units"
 
 import type { Map as MLMap, LngLatLike } from "maplibre-gl"
 import type { Activity } from "./DotLayer/Activity"
 
-const KM = 1000
-const MI = 1609.34
-
-/** "a (b)", with the reader's own unit first */
-function both(metric: string, imperial: string): string {
-  return isMetric() ? `${metric} (${imperial})` : `${imperial} (${metric})`
-}
-
-/** "4:52/km" -- a pace, given a speed in m/s and a unit length in m */
-function pace(v: number, unit: number): string {
-  return HHMMSS(unit / v).replace(/^00:/, "")
-}
-
+/** Speed, or pace for the activities measured that way, in the reader's units */
 function speedText(A: Activity): string {
   const v = A.total_distance / (A.moving_time || A.elapsed_time) // m/s
   if (!isFinite(v) || v <= 0) return ""
 
+  const { value: perM, label } = distance(1) // reader's units per metre
   if (activity_vtype(A.type) === "pace")
-    return both(`${pace(v, KM)}/km`, `${pace(v, MI)}/mi`)
+    return `${HHMMSS(1 / (v * perM)).replace(/^00:/, "")}/${label}`
+  return `${(v * perM * 3600).toFixed(2)} ${label}/hr`
+}
 
-  const kmh = ((v * 3600) / KM).toFixed(2)
-  const mih = ((v * 3600) / MI).toFixed(2)
-  return both(`${kmh} km/hr`, `${mih} mi/hr`)
+function content(A: Activity): string {
+  const d = distance(A.total_distance || 0)
+  const when = A.tsLocal ? A.tsLocal.toLocaleString(getLocale()) : ""
+  const speed = speedText(A)
+
+  return (
+    `<b>${escapeHTML(A.name || "(untitled)")}</b><br>` +
+    `${A.type}: ${when}<br>` +
+    `${+d.value.toFixed(2)} ${d.label} in ${HHMMSS(A.elapsed_time || 0)}<br>` +
+    (speed ? `${speed}<br>` : "") +
+    `View in ${href(activityURL(A.id), "Strava")}, ` +
+    href(heatflaskURL([A.id]), "Heatflask")
+  )
 }
 
 let open: Popup | undefined
@@ -66,24 +68,10 @@ export function closePopupIfUnselected(): void {
  * off-screen, so the popup would never be seen.
  */
 export function activityPopup(map: MLMap, A: Activity, at?: LngLatLike): void {
-  const d = A.total_distance || 0
-  const dkm = +(d / KM).toFixed(2)
-  const dmi = +(d / MI).toFixed(2)
-  const when = A.tsLocal ? A.tsLocal.toLocaleString(getLocale()) : ""
-  const speed = speedText(A)
-
-  const content =
-    `<b>${escapeHTML(A.name || "(untitled)")}</b><br>` +
-    `${A.type}: ${when}<br>` +
-    `${both(`${dkm} km`, `${dmi} mi`)} in ${HHMMSS(A.elapsed_time || 0)}<br>` +
-    (speed ? `${speed}<br>` : "") +
-    `View in ${href(activityURL(A.id), "Strava")}, ` +
-    href(heatflaskURL([A.id]), "Heatflask")
-
   open?.remove()
   const popup = new Popup({ maxWidth: "320px" })
     .setLngLat(at ?? A.llBounds.getCenter())
-    .setHTML(content)
+    .setHTML(content(A))
   /* however it closes -- its own button, a click on the map, or us */
   popup.on("close", () => {
     if (open === popup) open = openFor = undefined
@@ -91,3 +79,12 @@ export function activityPopup(map: MLMap, A: Activity, at?: LngLatLike): void {
   open = popup.addTo(map)
   openFor = A
 }
+
+/** The activity the popup is open for, if it is */
+export function popupActivity(): Activity | undefined {
+  return openFor
+}
+
+document.addEventListener(UNITS_CHANGE, () => {
+  if (open && openFor) open.setHTML(content(openFor))
+})
