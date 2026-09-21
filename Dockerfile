@@ -19,14 +19,16 @@
 # Render, or Heroku's container stack.
 
 # ---- frontend ----------------------------------------------------------------
-FROM node:22-bookworm AS frontend
+FROM node:22-slim AS frontend
 
 WORKDIR /app/frontend
 
 # Dependencies first, so editing source does not reinstall them. The workspace
-# plugin under src/ has to be present for npm ci to link it. (The full node
-# image rather than -slim: leaflet-areaselect installs from GitHub and needs
-# git.)
+# plugin under src/ has to be present for npm ci to link it.
+#
+# -slim, which has no git: the dependency that needed it, leaflet-areaselect,
+# was installed from a GitHub repo and is gone. The one remaining non-registry
+# dependency, knob, comes from a codeload tarball over https.
 #
 # --ignore-scripts, as in the Nix dev loop: Parcel's native modules ship
 # prebuilt binaries. knob is installed from a GitHub tarball rather than a git
