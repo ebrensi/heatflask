@@ -97,7 +97,6 @@ async def update_collection_ttl(name: str, new_ttl: int):
             name,
             index={
                 "keyPattern": {"ts": 1},
-                "background": True,
                 "expireAfterSeconds": new_ttl,
             },
         )
