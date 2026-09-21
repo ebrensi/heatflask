@@ -5,8 +5,10 @@ sanic-ext~=25.12.0
 numpy~=2.5.0
 
 # pymongo 4.13+ ships the async driver natively, replacing motor,
-# which was deprecated 2026-05-14 (critical fixes only until 2027-05-14)
-pymongo[srv]~=4.18.0
+# which was deprecated 2026-05-14 (critical fixes only until 2027-05-14).
+# Not pymongo[srv]: 4.18 has no such extra (uv warns about it) because
+# dnspython, which mongodb+srv:// URLs need, is now a base dependency.
+pymongo~=4.18.0
 
 aiohttp[speedups]~=3.14.0
 

@@ -51,8 +51,13 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app/backend
 
-COPY backend/requirements.txt ./
-RUN pip install -r requirements.txt
+# requirements.lock, not requirements.txt: every package pinned to an exact
+# version and verified against a hash, so two builds of this commit install
+# byte-identical dependencies and a compromised or re-uploaded package on
+# PyPI fails the build instead of entering the image. requirements.txt is the
+# hand-edited input; heatflask-lock regenerates the lock from it.
+COPY backend/requirements.lock ./
+RUN pip install --require-hashes -r requirements.lock
 
 # The version number the app reports, and the commit it was built from. Heroku
 # builds pass no build args of their own, so there GIT_COMMIT stays empty and

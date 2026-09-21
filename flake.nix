@@ -83,7 +83,9 @@
             source backend/.venv/heatflask/bin/activate
             pip install --upgrade pip setuptools wheel
             echo "Installing backend dependencies..."
-            pip install -r backend/requirements.txt
+            # The same lock the Dockerfile installs, so a dev environment and
+            # production run identical versions.
+            pip install --require-hashes -r backend/requirements.lock
             deactivate
           fi
 
@@ -170,6 +172,27 @@
           echo ""
 
           exec python -m heatflask.webserver.serve "''${@}"
+        '';
+
+        # Regenerate backend/requirements.lock from backend/requirements.txt,
+        # which is the only file edited by hand. --universal resolves for every
+        # platform at once, with environment markers, so the one lock serves
+        # Linux, macOS and the Docker image alike.
+        #
+        # uv is referenced by store path rather than put on PATH: it exists to
+        # run this script, and the shell is meant to hold only what a
+        # contributor needs.
+        lockScript = pkgs.writeShellScriptBin "heatflask-lock" ''
+          set -e
+          ${pkgs.uv}/bin/uv pip compile backend/requirements.txt \
+            --universal \
+            --generate-hashes \
+            --python-version 3.13 \
+            -o backend/requirements.lock
+          echo ""
+          echo "backend/requirements.lock regenerated."
+          echo "Recreate the venv to install it:"
+          echo "  rm -rf backend/.venv/heatflask && heatflask-setup"
         '';
 
         # Tests run from inside the venv, as `python -m pytest`: pytest comes
@@ -263,6 +286,7 @@
             stopServicesScript
             runAppScript
             testScript
+            lockScript
             frontendBuildScript
             frontendWatchScript
           ];
@@ -291,6 +315,7 @@
             echo "  heatflask-stop-services    - stop MongoDB"
             echo "  heatflask-run              - run the Sanic backend"
             echo "  heatflask-test             - run the backend tests"
+            echo "  heatflask-lock             - regenerate requirements.lock"
             echo "  heatflask-frontend-build   - build the frontend once"
             echo "  heatflask-frontend-watch   - rebuild the frontend on change"
             echo ""

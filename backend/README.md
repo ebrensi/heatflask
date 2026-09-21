@@ -20,7 +20,20 @@ doing the expiry that Redis keys used to do.
   * set up a Python 3 virtual environment in `backend/.venv/heatflask`
   * install all the python dependencies
 
-It only creates the virtual environment if there isn't one, so after a change to `requirements.txt` either `pip install -r` it into the venv or delete `backend/.venv/heatflask` and run `heatflask-setup` again.
+It only creates the virtual environment if there isn't one, so after a dependency change, delete `backend/.venv/heatflask` and run `heatflask-setup` again.
+
+### Dependencies
+
+`requirements.txt` is the hand-edited list of what the app needs, with loose version ranges. `requirements.lock` is generated from it and is what actually gets installed, in development and in the Docker image alike: every package pinned to an exact version and checked against a hash, so two builds of the same commit install exactly the same code and a tampered-with package on PyPI fails the install instead of reaching production.
+
+After editing `requirements.txt`, regenerate the lock and rebuild the venv:
+
+```
+heatflask-lock
+rm -rf backend/.venv/heatflask && heatflask-setup
+```
+
+The lock is resolved for all platforms at once, so the same file works on Linux, macOS and in the image. Nothing else needs doing; do not hand-edit the lock.
 
 ### Setup local environment variables
 You will need a file in the [`/backend`](/backend/) directory called `.env`, that contains environment variables specific to your machine.  That file should only be on your machine, and not part of this repo.  There is a line in [`.gitignore`](/.gitignore) that excludes `.env` from the repo so you won't accidentally push it to Github.
