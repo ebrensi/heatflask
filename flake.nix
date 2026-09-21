@@ -11,8 +11,8 @@
       let
         pkgs = import nixpkgs {
           inherit system;
-          # For mongodb, which is SSPL-1.0 and so unfree by nixpkgs' reckoning.
-          # Nothing else here needs this, and removing mongodb would be the
+          # For mongodb-ce, which is SSPL-1.0 and so unfree by nixpkgs' reckoning.
+          # Nothing else here needs this, and removing MongoDB would be the
           # only way to drop it.
           config.allowUnfree = true;
         };
@@ -50,6 +50,14 @@
         # Postgres survives only as a one-shot user import (Users.migrate(),
         # which talks to the remote legacy database, not a local one), and
         # Redis was a read cache in front of Mongo.
+        #
+        # mongodb-ce is MongoDB's own 8.x build; nixpkgs' `mongodb` is 7.0.
+        # Production runs 8.0 on Atlas, and 8 rejects options 7 let through:
+        # collMod's index.background passed here and took production down.
+        # A stopgap: mongodb-ce is a prebuilt binary, where `mongodb` is built
+        # from source. Switch back once nixpkgs has a source-built mongodb 8
+        # (a mongodb-8_0 attribute, or `mongodb` itself at 8.x).
+        mongodb = pkgs.mongodb-ce;
 
         # One local database per clone, at .data/mongodb in the main worktree.
         # A relative dbPath resolved against the shell's working directory, so
@@ -114,7 +122,7 @@
           else
             echo "Starting MongoDB..."
             mkdir -p "$MONGO_DATA_DIR"
-            ${pkgs.mongodb}/bin/mongod --fork \
+            ${mongodb}/bin/mongod --fork \
               --dbpath "$MONGO_DATA_DIR" \
               --logpath "$MONGO_DATA_DIR/mongod.log" --logappend \
               --bind_ip 127.0.0.1 --port 27017
@@ -124,13 +132,12 @@
 
         stopServicesScript = pkgs.writeShellScriptBin "heatflask-stop-services" ''
           ${mongoDataDir}
-          # mongod can shut itself down given its dbPath. The mongodb package
-          # ships mongo/mongod/mongos and *not* mongosh, so the previous
-          # `mongosh --eval shutdown` was a command-not-found, and its pkill
-          # fallback matched a pattern that never appears in mongod's argv.
+          # mongod can shut itself down given its dbPath, so this needs no
+          # shell or pkill: a pkill fallback once matched a pattern that never
+          # appears in mongod's argv.
           if (exec 3<>/dev/tcp/127.0.0.1/27017) 2>/dev/null; then
             echo "Stopping MongoDB..."
-            ${pkgs.mongodb}/bin/mongod --dbpath "$MONGO_DATA_DIR" --shutdown
+            ${mongodb}/bin/mongod --dbpath "$MONGO_DATA_DIR" --shutdown
           else
             echo "MongoDB is not running"
           fi
@@ -160,6 +167,20 @@
           export MONGODB_URL=''${MONGODB_URL:-mongodb://localhost:27017/heatflask}
           export APP_ENV=''${APP_ENV:-development}
 
+          # A local database keeps what it has imported: re-importing costs
+          # Strava reads, and there is no storage bill here. The app applies
+          # these to the TTL indexes with collMod at startup, so only for a
+          # local database; pointed at Atlas, the production values stand.
+          # 10000 days, not "forever", because expireAfterSeconds tops out at
+          # 2^31-1 seconds, about 68 years.
+          case "$MONGODB_URL" in
+            *localhost*|*127.0.0.1*)
+              export MONGO_STREAMS_TTL=''${MONGO_STREAMS_TTL:-10000}
+              export INDEX_TTL=''${INDEX_TTL:-10000}
+              export HISTORY_TTL=''${HISTORY_TTL:-10000}
+              ;;
+          esac
+
           if [ -z "''${STRAVA_CLIENT_ID:-}" ]; then
             echo ""
             echo "ERROR: STRAVA_CLIENT_ID is not set, so the app cannot import."
@@ -169,6 +190,7 @@
 
           echo "MONGODB_URL: $MONGODB_URL"
           echo "APP_ENV:     $APP_ENV"
+          echo "TTLs (days): streams ''${MONGO_STREAMS_TTL:-10} index ''${INDEX_TTL:-20} history ''${HISTORY_TTL:-30}"
           echo ""
 
           exec python -m heatflask.webserver.serve "''${@}"
@@ -249,7 +271,9 @@
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
             pythonEnv
+            # The let-bound mongodb-ce: a let binding outranks `with pkgs`.
             mongodb
+            mongosh
 
             # Insurance for a platform where some dependency has no wheel
             # and pip falls back to building it. On x86_64-linux nothing
