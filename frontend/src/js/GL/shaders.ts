@@ -26,6 +26,19 @@
  * the segment starting there, 0 where no segment starts -- the last point of
  * a run, which is how separate polylines share one buffer.
  * ---------------------------------------------------------------------- */
+/* Dots and paths are decals on the terrain, and their height is only ever
+ * approximately right: a single offset per activity cannot follow the mesh,
+ * and GPS altitude is tens of metres out to begin with. Without help they
+ * sink into the ground and the depth test correctly hides them -- worst when
+ * zoomed in, where a finer DEM has more local relief for one offset to miss.
+ *
+ * So bias the depth toward the camera. Subtracting from clip z in proportion
+ * to w is a constant shift in NDC, which means a constant shift in the depth
+ * test at every distance, and -- unlike lifting the track further in metres
+ * -- it does not move anything on screen. Raise it if tracks still vanish
+ * into hillsides; lower it if they start showing through thin ridges. */
+export const DEPTH_BIAS = 0.002
+
 export const PATH_VS = `#version 300 es
 precision highp float;
 
@@ -70,6 +83,7 @@ void main() {
   c.xy += offset / u_viewport * c.w;
 
   gl_Position = c;
+  gl_Position.z -= float(${DEPTH_BIAS}) * gl_Position.w;
   v_color = a_color0;
   v_side = a_corner.y * halfWidth;
   v_halfWidth = halfWidth;
@@ -174,6 +188,7 @@ void main() {
   vec4 m1 = fetch(u_meta, a + 1);
   vec3 p = mix(s0.xyz, s1.xyz, f - i0);
   gl_Position = u_matrix * vec4(p.xy + m1.xy, (p.z + m1.w) * m1.z * u_zScale, 1.0);
+  gl_Position.z -= float(${DEPTH_BIAS}) * gl_Position.w;
 
   v_circle = m3.x;
   float size = m3.x > 0.5 ? 2.0 * u_size : u_size;
@@ -269,10 +284,13 @@ void main() {
 
   float a = clamp(0.5 - d, 0.0, 1.0) * v_color.a;
   if (a <= 0.0) discard;
-  /* The shadow pass wants only coverage, in a one-channel buffer: see
-   * SHADOW_FS */
+  /* The shadow pass wants coverage, and -- when terrain can occlude it --
+   * the dot's depth alongside, so the composite can depth-test a shadow that
+   * is otherwise a flat screen-space blur. Depth goes in as 1 - z, because
+   * the pass blends with MAX and the nearest dot should win, and premultiplied
+   * by coverage so the blur can carry it (see SHADOW_FS). */
   if (u_shadow > 0.5) {
-    fragColor = vec4(a);
+    fragColor = vec4(a, a * (1.0 - gl_FragCoord.z), 0.0, 0.0);
     return;
   }
 
@@ -339,6 +357,7 @@ uniform vec2 u_offset;     // target pixels to shift the source by
 uniform vec2 u_step;       // one source texel along the blur, in uv
 uniform float u_sigma;     // in source texels
 uniform float u_final;     // 1 for the pass onto the map: no blur
+uniform float u_depth;     // 1 when terrain should occlude the shadow
 uniform vec4 u_color;      // the shadow's, premultiplied
 
 out vec4 fragColor;
@@ -346,23 +365,38 @@ out vec4 fragColor;
 void main() {
   vec2 uv = (gl_FragCoord.xy - u_offset) / u_viewport;
   if (u_final > 0.5) {
-    float a = texture(u_source, uv).r;
+    vec2 s = texture(u_source, uv).rg;
+    float a = s.r;
     if (a <= 0.0) discard;
+    /* A shadow is a flat screen-space blur and has no depth of its own, so it
+     * borrows the depth of the dot casting it -- which is what uv already
+     * points at, the source being sampled back along the shadow's offset. A
+     * shadow is then hidden exactly when its dot is, which is what we want.
+     *
+     * g is (1 - z) premultiplied by coverage and blurred with it, so dividing
+     * by coverage recovers a coverage-weighted depth; without that, the soft
+     * fringe would average against empty texels and drift to the far plane.
+     * Written unconditionally: a shader that writes gl_FragDepth on only some
+     * paths leaves it undefined on the others. */
+    gl_FragDepth = u_depth > 0.5 ? 1.0 - s.g / max(a, 1e-4) : gl_FragCoord.z;
     fragColor = u_color * a;
     return;
   }
 
   float sigma = max(u_sigma, 0.01);
   int radius = min(int(ceil(3.0 * sigma)), MAX_RADIUS);
-  float sum = 0.0;
+  vec2 sum = vec2(0.0);
   float weights = 0.0;
   for (int i = -MAX_RADIUS; i <= MAX_RADIUS; i++) {
     if (abs(i) > radius) continue;
     float x = float(i);
     float w = exp(-0.5 * x * x / (sigma * sigma));
-    sum += w * texture(u_source, uv + x * u_step).r;
+    /* Coverage and premultiplied depth blur together: both are linear in the
+     * same weights, so one Gaussian carries the pair. In 2D the buffer is
+     * one-channel and g reads back 0, which u_depth then ignores. */
+    sum += w * texture(u_source, uv + x * u_step).rg;
     weights += w;
   }
-  fragColor = vec4(sum / weights);
+  fragColor = vec4(sum / weights, 0.0, 0.0);
 }
 `

@@ -95,11 +95,22 @@ const ALT_MIN_SAMPLES = 4
 const ALT_LIFT_M = 3
 const ALT_RECALIBRATE_ZOOM = 2
 
-/* Whether terrain hides what is behind it. Off, dots and paths draw over
- * everything, as they did in 2D, and a track on the far side of a ridge
- * still shows. On is more physical, but a track that is a metre under the
- * terrain mesh flickers in and out. */
-const DEPTH_TEST = false
+/* Whether terrain hides what is behind it: a track on the far side of a ridge
+ * should be behind the ridge, not drawn over it.
+ *
+ * This was off until Sept 2026, on the grounds that a track a metre under the
+ * terrain mesh flickers in and out. What that overlooked is that off does not
+ * mean "no occlusion" -- it means occlusion is whatever the draw order happens
+ * to give, which is not ours to rely on. MapLibre 6.9 reworked how terrain
+ * depth is maintained (markers moved off a depth-buffer readback to a CPU
+ * raycast) and tracks started showing through ridges.
+ *
+ * Against the flicker: ALT_LIFT_M already lifts the track clear of the mesh,
+ * on top of the per-activity offset measured against the terrain model. Depth
+ * writes stay off (see depthMask below) so that dots and paths test against
+ * the terrain without also fighting each other for depth, which would make
+ * overlapping translucent dots pop. */
+const DEPTH_TEST = true
 
 /* The dot shadows are drawn and blurred offscreen at this fraction of the
  * drawing buffer's resolution, then stretched back over the map. They are
@@ -216,6 +227,11 @@ export class HeatflaskLayer implements CustomLayerInterface {
   private shadowFramebuffers: WebGLFramebuffer[] = []
   private shadowWidth = 0
   private shadowHeight = 0
+  /** whether the silhouette buffers currently carry depth as well as
+   * coverage, which only terrain needs */
+  private shadowHasDepth = false
+  /** whether RG16F is renderable here, so shadows can be depth-tested */
+  private floatBuffers = false
   /* whether prerender has set this frame up, and drawn its shadows */
   private framePrepared = false
   private shadowsDrawn = false
@@ -275,6 +291,10 @@ export class HeatflaskLayer implements CustomLayerInterface {
     this.map = map
     this.gl = gl
 
+    /* Needed to render into RG16F, which is how a shadow carries the depth
+     * of the dot that cast it. Absent, shadows simply draw over terrain. */
+    this.floatBuffers = !!gl.getExtension("EXT_color_buffer_float")
+
     this.pathProgram = compileProgram(gl, PATH_VS, PATH_FS)
     this.pathU = uniformLocations(gl, this.pathProgram, [
       "u_matrix",
@@ -307,6 +327,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
       "u_step",
       "u_sigma",
       "u_final",
+      "u_depth",
       "u_color",
     ])
 
@@ -352,6 +373,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
     this.shadowTextures = []
     this.shadowFramebuffers = []
     this.shadowWidth = this.shadowHeight = 0
+    this.shadowHasDepth = false
     this.pathProgram = undefined
     this.gl = undefined
     this.infoBox?.remove()
@@ -427,12 +449,29 @@ export class HeatflaskLayer implements CustomLayerInterface {
 
   /** Size the shadow buffers to the drawing buffer. Allocates only when that
    * changes. */
-  private sizeShadowBuffers(gl: WebGL2RenderingContext): void {
+  /** Size the silhouette buffers, and widen them to carry depth when terrain
+   * is on. R8 holds coverage alone, which is all a flat map needs; RG16F adds
+   * the casting dot's depth so the composite can be occluded (see SHADOW_FS).
+   * The wider format costs bandwidth in the blur, so 2D never pays it. Eight
+   * bits of depth would band visibly against terrain, hence the half float.
+   * Without EXT_color_buffer_float there is no renderable RG16F, and shadows
+   * fall back to drawing over the terrain as they always have. */
+  private sizeShadowBuffers(
+    gl: WebGL2RenderingContext,
+    wantDepth: boolean
+  ): void {
     const w = Math.max(1, Math.round(gl.drawingBufferWidth * SHADOW_SCALE))
     const h = Math.max(1, Math.round(gl.drawingBufferHeight * SHADOW_SCALE))
-    if (w === this.shadowWidth && h === this.shadowHeight) return
+    const depth = wantDepth && this.floatBuffers
+    if (
+      w === this.shadowWidth &&
+      h === this.shadowHeight &&
+      depth === this.shadowHasDepth
+    )
+      return
     this.shadowWidth = w
     this.shadowHeight = h
+    this.shadowHasDepth = depth
 
     for (let i = 0; i < 2; i++) {
       const tex = this.shadowTextures[i]
@@ -440,12 +479,12 @@ export class HeatflaskLayer implements CustomLayerInterface {
       gl.texImage2D(
         gl.TEXTURE_2D,
         0,
-        gl.R8,
+        depth ? gl.RG16F : gl.R8,
         w,
         h,
         0,
-        gl.RED,
-        gl.UNSIGNED_BYTE,
+        depth ? gl.RG : gl.RED,
+        depth ? gl.HALF_FLOAT : gl.UNSIGNED_BYTE,
         null
       )
       gl.bindFramebuffer(gl.FRAMEBUFFER, this.shadowFramebuffers[i])
@@ -621,7 +660,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
     if (!(this.slotCount > 0 && +this.visual.T > 0 && this.visual.shadows))
       return
 
-    this.sizeShadowBuffers(gl)
+    this.sizeShadowBuffers(gl, DEPTH_TEST && !!this.zScale())
     const [silhouette] = this.shadowTextures
     gl.viewport(0, 0, this.shadowWidth, this.shadowHeight)
     gl.disable(gl.DEPTH_TEST)
@@ -652,6 +691,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
     gl.uniform2f(u.u_offset, 0, 0)
     gl.uniform2f(u.u_step, 1 / this.shadowWidth, 0)
     gl.uniform1f(u.u_final, 0)
+    gl.uniform1f(u.u_depth, 0)
     gl.drawArrays(gl.TRIANGLES, 0, 3)
 
     /* 3. Blurred vertically, back into the first buffer */
@@ -704,8 +744,12 @@ export class HeatflaskLayer implements CustomLayerInterface {
     const vw = gl.drawingBufferWidth
     const vh = gl.drawingBufferHeight
 
-    if (DEPTH_TEST && zScale) gl.enable(gl.DEPTH_TEST)
-    else gl.disable(gl.DEPTH_TEST)
+    /* Test against the terrain's depth, but do not write depth: these are
+     * translucent overlays, and writing would have them occlude each other. */
+    if (DEPTH_TEST && zScale) {
+      gl.enable(gl.DEPTH_TEST)
+      gl.depthMask(false)
+    } else gl.disable(gl.DEPTH_TEST)
 
     /* ---- paths ---- */
     if (this.options.showPaths && this.pathInstances > 0) {
@@ -728,13 +772,22 @@ export class HeatflaskLayer implements CustomLayerInterface {
        * and as one, so overlapping shadows do not compound. 4. The blurred
        * silhouette, offset, onto the map. */
       if (this.shadowsDrawn) {
-        gl.disable(gl.DEPTH_TEST)
+        /* The composite is a fullscreen triangle, so it has no depth of its
+         * own to test with; it writes gl_FragDepth from the silhouette's depth
+         * channel instead (see SHADOW_FS), which is why this pass can be depth
+         * tested at all. Without the channel there is nothing to test, and it
+         * draws over the terrain as before. */
+        if (this.shadowHasDepth) {
+          gl.enable(gl.DEPTH_TEST)
+          gl.depthMask(false)
+        } else gl.disable(gl.DEPTH_TEST)
         this.useShadowProgram(gl, this.shadowTextures[0], vw, vh)
         const u = this.shadowU
         const shadow = this.options.dotShadows
         /* screen y points down; gl_FragCoord y points up */
         gl.uniform2f(u.u_offset, shadow.x * pixelRatio, -shadow.y * pixelRatio)
         gl.uniform1f(u.u_final, 1)
+        gl.uniform1f(u.u_depth, this.shadowHasDepth ? 1 : 0)
         const rgba = packColor(shadow.color)
         gl.uniform4f(
           u.u_color,
@@ -747,7 +800,10 @@ export class HeatflaskLayer implements CustomLayerInterface {
         gl.drawArrays(gl.TRIANGLES, 0, 3)
         this.gpuTimer?.end()
         gl.bindTexture(gl.TEXTURE_2D, null)
-        if (DEPTH_TEST && zScale) gl.enable(gl.DEPTH_TEST)
+        if (DEPTH_TEST && zScale) {
+          gl.enable(gl.DEPTH_TEST)
+          gl.depthMask(false)
+        }
       }
 
       this.useDotProgram(gl, pixelRatio)
