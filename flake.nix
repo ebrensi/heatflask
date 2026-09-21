@@ -11,6 +11,9 @@
       let
         pkgs = import nixpkgs {
           inherit system;
+          # For mongodb, which is SSPL-1.0 and so unfree by nixpkgs' reckoning.
+          # Nothing else here needs this, and removing mongodb would be the
+          # only way to drop it.
           config.allowUnfree = true;
         };
 
@@ -225,9 +228,11 @@
             pythonEnv
             mongodb
 
-            # Build tools for compiled Python extensions
-            gcc
-            gnumake
+            # Insurance for a platform where some dependency has no wheel
+            # and pip falls back to building it. On x86_64-linux nothing
+            # compiles: the whole runtime tree installs with
+            # --only-binary=:all:. mkShell's stdenv already provides cc and
+            # make, so only this one has to be asked for.
             pkg-config
 
             zlib
@@ -245,14 +250,13 @@
             # Node.js for frontend assets
             nodejs_22
 
+            # heatflask-setup and the pre-commit hook shell out to git.
             git
-            jq
-            curl
 
-            # Deploys and the production logs and database. Only the
-            # maintainer has access to the Heroku app, but whoever does
-            # should get the CLI with the project, not their own machine.
-            heroku
+            # The Heroku CLI is deliberately absent. Deploying needs
+            # credentials only the maintainer has, so it belongs in their
+            # machine's configuration rather than in everyone's dev shell,
+            # where it was 700MB that CI also downloaded on every run.
 
             setupScript
             startServicesScript
