@@ -42,9 +42,15 @@ everyone.
 ### Client-side (frontend)
 [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier)
 
-Front-end code is TypeScript. It is typechecked with `npm run typecheck`, linted with [ESLint](https://eslint.org), and auto-formatted with [Prettier](https://prettier.io).
+Front-end code is TypeScript. It is typechecked with `npm run typecheck` and auto-formatted
+with [Prettier](https://prettier.io) (`npm run format`), both of which CI also runs.
 
-When you install frontend dependencies with `npm install`, TypeScript, ESLint and Prettier are installed for you as dev-dependencies and convenient `npm` scripts to use them are defined in [`package.json`](/frontend/package.json). You can then integrate it with whatever IDE you like.
+TypeScript and Prettier are installed with the frontend dependencies, and the `npm` scripts
+for them are in [`package.json`](/frontend/package.json), so any IDE can pick them up.
+
+There is no JavaScript linter. ESLint was a dependency here for years without a script or a
+CI step that ran it, so it was removed rather than migrated to its new config format; the
+typechecker covers most of what it was catching.
 
 ### Server-side (backend)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)

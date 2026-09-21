@@ -429,7 +429,6 @@ export class BitSet {
   // (for this set A and other set B,
   //   this computes B = A - B  and returns B)
   difference(other: BitSet, result?: BitSet): BitSet {
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
     if (!result) result = this
     else result.resize((this.words.length << 5) - 1)
 

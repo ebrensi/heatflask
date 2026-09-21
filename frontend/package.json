@@ -25,12 +25,12 @@
   ],
   "context": "browser",
   "dependencies": {
-    "@msgpack/msgpack": "^2.7.1",
+    "@msgpack/msgpack": "^2.8.0",
     "@types/google.analytics": "^0.0.42",
     "knob": "https://codeload.github.com/ebrensi/knob/tar.gz/aa695312da9b804a487ed9fe0e8c66cd655191a6",
     "latlon-geohash": "^2.0.0",
-    "maplibre-gl": "^6.4.1",
-    "mediabunny": "^1.56.1",
+    "maplibre-gl": "^6.10.0",
+    "mediabunny": "^1.58.1",
     "sidebar-v2": "^0.4.0"
   },
   "browserslist": [
@@ -42,10 +42,6 @@
     "@parcel/transformer-sass": "^2.16.4",
     "@types/latlon-geohash": "^2.0.0",
     "@types/node": "^17.0.25",
-    "@typescript-eslint/eslint-plugin": "^5.8.0",
-    "@typescript-eslint/parser": "^5.8.0",
-    "eslint": "^8.5.0",
-    "eslint-config-prettier": "^8.3.0",
     "onchange": "^7.1.0",
     "parcel": "^2.16.4",
     "prettier": "^2.5.1",

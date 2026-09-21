@@ -27,7 +27,7 @@ export class Store {
   ): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
       const openreq = indexedDB.open(dbName, version)
-      const self = this // eslint-disable-line @typescript-eslint/no-this-alias
+      const self = this
       let db: IDBDatabase
 
       openreq.onerror = onerror
