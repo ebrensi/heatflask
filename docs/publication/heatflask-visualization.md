@@ -315,7 +315,7 @@ rather than sliding across a fiction.
 
 ## 9. The model, complete
 
-Collecting Definition 2 and Propositions 4 and 6, an activity displays, at
+Collecting Definition 2 with Propositions 3 and 4, an activity displays, at
 phase $\phi$, a mark for each $k \in \{0, \dots, \lfloor D/T \rfloor\}$, at
 $$\theta_k = (\phi - \alpha) \bmod T + kT,
 \qquad
@@ -447,12 +447,29 @@ concatenation boundary, and §8.
 
 `clipped()` writes a position outside the clip volume and a point size of zero
 — the cheapest way to make a vertex disappear, since the rasterizer discards it
-before any fragment work. Most invocations, most frames, do nothing else: with
-$T$ at its default and typical durations, a large majority of slots are in
-their off phase at any moment. That is not waste in the usual sense. The
-alternative is a host-side compaction pass that reproduces the branch on the
-CPU and then uploads the survivors, which is precisely the per-frame transfer
-the design exists to avoid.
+before any fragment work.
+
+It is worth quantifying how often that happens, because the natural worry about
+a fixed slot buffer is that it wastes invocations on marks that do not exist.
+It does not. The buffer allocates $\lfloor D/T \rfloor + 1$ slots per activity
+(Proposition 3), and §3 computed the number actually displayed as
+$\lfloor (D-r)/T \rfloor + 1$, which differs from the allocation by at most one.
+So **at most one slot per activity is dark at any instant** — the trailing one,
+which is displayed precisely when $r \le D \bmod T$ and is therefore dark for a
+fraction $1 - (D \bmod T)/T$ of each period, on average one half. For a
+67-minute activity at $T = 60$ that is half a dark slot out of 68, under one
+percent.
+
+The early returns are therefore *rare*, not common, and the fixed slot buffer
+is very nearly tight. The remaining culls — the bracket test and the gap test —
+are rarer still. Uniform control flow is also what the hardware wants: with
+almost every invocation in a warp taking the same path, the branches cost
+essentially nothing to divergence.
+
+The alternative, in any case, would be a host-side compaction pass that
+reproduces the branch on the CPU and uploads only the survivors — which is
+precisely the per-frame transfer the design exists to avoid, in exchange for
+eliminating under one percent of the vertex work.
 
 ## 14. Level of detail: what is simplified, and what deliberately is not
 
