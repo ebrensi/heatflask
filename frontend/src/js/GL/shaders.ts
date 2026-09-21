@@ -100,12 +100,16 @@ void main() {
  * activity time now - k*T that falls within the activity. Measured from the
  * activity's start ts, those times are
  *
- *     tau_k = ((now - ts) mod T) + k*T,    k = 0, 1, 2, ...
+ *     theta_k = ((now - ts) mod T) + k*T,    k = 0, 1, 2, ...
  *
  * so one frame needs only phase = now mod T; each activity's own ts mod T is
  * in its metadata. Every stream is uploaded once, resampled onto a uniform
- * time grid (u_streams), which turns "where was the athlete at tau" into two
+ * time grid (u_streams), which turns "where was the athlete at theta" into two
  * texel fetches and a mix instead of a search.
+ *
+ * theta is an activity time -- seconds since that activity started. It is
+ * unrelated to visual.tau, the clock rate in activity-seconds per real
+ * second; the two were both called `tau` until Sept 2026.
  *
  * Each vertex is one dot slot (activity index, k). The slot buffer depends on
  * T and on the selection, never on time, so a frame uploads a single uniform.
@@ -155,10 +159,10 @@ void main() {
   vec4 m0 = fetch(u_meta, a);
   vec4 m3 = fetch(u_meta, a + 3);
 
-  float tau = mod(u_phase - m0.w, u_T) + float(a_slot.y) * u_T;
-  if (tau > m3.y) { clipped(); return; }
+  float theta = mod(u_phase - m0.w, u_T) + float(a_slot.y) * u_T;
+  if (theta > m3.y) { clipped(); return; }
 
-  float f = tau * m0.z;
+  float f = theta * m0.z;
   float i0 = floor(f);
   int base = int(m0.x) + int(i0);
   if (i0 + 1.0 >= m0.y) { clipped(); return; }
