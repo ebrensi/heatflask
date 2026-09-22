@@ -16,6 +16,7 @@
 [dir="rtl"] .heatflask-dialog,
 [dir="rtl"] .maplibregl-popup-content,
 [dir="rtl"] .capture-progress,
+[dir="rtl"] .share-readout,
 [dir="rtl"] #flashes {
   direction: rtl;
 }

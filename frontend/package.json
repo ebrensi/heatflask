@@ -37,9 +37,11 @@
     "> 0.75%, last 2 versions, not dead"
   ],
   "devDependencies": {
+    "@parcel/packager-raw-url": "^2.16.4",
     "@parcel/resolver-glob": "^2.16.4",
     "@parcel/transformer-inline-string": "^2.16.4",
     "@parcel/transformer-sass": "^2.16.4",
+    "@parcel/transformer-webmanifest": "^2.16.4",
     "@types/latlon-geohash": "^2.0.0",
     "@types/node": "^17.0.25",
     "onchange": "^7.1.0",

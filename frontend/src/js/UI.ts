@@ -40,6 +40,7 @@ import { LayerPicker } from "./MapControls"
 import { addAnimationControl } from "./AnimationControl"
 import { addBoxSelect } from "./BoxSelect"
 import { addCaptureControl } from "./CaptureControl"
+import { addShareControl } from "./ShareControl"
 import * as Table from "./Table"
 import { initRender, renderFromQuery } from "./Render"
 import { initImportProgress } from "./ImportProgress"
@@ -92,6 +93,9 @@ export async function start() {
   // Play/pause button for the animation, and video capture
   addAnimationControl(map, appState)
   addCaptureControl(map)
+
+  // Share or copy the map's link; the installed app has no address bar
+  addShareControl(map)
 
   // shift-drag a box over the map to select the activities inside it
   addBoxSelect(map)
