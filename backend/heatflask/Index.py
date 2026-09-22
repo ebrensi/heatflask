@@ -34,15 +34,21 @@ COLLECTION_NAME = "index_v0"
 SECS_IN_HOUR = 60 * 60
 SECS_IN_DAY = 24 * SECS_IN_HOUR
 
-# How long we store a user's Index
-TTL = int(os.environ.get("INDEX_TTL", 20)) * SECS_IN_DAY
+# How long we keep a user's index after they last used the app.
+#
+# The clock runs from last use, not from import: touch_user_entries refreshes
+# it while the owner is active, so this expires the indexes of people who have
+# stopped coming and nobody else's. Rebuilding one is cheap in Strava reads --
+# about one per fifty activities, against one per activity for streams -- but
+# it costs the user a wait, so it wants to be long.
+TTL = int(os.environ.get("INDEX_TTL", 90)) * SECS_IN_DAY
 
 myBox = types.SimpleNamespace(collection=None)
 
 
 async def get_collection():
     if myBox.collection is None:
-        myBox.collection = await DataAPIs.init_collection(COLLECTION_NAME)
+        myBox.collection = await DataAPIs.init_collection(COLLECTION_NAME, ttl=TTL)
     return myBox.collection
 
 
@@ -111,6 +117,9 @@ class ActivitySummaryFields:
     # made before 2026-09-21 have none; see has_legacy_entries.
     SPORT_TYPE = "st"
     VISIBILITY = "v"
+    # When this entry was last written or touched. Drives the TTL index, and
+    # is the one field here that is about us rather than about the activity.
+    TIMESTAMP = "ts"
 
 
 F = ActivitySummaryFields
@@ -140,6 +149,10 @@ def mongo_doc(
     _id=None,
     title=None,
     update=False,
+    # Named rather than left to **and_more, where it was silently dropped:
+    # every caller passed one, no entry ever had it, and so the TTL that
+    # INDEX_TTL was supposed to drive had nothing to act on.
+    ts=None,
     **and_more,
 ):
     if not (update or (start_date and map and map.get("summary_polyline"))):
@@ -167,6 +180,7 @@ def mongo_doc(
             F.FLAG_COMMUTE: commute,
             F.FLAG_PRIVATE: private,
             F.LATLNG_BOUNDS: polyline_bounds(map["summary_polyline"]),
+            F.TIMESTAMP: ts or datetime.datetime.now(datetime.timezone.utc),
         }
     )
 
@@ -412,6 +426,10 @@ async def update_user_entries(**user) -> int:
 
     This asks Strava only for what started after the newest activity we
     already hold, which is normally a single request returning nothing.
+
+    It also restarts the index's TTL clock, since the owner is evidently still
+    here. due_for_update gates this to once per UPDATE_INTERVAL, so it is one
+    bulk write every five minutes at worst.
     """
     uid = int(user[U.ID])
 
@@ -419,6 +437,8 @@ async def update_user_entries(**user) -> int:
     if after is None:
         # Nothing indexed yet: that is import_user_entries' job, not this one
         return 0
+
+    await touch_user_entries(uid)
 
     strava = Users.strava_client(user)
     await strava.update_access_token()
@@ -505,6 +525,21 @@ async def refresh_one(activity_id: int, **user) -> str:
 async def delete_one(activity_id: int):
     index = await get_collection()
     return await index.delete_one({F.ACTIVITY_ID: activity_id})
+
+
+async def touch_user_entries(user_id: int) -> None:
+    """
+    Restart the TTL clock on this user's whole index.
+
+    Without this the index would expire TTL after it was *imported*, taking
+    the index of somebody who uses Heatflask every week along with it. What
+    should expire is the index of someone who has stopped coming.
+    """
+    index = await get_collection()
+    await index.update_many(
+        {F.USER_ID: int(user_id)},
+        {"$set": {F.TIMESTAMP: datetime.datetime.now(datetime.timezone.utc)}},
+    )
 
 
 async def delete_user_entries(**user):
@@ -675,13 +710,17 @@ async def query(
     sends can remove it.
     """
     mongo_query: dict = {"$and": [privacy]} if privacy else {}
-    projection = None
+
+    # F.TIMESTAMP is ours, not the activity's, and these docs are msgpacked
+    # straight onto the wire -- where a datetime raises TypeError and takes
+    # the whole response with it. It never leaves the server.
+    projection = {F.TIMESTAMP: False}
 
     limit = int(limit) if limit else 0
 
     if user_id:
         mongo_query[F.USER_ID] = int(user_id)
-        projection = {F.USER_ID: False}
+        projection[F.USER_ID] = False
 
     if before or after:
         mongo_query[F.UTC_START_TIME] = Utility.cleandict(

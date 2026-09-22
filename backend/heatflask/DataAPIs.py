@@ -89,7 +89,20 @@ async def update_collection_ttl(name: str, new_ttl: int):
     # Update the MongoDB Activities TTL if necessary
     info = await collection.index_information()
 
-    current_ttl = info["ts"]["expireAfterSeconds"]
+    if "ts" not in info:
+        # A collection that predates its TTL, which is how index_v0 arrives
+        # here the first time. This used to raise KeyError, out of the
+        # get_collection() that every query goes through.
+        await collection.create_index(
+            "ts", name="ts", unique=False, expireAfterSeconds=new_ttl
+        )
+        log.info("%s TTL index created: %s", name, datetime.timedelta(seconds=new_ttl))
+        return collection
+
+    # A plain `ts` index has no expireAfterSeconds at all; collMod below turns
+    # it into a TTL index, so None has to compare unequal to the new value
+    # rather than raise.
+    current_ttl = info["ts"].get("expireAfterSeconds")
 
     if current_ttl != new_ttl:
         await db.mongodb.command(
@@ -104,7 +117,7 @@ async def update_collection_ttl(name: str, new_ttl: int):
         log.info(
             "%s TTL updated from %s to %s",
             name,
-            datetime.timedelta(seconds=current_ttl),
+            "none" if current_ttl is None else datetime.timedelta(seconds=current_ttl),
             datetime.timedelta(seconds=new_ttl),
         )
 
