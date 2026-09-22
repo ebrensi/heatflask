@@ -60,6 +60,11 @@ def header_len(ntype: int) -> int:
 
 
 def rld_encode(vals: Nums, scale: float = 1) -> RLDEncoded:
+    if len(vals) == 0:
+        # There is no first value to put in the header, so there is nothing to
+        # encode. The caller decides what an activity with an empty stream is.
+        raise ValueError("cannot encode an empty stream")
+
     vals = (
         np.fromiter((scale * v + 0.5 for v in vals), dtype="i4", count=len(vals))
         if type(vals[0]) is float
@@ -95,6 +100,15 @@ def rld_encode(vals: Nums, scale: float = 1) -> RLDEncoded:
     my_dtype, rl_marker, max_reps = SPECS[ntype]
 
     n = len(vals)
+
+    if n == 1:
+        # A single sample has no diffs at all. The loop below starts by
+        # reading vals[1], so this used to raise IndexError out of the middle
+        # of an import, and the activity was dropped and refetched from Strava
+        # on every later query. rld_decode reads the header and stops, which
+        # gives back the one value.
+        return bytes([ntype]) + np.array(vals[0], dtype=FIRSTVAL_DTYPE[ntype]).tobytes()
+
     encoded = np.empty(n, dtype=my_dtype)
     reps = 0
     j = 0

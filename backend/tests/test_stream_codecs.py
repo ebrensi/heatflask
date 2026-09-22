@@ -73,10 +73,30 @@ def test_float_stream_is_scaled_and_rounded():
     assert list(StreamCodecs.rld_decode(enc)) == [14, 26, 35]
 
 
+@pytest.mark.parametrize("vals", [[5], [0], [-5], [40000], [3, 3], [7, 9]])
+def test_shortest_streams_roundtrip(vals):
+    # A one-sample stream used to raise IndexError out of the encoder --
+    # "index 1 is out of bounds for axis 0 with size 1" -- which dropped the
+    # activity and had it refetched from Strava on every later query.
+    roundtrip(vals)
+
+
+def test_single_sample_is_header_only():
+    enc = StreamCodecs.rld_encode([5])
+    assert len(enc) == StreamCodecs.header_len(enc[0])
+
+
+def test_empty_stream_is_refused():
+    # No first value means no header, so there is nothing to encode. The
+    # caller decides what that means; it must not be a silent empty blob.
+    with pytest.raises(ValueError):
+        StreamCodecs.rld_encode([])
+
+
 @pytest.mark.parametrize("seed", range(20))
 def test_random_streams_roundtrip(seed):
     rng = np.random.default_rng(seed)
-    n = int(rng.integers(3, 500))
+    n = int(rng.integers(1, 500))
     steps = rng.integers(-40000, 40000, size=n)
     vals = np.cumsum(steps, dtype="i4")
     enc = StreamCodecs.rld_encode(vals)
