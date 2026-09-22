@@ -37,6 +37,12 @@ export type ActivityQuery = {
   streams?: boolean
   /** Ask the backend to report which of these it holds streams for */
   stream_status?: boolean
+  /**
+   * How many tracks this render already had in the browser cache. Not a
+   * filter: it is only recorded, so the server's history can tell a render
+   * served from IndexedDB from one it paid Mongo or Strava for.
+   */
+  browser_hits?: number
   visibility?: "everyone" | "followers" | "only_me"
   overlaps?: BBounds
 }

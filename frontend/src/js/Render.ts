@@ -152,6 +152,13 @@ async function fillStreamsFromCache(
       activity_ids: misses,
       /* The ids are explicit, so none of the other narrowing applies */
       limit: undefined as number,
+      /* How many tracks this render drew without asking for them. The server
+       * cannot see it any other way: it only hears about the misses, so its
+       * own "cached" count is Mongo alone and its history said nothing about
+       * the cache that does most of the work. A count, not the ids -- the
+       * server only needs the number, and the ids would be the larger half of
+       * the request. */
+      browser_hits: hits,
     }
 
     let done = 0

@@ -42,7 +42,10 @@ class QuerySummary:
 
     owner: int | None = None
     streams: bool = False
-    # the browser's own cache: activities it asked us not to send
+    # the browser's own cache: activities it already had and did not ask for.
+    # Reported by the client, because only it knows -- a render served
+    # entirely from IndexedDB never reaches us at all, and one served partly
+    # from it asks only for what it missed.
     excluded: int = 0
     # activities the top-up found on Strava before the query ran
     new: int = 0
@@ -191,7 +194,11 @@ async def run_query(request: SessionRequest, summary: QuerySummary):
     # for. Off by default, so the render path never pays for the extra lookup.
     stream_status = query.pop("stream_status", False)
     summary.streams = bool(streams)
-    summary.excluded = len(query.get("exclude_ids") or [])
+    # popped, not read in place: this is a report about the client's cache,
+    # not a filter, and Index.query takes its kwargs from whatever is left
+    summary.excluded = int(query.pop("browser_hits", 0) or 0) or len(
+        query.get("exclude_ids") or []
+    )
     response = await request.respond(content_type="application/msgpack")
 
     def sendPacked(doc):

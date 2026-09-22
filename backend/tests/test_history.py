@@ -205,7 +205,11 @@ async def query_route(monkeypatch, sanic_server, history):
     """POST /activities with Index, Users and Streams faked; returns the entry"""
     athletes = {12: {"_id": 12, "p": False}, 13: {"_id": 13, "p": True}}
 
+    seen: dict = {}
+
     async def fake_query(**kwargs):
+        seen.clear()
+        seen.update(kwargs)
         return {"docs": [{"_id": i} for i in range(5)]}
 
     async def get_user(uid):
@@ -256,6 +260,8 @@ async def query_route(monkeypatch, sanic_server, history):
         (entry,) = history.docs
         return entry
 
+    # what the route handed Index.query on the last POST
+    post.index_query_kwargs = seen
     return post
 
 
@@ -373,3 +379,22 @@ async def test_the_page_escapes_what_it_was_told(sanic_server, monkeypatch, hist
 
     assert "<script>alert(1)</script>" not in page
     assert "&lt;script&gt;" in page
+
+
+async def test_browser_cache_hits_are_recorded(query_route):
+    # A render mostly served from IndexedDB: the browser asks only for what it
+    # missed, so without this the history said "2 activities" and gave no sign
+    # that 400 more were drawn.
+    entry = await query_route(
+        {"user_id": 12, "streams": True, "activity_ids": [0, 1], "browser_hits": 400}
+    )
+
+    assert entry["stats"]["excluded"] == 400
+    assert "(+400 already in the browser)" in entry["msg"]
+
+
+async def test_browser_hits_is_not_passed_to_the_index_query(query_route):
+    # It is a report, not a filter. Index.query takes the request's leftover
+    # keys as kwargs, so anything not popped becomes a TypeError.
+    await query_route({"user_id": 12, "streams": True, "browser_hits": 7})
+    assert "browser_hits" not in query_route.index_query_kwargs
