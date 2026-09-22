@@ -106,6 +106,10 @@ class ActivitySummaryFields:
     FLAG_PRIVATE = "p"
     ACTIVITY_NAME = "N"
     ACTIVITY_TYPE = "t"
+    # A string, not an index into a list the way ACTIVITY_TYPE is: Strava adds
+    # sport types often enough that a positional list would go stale. Entries
+    # made before 2026-09-21 have none; see has_legacy_entries.
+    SPORT_TYPE = "st"
     VISIBILITY = "v"
 
 
@@ -123,6 +127,7 @@ def mongo_doc(
     elapsed_time=None,
     total_elevation_gain=None,
     type=None,
+    sport_type=None,
     start_date=None,
     utc_offset=None,
     athlete_count=None,
@@ -151,6 +156,9 @@ def mongo_doc(
             F.MOVING_SECONDS: moving_time,
             F.ELEVATION_GAIN: total_elevation_gain,
             F.ACTIVITY_TYPE: Strava.ATYPES_LOOKUP.get(type, type),
+            # never left out: has_legacy_entries takes a missing one to mean
+            # the index predates the field, and would rebuild it every query
+            F.SPORT_TYPE: sport_type or type or "Workout",
             F.UTC_START_TIME: utc_start_time,
             F.UTC_LOCAL_OFFSET: utc_offset,
             F.N_ATHLETES: athlete_count,
@@ -512,6 +520,81 @@ async def count_user_entries(**user):
     return await index.count_documents({F.USER_ID: int(uid)})
 
 
+async def has_legacy_entries(**user) -> bool:
+    """
+    True if some of this user's index was made before we stored sport_type.
+    Such an index is rebuilt whole the next time it is queried: it costs one
+    Strava request per 200 activities, once, and a partly-rebuilt index would
+    leave the sport filter guessing for the rest.
+    """
+    index = await get_collection()
+    return not not (
+        await index.find_one(
+            {F.USER_ID: int(user[U.ID]), F.SPORT_TYPE: {"$exists": False}},
+            projection={F.ACTIVITY_ID: True},
+        )
+    )
+
+
+def sport_type_filter(sport_types: list[str], exclude=False) -> dict:
+    """
+    Match these sport types, or with `exclude`, every other one.
+
+    Entries without a sport type -- made before it was stored, and not yet
+    rebuilt -- have only the coarser ActivityType, and each direction errs
+    toward showing them. Included, one is matched by the ActivityType Strava
+    files the sport under, so TrailRun brings in all of its Runs. Excluded, it
+    goes only if its ActivityType is itself excluded: leaving out TrailRun
+    keeps its Runs, and leaving out Run drops them.
+    """
+    if exclude:
+        legacy = set(sport_types)
+    else:
+        legacy = set(Strava.legacy_type(st) for st in sport_types)
+        # and the names themselves: a type ATYPES does not list is stored raw
+        legacy |= set(sport_types)
+    match = {
+        "$or": [
+            {F.SPORT_TYPE: {"$in": list(sport_types)}},
+            {
+                F.SPORT_TYPE: {"$exists": False},
+                F.ACTIVITY_TYPE: {
+                    "$in": [Strava.ATYPES_LOOKUP.get(t, t) for t in legacy]
+                },
+            },
+        ]
+    }
+    return {"$nor": [match]} if exclude else match
+
+
+async def sport_type_counts(privacy: dict | None, user_id: int | None) -> dict:
+    """How many activities of each sport type this viewer can see"""
+    match: dict = {"$and": [privacy]} if privacy else {}
+    if user_id:
+        match[F.USER_ID] = int(user_id)
+    index = await get_collection()
+    cursor = await index.aggregate(
+        [
+            {"$match": match},
+            {
+                "$group": {
+                    "_id": {"st": f"${F.SPORT_TYPE}", "t": f"${F.ACTIVITY_TYPE}"},
+                    "n": {"$sum": 1},
+                }
+            },
+        ]
+    )
+    counts: dict[str, int] = {}
+    async for doc in cursor:
+        st, t = doc["_id"].get("st"), doc["_id"].get("t")
+        if st is None:
+            # a legacy entry: its ActivityType, which is a sport type too
+            st = Strava.ATYPES[t] if isinstance(t, int) else t
+        if st:
+            counts[st] = counts.get(st, 0) + doc["n"]
+    return counts
+
+
 async def has_user_entries(**user):
     uid = int(user[U.ID])
     index = await get_collection()
@@ -576,6 +659,8 @@ async def query(
     before: int = None,
     limit: int = None,
     activity_type: list[str] = None,
+    sport_type: list[str] = None,
+    exclude_sport_type: list[str] = None,
     commute: bool = None,
     private: bool = None,
     visibility: bool = None,
@@ -613,6 +698,14 @@ async def query(
 
     if activity_type:
         mongo_query[F.ACTIVITY_TYPE] = {"$in": activity_type}
+
+    if sport_type:
+        # an $or of its own, so it goes in the $and beside the privacy filter
+        mongo_query.setdefault("$and", []).append(sport_type_filter(sport_type))
+    if exclude_sport_type:
+        mongo_query.setdefault("$and", []).append(
+            sport_type_filter(exclude_sport_type, exclude=True)
+        )
 
     if visibility:
         # ["everyone", "followers", "only_me"]

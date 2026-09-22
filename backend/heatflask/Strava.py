@@ -416,6 +416,88 @@ ATYPES: Tuple[ActivityType, ...] = get_args(ActivityType)
 
 ATYPES_LOOKUP: dict[ActivityType, int] = {atype: i for i, atype in enumerate(ATYPES)}
 
+# Strava's finer-grained replacement for ActivityType: it tells a trail run from
+# a road run, and a gravel ride from a mountain bike ride. The query filter is
+# by these. See https://developers.strava.com/swagger/sport_type.json
+SportType = Literal[
+    "AlpineSki",
+    "BackcountrySki",
+    "Badminton",
+    "Basketball",
+    "Canoeing",
+    "Cricket",
+    "Crossfit",
+    "Dance",
+    "EBikeRide",
+    "Elliptical",
+    "EMountainBikeRide",
+    "Golf",
+    "GravelRide",
+    "Handcycle",
+    "HighIntensityIntervalTraining",
+    "Hike",
+    "IceSkate",
+    "InlineSkate",
+    "Kayaking",
+    "Kitesurf",
+    "MountainBikeRide",
+    "NordicSki",
+    "Padel",
+    "PhysicalTherapy",
+    "Pickleball",
+    "Pilates",
+    "Racquetball",
+    "Ride",
+    "RockClimbing",
+    "RollerSki",
+    "Rowing",
+    "Run",
+    "Sail",
+    "Skateboard",
+    "Snowboard",
+    "Snowshoe",
+    "Soccer",
+    "Squash",
+    "StairStepper",
+    "StandUpPaddling",
+    "Surfing",
+    "Swim",
+    "TableTennis",
+    "Tennis",
+    "TrailRun",
+    "Velomobile",
+    "VirtualRide",
+    "VirtualRow",
+    "VirtualRun",
+    "Volleyball",
+    "Walk",
+    "WeightTraining",
+    "Wheelchair",
+    "Windsurf",
+    "Workout",
+    "Yoga",
+]
+
+SPORT_TYPES: Tuple[SportType, ...] = get_args(SportType)
+
+
+def legacy_type(sport_type: str) -> str:
+    """
+    The ActivityType Strava gives an activity of this sport_type. Index
+    entries made before we stored sport_type have only this, so it is the
+    closest a filter can come for them: a TrailRun filter matches every one
+    of their Runs. The sport types newer than ActivityType are all Workouts.
+    """
+    if sport_type in ATYPES:
+        return sport_type
+    return {
+        "MountainBikeRide": "Ride",
+        "GravelRide": "Ride",
+        "EMountainBikeRide": "EBikeRide",
+        "TrailRun": "Run",
+        "VirtualRow": "Rowing",
+    }.get(sport_type, "Workout")
+
 
 class MetaAthlete(TypedDict):
     id: int
@@ -441,6 +523,7 @@ class Activity(TypedDict):
     elapsed_time: int
     total_elevation_gain: float
     type: ActivityType
+    sport_type: SportType
     start_date: int
     utc_offset: int
     athlete_count: int

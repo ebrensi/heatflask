@@ -172,6 +172,9 @@ async def route(monkeypatch, sanic_server):
     async def has_user_entries(**user):
         return True
 
+    async def has_legacy_entries(**user):
+        return False
+
     async def due_for_update(uid):
         calls["top_up"] = uid
         return False
@@ -182,6 +185,7 @@ async def route(monkeypatch, sanic_server):
 
     monkeypatch.setattr(Index, "query", fake_query)
     monkeypatch.setattr(Index, "has_user_entries", has_user_entries)
+    monkeypatch.setattr(Index, "has_legacy_entries", has_legacy_entries)
     monkeypatch.setattr(Index, "due_for_update", due_for_update)
     monkeypatch.setattr(Index, "import_index_progress", import_index_progress)
     monkeypatch.setattr(Users, "get", get_user)

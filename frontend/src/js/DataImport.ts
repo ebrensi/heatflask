@@ -26,6 +26,10 @@ export type ActivityQuery = {
   limit?: number
   key?: string
   activity_type?: string[]
+  /** Strava sport types; the backend matches any of them */
+  sport_type?: string[]
+  /** ...or every sport type but these */
+  exclude_sport_type?: string[]
   activity_ids?: number[]
   exclude_ids?: number[]
   commute?: boolean
@@ -121,6 +125,9 @@ export function qToQ(
 ) {
   const bq: ActivityQuery = { streams, exclude_ids }
   if (query.userid) bq.user_id = query.userid
+  if (query.sport) bq.sport_type = query.sport.split(",").filter(Boolean)
+  else if (query.nosport)
+    bq.exclude_sport_type = query.nosport.split(",").filter(Boolean)
 
   switch (query.type) {
     case "activities":

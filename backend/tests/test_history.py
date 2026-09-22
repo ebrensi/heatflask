@@ -233,6 +233,7 @@ async def query_route(monkeypatch, sanic_server, history):
 
     monkeypatch.setattr(Index, "query", fake_query)
     monkeypatch.setattr(Index, "has_user_entries", yes)
+    monkeypatch.setattr(Index, "has_legacy_entries", no)
     monkeypatch.setattr(Index, "due_for_update", no)
     monkeypatch.setattr(Index, "import_index_progress", no_progress)
     monkeypatch.setattr(Users, "get", get_user)

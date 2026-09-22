@@ -197,13 +197,13 @@ It only ever checks `en.json`. Other languages are allowed to be incomplete.
 
 ## Where the strings are
 
-132 in total, 24 of them carrying `{fields}` and 15 carrying inline markup.
+195 in total, 24 of them carrying `{fields}` and 15 carrying inline markup.
 
 | Namespace        | n   |                                     |
 | ---------------- | --- | ----------------------------------- |
 | `common`         | 2   | shared odds and ends                |
 | `splash`         | 3   | the logged-out landing page         |
-| `tab.query`      | 13  | sidebar: the query form             |
+| `tab.query`      | 20  | sidebar: the query form             |
 | `tab.activities` | 4   | sidebar: the rendered-activity list |
 | `tab.controls`   | 11  | sidebar: the model-parameter dials  |
 | `tab.profile`    | 27  | sidebar: account settings           |
@@ -213,6 +213,7 @@ It only ever checks `en.json`. Other languages are allowed to be incomplete.
 | `import`         | 6   | the import-progress dialog          |
 | `table`          | 2   | the activity list                   |
 | `users`          | 19  | the public user directory           |
+| `sport`          | 56  | Strava's sport types, by name       |
 | `activities`     | 11  | the activity index page             |
 
 ## Right-to-left languages

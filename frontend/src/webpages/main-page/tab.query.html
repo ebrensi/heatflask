@@ -45,6 +45,35 @@
 
 <br />
 
+<!-- Which sports to include. tab.query.ts fills the list with the sports this
+     map has, when it is opened; all are checked unless a link says otherwise. -->
+<details id="sport-menu" class="sport-menu">
+  <summary>
+    <span data-i18n="tab.query.sports">Sports:</span>
+    <span id="sport-summary"></span>
+  </summary>
+  <div class="sport-menu-body">
+    <div id="sport-status" class="sport-status"></div>
+    <ul id="sport-list" class="sport-list"></ul>
+    <button
+      id="sport-all"
+      type="button"
+      class="btn btn-sm smooth"
+      data-i18n="tab.query.allSports"
+    >
+      All sports
+    </button>
+    <button
+      id="sport-none"
+      type="button"
+      class="btn btn-sm smooth"
+      data-i18n="tab.query.sportsNone"
+    >
+      None
+    </button>
+  </div>
+</details>
+
 <label>
   <input type="checkbox" id="autozoom" />
   <span data-i18n="tab.query.autozoom">

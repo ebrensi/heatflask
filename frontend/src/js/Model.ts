@@ -38,6 +38,8 @@ export type QueryParameters = {
   before?: number // End date Epoch
   ids?: string // string representing and Array of activity ids
   quantity?: number // number of days or activities
+  sport?: string // Strava sport_types, comma separated: only these
+  nosport?: string // ...or every sport but these. Neither means all.
 }
 export const DefaultQuery: QueryParameters = {
   type: "activities",
@@ -115,6 +117,8 @@ export type URLParameters = {
   ids?: string
   key?: string
   userid?: string
+  sport?: string
+  nosport?: string
   // Visual parameters
   // Map
   zoom?: string

@@ -117,6 +117,72 @@ async def query(request: SessionRequest):
         )
 
 
+@dataclass
+class Access:
+    """
+    What a viewer may see of one athlete's map, or of everyone's. Decided from
+    the session alone: nothing in the request can override it.
+    """
+
+    target_user: dict | None = None
+    is_owner: bool = False
+    # a Mongo filter for Index.query, None for an admin, who sees everything
+    privacy: dict | None = None
+    # why the viewer may see nothing at all
+    refused: str | None = None
+
+    @classmethod
+    async def of(cls, request: SessionRequest, target_user_id) -> "Access":
+        access = cls()
+        if target_user_id:
+            access.target_user = await Users.get(target_user_id)
+            if not access.target_user:
+                raise SanicException(
+                    f"user {target_user_id} not registered", status_code=404, quiet=True
+                )
+        target_user = access.target_user
+
+        viewer = request.ctx.current_user
+        access.is_owner = bool(
+            viewer and target_user and viewer[U.ID] == target_user[U.ID]
+        )
+        if request.ctx.is_admin:
+            return access
+
+        viewer_id = viewer[U.ID] if viewer else None
+        if target_user is None:
+            sharing = await Users.sharing_ids()
+        elif Users.is_sharing(target_user):
+            sharing = [target_user[U.ID]]
+        elif access.is_owner:
+            sharing = []
+        else:
+            # Someone else's map, and they have not chosen to share it
+            access.refused = "This athlete's map is private" + (
+                "" if viewer else ". If it is yours, log in to see it."
+            )
+            return access
+        access.privacy = Index.visible_to(viewer_id, sharing=sharing)
+        return access
+
+
+@bp.get("/sport_types")
+@session_cookie(get=True)
+async def sport_types(request: SessionRequest):
+    """
+    How many activities of each sport type the viewer can see on this map
+    (?user=<id>), or on the map of everyone who shares theirs: what the query
+    tab's sport filter offers. Nothing is imported for it.
+    """
+    access = await Access.of(request, request.args.get("user"))
+    if access.refused:
+        return sanic.json({})
+    counts = await Index.sport_type_counts(
+        access.privacy, access.target_user and access.target_user[U.ID]
+    )
+    return sanic.json(counts)
+
+
 async def run_query(request: SessionRequest, summary: QuerySummary):
     query = request.json
 
@@ -139,45 +205,28 @@ async def run_query(request: SessionRequest, summary: QuerySummary):
     query.pop("privacy", None)
 
     target_user_id = query.get("user_id")
-    target_user = None
     if target_user_id:
         summary.owner = int(target_user_id)
-        target_user = await Users.get(target_user_id)
-        if not target_user:
-            raise SanicException(
-                f"user {target_user_id} not registered", status_code=404, quiet=True
-            )
+    access = await Access.of(request, target_user_id)
+    target_user, is_owner = access.target_user, access.is_owner
 
-    viewer = request.ctx.current_user
-    is_owner = bool(viewer and target_user and viewer[U.ID] == target_user[U.ID])
-
-    if not request.ctx.is_admin:
-        viewer_id = viewer[U.ID] if viewer else None
-        if target_user is None:
-            sharing = await Users.sharing_ids()
-        elif Users.is_sharing(target_user):
-            sharing = [target_user[U.ID]]
-        elif is_owner:
-            sharing = []
-        else:
-            # Someone else's map, and they have not chosen to share it. Refused
-            # before anything below can import their index with their token.
-            summary.outcome = "refused: private"
-            await sendPacked(
-                {
-                    "error": "This athlete's map is private"
-                    + ("" if viewer else ". If it is yours, log in to see it.")
-                }
-            )
-            return
-        query["privacy"] = Index.visible_to(viewer_id, sharing=sharing)
+    if access.refused:
+        # Refused before anything below can import their index with their token
+        summary.outcome = "refused: private"
+        await sendPacked({"error": access.refused})
+        return
+    if access.privacy:
+        query["privacy"] = access.privacy
 
     if target_user:
         # If there are no index entries for this user and they aren't
-        #  currently being imported, start importing them now
-        if (not await Index.has_user_entries(**target_user)) and (
-            not await Index.check_import_progress(target_user_id)
-        ):
+        # currently being imported, start importing them now. So too for an
+        # index made before we stored sport_type, once, so the sport filter
+        # works on it.
+        needs_import = not await Index.has_user_entries(
+            **target_user
+        ) or await Index.has_legacy_entries(**target_user)
+        if needs_import and not await Index.check_import_progress(target_user_id):
             request.app.add_task(Index.import_user_entries(**target_user))
             # We do this to make sure asyncio starts doing the import task
             # by the time we start looking at import progress

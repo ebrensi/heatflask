@@ -34,6 +34,8 @@ const urlArgNames: Record<URLParameter, string[]> = {
   ids: ["id", "ids"],
   key: ["key"],
   userid: ["user", "userid"],
+  sport: ["sport", "sports", "st"],
+  nosport: ["nosport"],
 
   // Visual parameters
   //  Map
@@ -84,6 +86,8 @@ function QVtoURL({ query, visual }: QVParams): URLParameters {
     ids: undefined,
     key: query.key,
     userid: str(query.userid),
+    sport: query.sport || undefined,
+    nosport: query.nosport || undefined,
     // Visual parameters
     autozoom: boolString(visual.autozoom),
     tau: str(visual.tau),
@@ -180,6 +184,11 @@ export function parseURL(urlString: string) {
     } else if (type === "ids") qparams.ids = urlParams.ids
     else if (type === "key") qparams.key = urlParams.key
   }
+
+  /* The sport filter goes with any query type. It is one list or the other;
+   * a link carrying both means the inclusive one. */
+  if (urlParams.sport) qparams.sport = urlParams.sport
+  else if (urlParams.nosport) qparams.nosport = urlParams.nosport
 
   console.log(`qparams`, qparams)
   /*
@@ -335,6 +344,8 @@ const URL_QUERY: (keyof QueryParameters)[] = [
   "before",
   "key",
   "userid",
+  "sport",
+  "nosport",
 ]
 
 /**
