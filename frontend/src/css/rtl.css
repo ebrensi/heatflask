@@ -1,0 +1,49 @@
+/*
+ * Right-to-left languages on the map page (i18n.ts sets <html dir="rtl">).
+ *
+ * The frame stays as it is -- sidebar on the left, its tab strip, the map and
+ * its controls -- because none of it is text, and mirroring it would move
+ * every control away from where the rest of the CSS positions it. What turns
+ * around is what gets read: the panes, the dialogs, the activity pop-up and
+ * the capture readout.
+ */
+[dir="rtl"] #sidebar,
+[dir="rtl"] #map {
+  direction: ltr;
+}
+
+[dir="rtl"] .sidebar-pane,
+[dir="rtl"] .heatflask-dialog,
+[dir="rtl"] .maplibregl-popup-content,
+[dir="rtl"] .capture-progress,
+[dir="rtl"] #flashes {
+  direction: rtl;
+}
+
+/* The pane's title now starts at the right, where the close button sits. */
+[dir="rtl"] .sidebar-left .sidebar-close {
+  right: auto;
+  left: 0;
+}
+
+/* Same collision in the dialogs: move the close button, and the room kept
+ * for it, to the other end of the title bar. */
+[dir="rtl"] .heatflask-dialog .titlebar {
+  padding: 10px 10px 10px 45px;
+}
+[dir="rtl"] .heatflask-dialog .close {
+  right: auto;
+  left: 8px;
+}
+
+/* The dial readouts are a number and a unit ("2.0 s", "1 min ~ 2.0 s"),
+ * which the bidi algorithm lays out back to front in an RTL run. They are
+ * written left to right in every language, so hold them that way, and only
+ * push them over to the side the rest of the text now starts from. */
+[dir="rtl"] .dial-value {
+  direction: ltr;
+  text-align: right;
+}
+[dir="rtl"] .dial-pair {
+  justify-content: flex-end;
+}

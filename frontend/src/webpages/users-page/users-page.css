@@ -15,7 +15,7 @@ body {
 }
 
 #users th {
-  text-align: left;
+  text-align: start;
   white-space: nowrap;
   cursor: pointer;
   user-select: none;
@@ -33,10 +33,10 @@ body {
   white-space: nowrap;
 }
 
-/* Numbers line up when they are tabular and right-aligned */
+/* Numbers line up when they are tabular and end-aligned */
 #users th.num,
 #users td.num {
-  text-align: right;
+  text-align: end;
   font-variant-numeric: tabular-nums;
 }
 

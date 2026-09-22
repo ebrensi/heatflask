@@ -117,7 +117,7 @@
     & > thead > tr{ 
         & > th, & > td{
             vertical-align: bottom;
-            text-align: left;
+            text-align: start;
             border-bottom: 1px solid #d9d9d9;
         }
     }
@@ -125,19 +125,19 @@
     & > tfoot  > tr{ 
         & > th, & > td{
             vertical-align: bottom;
-            text-align: left;
+            text-align: start;
             border-top: 1px solid #d9d9d9;
         }
     }
 
     th {
         vertical-align: bottom;
-        text-align: left;
+        text-align: start;
 
         &.dt-sorter {
             position: relative;
             cursor: pointer;
-            padding-right:20px;
+            padding-inline-end: 20px;
 
             &::before,
             &::after {
@@ -145,7 +145,7 @@
                 height: 0;
                 width: 0;
                 position: absolute;
-                right: 7px;
+                inset-inline-end: 7px;
                 border-left: 4px solid transparent;
                 border-right: 4px solid transparent;
                 opacity: 0.2;
