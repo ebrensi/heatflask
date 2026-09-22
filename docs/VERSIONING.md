@@ -42,7 +42,7 @@ warns and falls back to the default rather than failing.
 
 ## How we got here
 
-`v1.0.0` was tagged at `b47af4d8`. Since then the URL surface has grown five
+`v1.0.0` was tagged at `b47af4d8`. Since then the URL surface has grown six
 times and never broken:
 
 - `1.1.0` — `5df44f4f`, the MapLibre/WebGL rewrite: adds `pitch`, `bearing` and
@@ -58,6 +58,10 @@ times and never broken:
 - `1.5.0` — `5bf94c19`, the Shadows checkbox: adds `sh` (also spelled
   `shadows`). It defaults to on, which is how every map was already drawn, so
   a link that leaves it out looks the same as it did.
+- `1.6.0` — `9cb33195`, the sport filter: adds `sport` (also spelled `sports`
+  and `st`), the Strava sport types to show, and `nosport`, the ones to leave
+  out; a link carries whichever list is shorter. A link with neither shows
+  every sport, as every link did before.
 
 Everything else in those commits — the WebGL dot layer, i18n, shared maps, the
 history log, the stream encoding — is invisible to a saved link, so it is patch
