@@ -4,11 +4,15 @@ One JSON file per language. `en.json` is the source of truth: every string the
 front end shows is in it, and English is the fallback for any key a translation
 has not got to yet.
 
-Shipping nineteen: English, Czech, Dutch, French, German, Indonesian, Italian,
-Japanese, Norwegian (Bokmål), Polish, Brazilian and European Portuguese,
-Russian, Spanish, Thai, Ukrainian, Vietnamese, and Chinese in both Simplified
-and Traditional. All but English are a machine first pass -- **they have not been
-read by a native speaker**, and corrections are the point.
+Shipping thirty-two. English; in Europe, Czech, Dutch, French, German,
+Italian, Norwegian (Bokmål), Polish, Brazilian and European Portuguese,
+Russian, Spanish and Ukrainian; in Asia, Chinese in both Simplified and
+Traditional, Indonesian, Japanese, Thai and Vietnamese; in the Middle East and
+South Asia, Arabic, Persian, Urdu, Hindi, Bengali, Marathi, Tamil, Telugu and
+Kannada; in Africa, Amharic, Tigrinya, Swahili and Hausa. All but English are a
+machine first pass -- **they have not been read by a native speaker**, and
+corrections are the point. Of those, Tigrinya and Hausa are the least
+certain: there is far less text in them to learn from.
 The keys most likely to be wrong are the terse ones, where the English gives a
 translator nothing to go on: `tab.controls.*` (the dial labels) and
 `tab.info.*` (the help text).
@@ -67,6 +71,12 @@ A Nynorsk catalog, if someone writes one, is just `nn.json` and dropping the
 
 Slovak (`sk`) goes to Czech on the same reasoning, and `in` -- the old tag for
 Indonesian that some Android and Java stacks still send -- goes to `id`.
+Dari (`prs`) goes to Persian, as do `pes` and `swh`, the ISO 639-3 codes a few
+stacks send for Persian and Swahili.
+
+Arabic is one catalog, `ar`, in Modern Standard Arabic -- the written
+language everywhere Arabic is written, whatever is spoken -- so every `ar-XX`
+reaches it on its base language and it needs no aliases.
 
 ## How a reader gets a language
 
@@ -109,7 +119,7 @@ text. Translate only the value.
 They can move anywhere in the sentence — that is the point of them. A field
 that is misspelled or dropped shows up as literal `{count}` in the UI.
 
-**Inline HTML must survive, and may move.** 17 strings carry a `<kbd>`, an
+**Inline HTML must survive, and may move.** 15 strings carry a `<kbd>`, an
 icon `<i>`, or a link:
 
 ```json
@@ -127,7 +137,9 @@ sentence.
 counted strings are safe because the count cannot be 1 where it would matter,
 but `users.monthsAgo` and `users.yearsAgo` can be, so every language uses an
 abbreviation there ("{count} mes.", "vor {count} Mon.") the way the English
-itself does with "mo" and "yr". `import.count` sidesteps it by putting the
+itself does with "mo" and "yr". Not every language can: Arabic, Swahili and
+Marathi change the noun with the number, and "1 month ago" in them reads a
+little off. That is the case for real plural rules, when someone reports it. `import.count` sidesteps it by putting the
 noun first: "Aktivitäten: {received}". If a language needs real plural rules,
 that is a change to `t()`, not a thing to fake in the catalog.
 
@@ -185,23 +197,44 @@ It only ever checks `en.json`. Other languages are allowed to be incomplete.
 
 ## Where the strings are
 
-124 in total, 25 of them carrying `{fields}` and 17 carrying inline markup.
+132 in total, 24 of them carrying `{fields}` and 15 carrying inline markup.
 
 | Namespace        | n   |                                     |
 | ---------------- | --- | ----------------------------------- |
 | `common`         | 2   | shared odds and ends                |
-| `splash`         | 4   | the logged-out landing page         |
-| `tab.query`      | 16  | sidebar: the query form             |
+| `splash`         | 3   | the logged-out landing page         |
+| `tab.query`      | 13  | sidebar: the query form             |
 | `tab.activities` | 4   | sidebar: the rendered-activity list |
-| `tab.controls`   | 9   | sidebar: the model-parameter dials  |
-| `tab.profile`    | 12  | sidebar: account settings           |
-| `tab.info`       | 21  | sidebar: the help text              |
+| `tab.controls`   | 11  | sidebar: the model-parameter dials  |
+| `tab.profile`    | 27  | sidebar: account settings           |
+| `tab.info`       | 19  | sidebar: the help text              |
 | `map`            | 3   | map control tooltips                |
 | `capture`        | 12  | video export                        |
 | `import`         | 6   | the import-progress dialog          |
 | `table`          | 2   | the activity list                   |
-| `users`          | 22  | the public user directory           |
+| `users`          | 19  | the public user directory           |
 | `activities`     | 11  | the activity index page             |
+
+## Right-to-left languages
+
+Arabic, Persian and Urdu are written right to left. `RTL` in `i18n.ts` lists
+them, and `initI18n` sets `<html dir="rtl">` for them; a new one is a line
+there as well as a catalog.
+
+That is all the splash, user-directory and activity-index pages need -- they
+are text and tables, and their CSS uses `start`/`end` rather than
+`left`/`right`, so it turns around with them. The map page does not turn
+around as a whole. [`../css/rtl.css`](../css/rtl.css) holds its frame
+left-to-right -- the sidebar stays on the left and the map controls stay put,
+since none of that is text -- and makes only what is read RTL: the panes, the
+dialogs, the activity pop-up, the capture readout and the flash messages.
+The dial readouts ("1 min ~ 2.0 s") are held left-to-right inside that, or the
+bidi algorithm prints them back to front.
+
+What to look at with `?lang=ar`: the controls tab's readouts, the close
+buttons (they move to the left end of the title bar, where the title no
+longer is), and anything that mixes a Latin name into a sentence, like
+`tab.query.title`.
 
 ## Before shipping a CJK language
 

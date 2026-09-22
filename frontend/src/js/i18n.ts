@@ -32,21 +32,34 @@
  */
 
 import EN_JSON from "../locales/en.json"
+import AM_JSON from "../locales/am.json"
+import AR_JSON from "../locales/ar.json"
+import BN_JSON from "../locales/bn.json"
 import CS_JSON from "../locales/cs.json"
 import DE_JSON from "../locales/de.json"
 import ES_JSON from "../locales/es.json"
+import FA_JSON from "../locales/fa.json"
 import FR_JSON from "../locales/fr.json"
+import HA_JSON from "../locales/ha.json"
+import HI_JSON from "../locales/hi.json"
 import ID_JSON from "../locales/id.json"
 import IT_JSON from "../locales/it.json"
 import JA_JSON from "../locales/ja.json"
+import KN_JSON from "../locales/kn.json"
+import MR_JSON from "../locales/mr.json"
 import NB_JSON from "../locales/nb.json"
 import NL_JSON from "../locales/nl.json"
 import PL_JSON from "../locales/pl.json"
 import PT_BR_JSON from "../locales/pt-BR.json"
 import PT_PT_JSON from "../locales/pt-PT.json"
 import RU_JSON from "../locales/ru.json"
+import SW_JSON from "../locales/sw.json"
+import TA_JSON from "../locales/ta.json"
+import TE_JSON from "../locales/te.json"
 import TH_JSON from "../locales/th.json"
+import TI_JSON from "../locales/ti.json"
 import UK_JSON from "../locales/uk.json"
+import UR_JSON from "../locales/ur.json"
 import VI_JSON from "../locales/vi.json"
 import ZH_HANS_JSON from "../locales/zh-Hans.json"
 import ZH_HANT_JSON from "../locales/zh-Hant.json"
@@ -68,21 +81,34 @@ const EN = <Catalog>EN_JSON
  * many languages or many times the strings.
  */
 const CATALOGS: Record<string, Catalog> = {
+  am: <Catalog>AM_JSON,
+  ar: <Catalog>AR_JSON,
+  bn: <Catalog>BN_JSON,
   cs: <Catalog>CS_JSON,
   de: <Catalog>DE_JSON,
   es: <Catalog>ES_JSON,
+  fa: <Catalog>FA_JSON,
   fr: <Catalog>FR_JSON,
+  ha: <Catalog>HA_JSON,
+  hi: <Catalog>HI_JSON,
   id: <Catalog>ID_JSON,
   it: <Catalog>IT_JSON,
   ja: <Catalog>JA_JSON,
+  kn: <Catalog>KN_JSON,
+  mr: <Catalog>MR_JSON,
   nb: <Catalog>NB_JSON,
   nl: <Catalog>NL_JSON,
   pl: <Catalog>PL_JSON,
   "pt-BR": <Catalog>PT_BR_JSON,
   "pt-PT": <Catalog>PT_PT_JSON,
   ru: <Catalog>RU_JSON,
+  sw: <Catalog>SW_JSON,
+  ta: <Catalog>TA_JSON,
+  te: <Catalog>TE_JSON,
   th: <Catalog>TH_JSON,
+  ti: <Catalog>TI_JSON,
   uk: <Catalog>UK_JSON,
+  ur: <Catalog>UR_JSON,
   vi: <Catalog>VI_JSON,
   "zh-Hans": <Catalog>ZH_HANS_JSON,
   "zh-Hant": <Catalog>ZH_HANT_JSON,
@@ -110,6 +136,13 @@ const CATALOGS: Record<string, Catalog> = {
  * are close enough that a Slovak reader is better off in Czech than English.
  * `in` is the tag ISO withdrew for Indonesian in 1989, which old Android and
  * Java stacks still send.
+ *
+ * Dari (prs) is Afghan Persian: same script, same written standard near
+ * enough, so it goes to fa, and so does pes, the ISO 639-3 code for the
+ * Persian of Iran, which a few stacks send instead of fa. swh is 639-3 for
+ * Swahili proper. Arabic needs no aliases: the catalog is Modern Standard
+ * Arabic, the written language of every ar-XX region, and base-language
+ * matching already sends them all to it.
  */
 const ALIASES: Record<string, string> = {
   zh: "zh-Hans",
@@ -124,6 +157,23 @@ const ALIASES: Record<string, string> = {
   nn: "nb",
   sk: "cs",
   in: "id",
+  prs: "fa",
+  pes: "fa",
+  swh: "sw",
+}
+
+/**
+ * Catalogs written right to left. `dir` goes on <html>, which is all the pages
+ * that are only text and tables need. The map page is not only text: it keeps
+ * its frame -- sidebar on the left, map controls where they are -- and turns
+ * back to RTL only inside the panes, dialogs and pop-ups (css/rtl.css).
+ *
+ * A list rather than Intl.Locale's textInfo, which Firefox does not have.
+ */
+const RTL = new Set(["ar", "fa", "ur"])
+
+function isRTL(tag: string): boolean {
+  return RTL.has(tag.split("-")[0])
 }
 
 /** Language tags a reader can actually be given. */
@@ -328,5 +378,6 @@ export function initI18n(): string {
   /* Drives CJK font selection and line breaking, so it matters well beyond
    * being correct markup. */
   document.documentElement.lang = locale
+  document.documentElement.dir = isRTL(locale) ? "rtl" : "ltr"
   return locale
 }
