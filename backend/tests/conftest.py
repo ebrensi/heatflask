@@ -55,6 +55,9 @@ class FakeStrava:
         self.requests = 0
         self.refused = 0
         self.no_streams: set[int] = set()
+        # activities whose streams arrive but hold no track, so they encode
+        # into nothing and earn a tombstone
+        self.no_latlng: set[int] = set()
         # what GET /activities/{id} answers: this status, and these fields over
         # a public ride with a track
         self.activity_status = 200
@@ -110,6 +113,10 @@ class FakeStrava:
             "altitude": {"data": [1.0] * n},
             "latlng": {"data": [[45.0 + i * 1e-4, -122.0] for i in range(n)]},
         }
+        if aid in self.no_latlng:
+            # A real 200 that cannot be encoded: an indoor ride has time and
+            # altitude but no track. The read is spent either way.
+            del body["latlng"]
         return web.json_response(body, headers=self.headers(used))
 
     async def activities(self, request):
@@ -242,6 +249,11 @@ class FakeCollection:
     def find(self, query, projection=None):
         ids = query["_id"]["$in"]
         found = [self.docs[i] for i in ids if i in self.docs]
+
+        # cached_ids asks for {"mpk": {"$ne": None}} to skip tombstones, and a
+        # fake that ignored the filter would pass a test Mongo would fail
+        if query.get("mpk") == {"$ne": None}:
+            found = [d for d in found if d.get("mpk") is not None]
 
         async def cursor():
             for d in found:

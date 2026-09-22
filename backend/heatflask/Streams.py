@@ -16,7 +16,7 @@ import asyncio
 import types
 from dataclasses import dataclass
 from pymongo.errors import BulkWriteError
-from typing import TypedDict, AsyncGenerator
+from typing import Optional, TypedDict, AsyncGenerator
 
 from . import DataAPIs
 from . import History
@@ -95,7 +95,9 @@ def decode_streams(msgpacked_streams: PackedStreams):
 
 class StreamsDoc(TypedDict):
     _id: int
-    mpk: PackedStreams
+    # None marks a tombstone: an activity whose streams we fetched and could
+    # not encode. See tombstone_doc.
+    mpk: Optional[PackedStreams]
     ts: datetime.datetime
 
 
@@ -106,6 +108,28 @@ def mongo_doc(activity_id: int, packed: PackedStreams, ts=None) -> StreamsDoc:
         # aware UTC: this field drives the TTL index, and .now() without a
         # timezone writes local time, expiring streams early or late by the
         # machine's UTC offset
+        "ts": ts or datetime.datetime.now(datetime.timezone.utc),
+    }
+
+
+def tombstone_doc(activity_id: int, ts=None) -> StreamsDoc:
+    """
+    A marker saying "we have already paid a Strava read for this one, and it
+    did not encode".
+
+    Without it an unencodable activity was never written, so it missed the
+    cache lookup on every later query and was fetched from Strava again --
+    forever, once per render of that athlete's map. Activity 323533360 was
+    refetched three times in six days for one read each.
+
+    Unlike a real stream, its `ts` is not refreshed when it is served, so it
+    expires on the stream TTL and the activity is retried at most once per TTL
+    period. That is what lets a map heal itself after the encoder is fixed,
+    for the price of one read per unencodable activity per TTL.
+    """
+    return {
+        "_id": int(activity_id),
+        "mpk": None,
         "ts": ts or datetime.datetime.now(datetime.timezone.utc),
     }
 
@@ -161,11 +185,20 @@ async def strava_import(
     cost = History.ReadCost()
 
     def pack(aid: int, streams: Strava.Streams) -> PackedStreams | None:
+        """
+        Encode one activity's streams and queue it for Mongo.
+
+        An activity we cannot encode gets a tombstone rather than nothing at
+        all, so the read we just spent on it is not spent again on the next
+        query. Both failures below are permanent properties of the activity --
+        an activity with no GPS never grows one -- so both are worth marking.
+        """
         try:
             packed = encode_streams(streams)
         except KeyError as e:
             # an activity with a time stream but no GPS or altitude
             log.info("activity %d has no %s stream", aid, e)
+            unsaved.append(tombstone_doc(aid, ts=now))
             return None
         except Exception as e:
             # One unencodable activity used to raise out of the generator in
@@ -179,6 +212,7 @@ async def strava_import(
                 user=user.get(Users.UserField.ID),
                 activity=aid,
             )
+            unsaved.append(tombstone_doc(aid, ts=now))
             return None
         unsaved.append(mongo_doc(aid, packed, ts=now))
         return packed
@@ -198,8 +232,10 @@ async def strava_import(
     finally:
         await aiterator.aclose()
         for aid, streams in leftovers:
-            pack(aid, streams)
-            imported += 1
+            # counted only when it encoded: `imported` says how many streams
+            # we actually have, and it is what the history entry reports
+            if pack(aid, streams) is not None:
+                imported += 1
         if leftovers:
             log.info("saving %d streams fetched but not sent", len(leftovers))
         # shielded, so a cancellation (the client disconnecting) cannot
@@ -226,6 +262,10 @@ class QueryCounts:
 
     cached: int = 0
     fetched: int = 0
+    # activities we hold a tombstone for: already paid for, and unencodable,
+    # so they are neither served nor refetched. Counted so that
+    # cached + fetched + unencodable accounts for everything asked for.
+    unencodable: int = 0
 
 
 async def aiter_query(
@@ -238,6 +278,9 @@ async def aiter_query(
     Pass `counts` to learn how many were found in Mongo and how many fetched
     from Strava. It is kept up to date as the query runs, so it is still
     right about a query that was stopped part way.
+
+    Activities we hold a tombstone for are yielded by neither route: we have
+    already paid a read for them and know they do not encode.
 
     The Strava import gets a head start, running while the local results are
     sent. Stop early with aclose(), which stops the import too.
@@ -255,17 +298,32 @@ async def aiter_query(
     exclusions = {"ts": False}
 
     cursor = streams.find(query, projection=exclusions)
-    local_result: list[StreamsQueryResult] = [
-        (doc["_id"], doc["mpk"]) async for doc in cursor
-    ]
-    mongo_result_ids = [_id for _id, mpk in local_result]
+    local_result: list[StreamsQueryResult] = []
+    # every id Mongo knows about, tombstones included: this is what we do not
+    # have to ask Strava for
+    mongo_result_ids: list[int] = []
+    tombstoned = 0
+    async for doc in cursor:
+        mongo_result_ids.append(doc["_id"])
+        mpk = doc.get("mpk")
+        if mpk is None:
+            tombstoned += 1
+        else:
+            local_result.append((doc["_id"], mpk))
+
     if counts is not None:
         counts.cached = len(local_result)
+        counts.unencodable = tombstoned
 
-    if mongo_result_ids:
-        # Reset the TTL clock for the streams we are about to serve
+    if local_result:
+        # Reset the TTL clock for the streams we are about to serve.
+        #
+        # Tombstones are deliberately left out: theirs runs from when it was
+        # written, so an activity that failed to encode is retried once per
+        # TTL period rather than never again, and a map heals itself after the
+        # encoder learns to handle it.
         await streams.update_many(
-            {"_id": {"$in": mongo_result_ids}},
+            {"_id": {"$in": [_id for _id, mpk in local_result]}},
             {"$set": {"ts": datetime.datetime.now(datetime.timezone.utc)}},
         )
 
@@ -334,11 +392,16 @@ async def cached_ids(activity_ids: list[int]) -> list[int]:
     Deliberately does not touch `ts` the way aiter_query does: this only
     reports what is in the cache, and merely looking at the list should not
     extend anything's stay in it.
+
+    Tombstones do not count: the activity list uses this to say which tracks
+    are ready to draw, and a tombstone has no track to draw.
     """
     if not activity_ids:
         return []
     streams = await get_collection()
-    cursor = streams.find({"_id": {"$in": activity_ids}}, projection={"_id": True})
+    cursor = streams.find(
+        {"_id": {"$in": activity_ids}, "mpk": {"$ne": None}}, projection={"_id": True}
+    )
     return [doc["_id"] async for doc in cursor]
 
 
