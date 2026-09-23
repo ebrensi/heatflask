@@ -62,6 +62,9 @@ times and never broken:
   and `st`), the Strava sport types to show, and `nosport`, the ones to leave
   out; a link carries whichever list is shorter. A link with neither shows
   every sport, as every link did before.
+- `1.7.0` — `54e001d8`, the globe projection: adds `globe`, drawing the map on
+  a sphere rather than flat Web Mercator. It defaults to off, which is how
+  every map was drawn before, so a link that leaves it out is unchanged.
 
 Everything else in those commits — the WebGL dot layer, i18n, shared maps, the
 history log, the stream encoding — is invisible to a saved link, so it is patch
