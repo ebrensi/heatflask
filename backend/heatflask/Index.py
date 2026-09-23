@@ -259,10 +259,15 @@ async def fake_import(uid=None):
 
 
 async def import_index_progress(user_id: int, poll_delay=0.5):
+    """
+    Yield each new progress message while an index import for this user runs.
+
+    Checked before sleeping, not after: with no import running, which is
+    nearly every query, this used to sleep poll_delay anyway before noticing,
+    and put half a second on every map and list the app served.
+    """
     last_msg = None
-    msg = 1
-    while msg:
-        msg = await check_import_progress(user_id)
+    while msg := await check_import_progress(user_id):
         if msg != last_msg:
             yield msg
             last_msg = msg

@@ -14,10 +14,31 @@ import aiohttp
 import msgpack
 from sanic import Sanic
 
-from heatflask import Streams
+from heatflask import Index, Streams
 from heatflask.webserver.bp import activities
 
 from conftest import make_user
+
+
+async def test_no_index_import_means_no_wait(monkeypatch):
+    """Every map and list polls for an index import; with none running, the
+    poll must not sleep before it finds that out"""
+    checks = iter(["page 1", "page 2", None])
+
+    async def check(uid):
+        return next(checks)
+
+    monkeypatch.setattr(Index, "check_import_progress", check)
+    msgs = [m async for m in Index.import_index_progress(1, poll_delay=0)]
+    assert msgs == ["page 1", "page 2"]
+
+    async def idle(uid):
+        return None
+
+    monkeypatch.setattr(Index, "check_import_progress", idle)
+    t0 = time.monotonic()
+    assert [m async for m in Index.import_index_progress(1, poll_delay=5)] == []
+    assert time.monotonic() - t0 < 1
 
 
 async def test_wait_notices_while_stalled_on_the_rate_limit(limiter, monkeypatch):
