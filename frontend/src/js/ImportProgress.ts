@@ -23,6 +23,7 @@
 import { icon } from "./Icons"
 import { Dialog } from "./Dialog"
 import { t } from "./i18n"
+import { URLS } from "./Env"
 
 import type { Map as MLMap } from "maplibre-gl"
 
@@ -31,6 +32,7 @@ let msgEl: HTMLElement
 let barEl: HTMLProgressElement
 let countEl: HTMLElement
 let stopEl: HTMLButtonElement
+let loginEl: HTMLButtonElement
 let visible = false
 let hideTimer: ReturnType<typeof setTimeout> | undefined
 let stopHandler: (() => void) | undefined
@@ -52,6 +54,7 @@ export function initImportProgress(map: MLMap): void {
         <button type="button" class="btn btn-c btn-sm smooth import-stop">
           <i class="hf hf-cancel-circle"></i> ${t("import.stop")}
         </button>
+        <button type="button" class="strava-auth import-login" hidden></button>
       </div>`,
   })
 
@@ -60,6 +63,11 @@ export function initImportProgress(map: MLMap): void {
   barEl = root.querySelector(".progbar")
   countEl = root.querySelector(".import-count")
   stopEl = root.querySelector(".import-stop")
+  loginEl = root.querySelector(".import-login")
+  loginEl.addEventListener("click", () => {
+    const here = window.location.pathname + window.location.search
+    window.location.href = `${URLS.login}?state=${encodeURIComponent(here)}`
+  })
   stopEl.addEventListener("click", () => {
     stopEl.disabled = true
     if (msgEl) msgEl.textContent = t("import.stopping")
@@ -84,9 +92,14 @@ export function start(message = t("import.contacting")): void {
     stopEl.disabled = false
     stopEl.hidden = false
   }
+  if (loginEl) loginEl.hidden = true
+  win.place("center")
   /* No value attribute => the indeterminate barber-pole, which is right until
    * we know how many activities are coming. */
-  if (barEl) barEl.removeAttribute("value")
+  if (barEl) {
+    barEl.hidden = false
+    barEl.removeAttribute("value")
+  }
   win.show()
   visible = true
 }
@@ -137,6 +150,29 @@ export function finish(finalMessage?: string, isError = false): void {
     () => win.hide(),
     isError ? LINGER_ERROR_MS : LINGER_MS
   )
+}
+
+/**
+ * Move to the bottom of the map, once there is something on it to see: the
+ * tracks are drawn as they arrive, and the map can be used while the rest
+ * come in, which it cannot with this over the middle of it.
+ */
+export function aside(): void {
+  win?.place("bottom")
+}
+
+/**
+ * The map was refused, and stays refused until the dialog is closed. With
+ * `login`, the viewer is not logged in and is offered a login that comes back
+ * here: accounts start private, so the one refused is often the owner.
+ */
+export function refused(msg: string, login: boolean): void {
+  if (!win) return
+  start(msg)
+  if (stopEl) stopEl.hidden = true
+  if (barEl) barEl.hidden = true
+  if (loginEl) loginEl.hidden = !login
+  visible = false
 }
 
 /** Close immediately, leaving an error on screen is the caller's business. */

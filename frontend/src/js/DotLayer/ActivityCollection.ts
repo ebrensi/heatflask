@@ -35,6 +35,7 @@ export function remove(id: number): void {
 /** Drop every activity. Used when a new query replaces the current set. */
 export function clear(): void {
   items.clear()
+  colorPlan = undefined
   _itemsArray = []
   inView.clear()
   lastInView.clear()
@@ -102,6 +103,23 @@ export function reset(): void {
 /** How far the palette is turned before it is dealt out. See makePalette. */
 let colorRotation = 0
 
+/** Each activity's place in the whole set a render is loading, most recent
+ * first, when it knows that set before the tracks arrive. See planColors. */
+let colorPlan: Map<number, number> | undefined
+
+/**
+ * Deal colours by each activity's place among these ids (most recent first),
+ * rather than among those loaded so far.
+ *
+ * The map is drawn as tracks arrive, and a colour is a place in date order.
+ * Dealt among the activities loaded so far, every arrival would shift the
+ * places of everything older than it, and the colours on the map would keep
+ * changing under the viewer until the last track was in.
+ */
+export function planColors(idsByDate: number[]): void {
+  colorPlan = new Map(idsByDate.map((id, i) => [id, i]))
+}
+
 /**
  * Assign a dot-color to each item of _items, in the order the table lists
  * them -- most recent first -- since neighbours in that list are the ones
@@ -110,9 +128,14 @@ let colorRotation = 0
  * Strava answers (Streams.aiter_query).
  */
 function setDotColors(): void {
-  const colorPalette = ColorPalette.makePalette(items.size, colorRotation)
   const byDate = [...items.values()].sort((a, b) => (b.ts || 0) - (a.ts || 0))
-  for (let i = 0; i < byDate.length; i++) byDate[i].colors.dot = colorPalette[i]
+  const colorPalette = ColorPalette.makePalette(
+    Math.max(byDate.length, colorPlan?.size || 0),
+    colorRotation
+  )
+  for (let i = 0; i < byDate.length; i++) {
+    byDate[i].colors.dot = colorPalette[colorPlan?.get(byDate[i].id) ?? i]
+  }
 }
 
 /**

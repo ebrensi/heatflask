@@ -203,6 +203,10 @@
 .heatflask-dialog.dialog-top {
   top: 10px;
 }
+/* clear of the map's attribution, and of the tracks drawn so far */
+.heatflask-dialog.dialog-bottom {
+  bottom: 30px;
+}
 .heatflask-dialog .titlebar {
   position: relative;
   min-height: 38px;

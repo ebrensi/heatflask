@@ -12,6 +12,8 @@
 
 import { t } from "./i18n"
 
+type Position = "top" | "center" | "bottom"
+
 export class Dialog {
   readonly el: HTMLDivElement
   private titleEl: HTMLDivElement
@@ -19,12 +21,11 @@ export class Dialog {
 
   constructor(
     parent: HTMLElement,
-    opts: { title?: string; content?: string; position?: "top" | "center" } = {}
+    opts: { title?: string; content?: string; position?: Position } = {}
   ) {
     const el = (this.el = document.createElement("div"))
-    el.className = `control-window heatflask-dialog dialog-${
-      opts.position || "center"
-    }`
+    el.className = "control-window heatflask-dialog"
+    this.place(opts.position || "center")
     el.hidden = true
 
     const bar = document.createElement("div")
@@ -51,6 +52,13 @@ export class Dialog {
     if (opts.title) this.title(opts.title)
     if (opts.content) this.content(opts.content)
     parent.appendChild(el)
+  }
+
+  /** Move it, e.g. out of the way of what it is reporting on */
+  place(position: Position): this {
+    for (const p of ["top", "center", "bottom"])
+      this.el.classList.toggle(`dialog-${p}`, p === position)
+    return this
   }
 
   title(html: string): this {

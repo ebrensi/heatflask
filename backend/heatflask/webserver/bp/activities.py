@@ -220,7 +220,11 @@ async def run_query(request: SessionRequest, summary: QuerySummary):
     if access.refused:
         # Refused before anything below can import their index with their token
         summary.outcome = "refused: private"
-        await sendPacked({"error": access.refused})
+        # Accounts start private, so the anonymous visitor refused here is
+        # often the owner, not yet logged in: the page offers them a login.
+        await sendPacked(
+            {"error": access.refused, "login": request.ctx.current_user is None}
+        )
         return
     if access.privacy:
         query["privacy"] = access.privacy
@@ -304,9 +308,10 @@ async def run_query(request: SessionRequest, summary: QuerySummary):
     summaries_lookup = {A[I.ACTIVITY_ID]: A for A in summaries}
     ids = list(summaries_lookup.keys())
 
-    user = await Users.get(target_user_id)
+    # the owner's token pays for whatever Mongo does not hold; with no target
+    # (the all-athletes map) only Mongo's streams are served
     streams_iter = Streams.aiter_query(
-        activity_ids=ids, user=user, counts=summary.counts
+        activity_ids=ids, user=target_user, counts=summary.counts
     )
     items = with_wait_notices(streams_iter, sendPacked)
     try:

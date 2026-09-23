@@ -15,11 +15,17 @@ import * as Table from "./Table"
 import * as ImportProgress from "./ImportProgress"
 import * as StreamCache from "./StreamCache"
 import { dotLayer } from "./DotLayerAPI"
-import { qToQ, makeActivityQuery, decodePackedStreams } from "./DataImport"
+import {
+  qToQ,
+  makeActivityQuery,
+  decodePackedStreams,
+  ACTIVITY_FIELDNAMES as F,
+} from "./DataImport"
 import { nextTask } from "./appUtil"
 import { URLS } from "./Env"
 
-import type { Map as MLMap, LngLatBounds } from "maplibre-gl"
+import { LngLatBounds } from "maplibre-gl"
+import type { Map as MLMap } from "maplibre-gl"
 import type { State } from "./Model"
 import type { ImportedActivity } from "./DataImport"
 
@@ -67,6 +73,8 @@ type Status = {
   info?: QueryInfo
   wait?: number
   error?: string
+  /** with error: the map was refused to a viewer who could log in */
+  login?: boolean
 }
 
 /**
@@ -90,16 +98,18 @@ function showStatus(status: Status): string | undefined {
 
 /**
  * Give every activity its streams, taking them from the cache where we can
- * and fetching only the rest.
+ * and fetching only the rest, and hand each one to `draw` as it gets them.
  *
  * The summaries have already arrived; this is the second leg. On a warm cache
  * it makes no request at all. Once `signal` is aborted it makes none either,
- * and only what the cache holds is filled in.
+ * and only what the cache holds is filled in. An activity we cannot get a
+ * track for is never handed over.
  */
 async function fillStreamsFromCache(
   activities: ImportedActivity[],
   polylinePrecision: number,
-  signal: AbortSignal
+  signal: AbortSignal,
+  draw: Progressive
 ): Promise<string | undefined> {
   if (!activities.length) return
 
@@ -126,6 +136,7 @@ async function fillStreamsFromCache(
     const bytes = packed[i]
     if (bytes && polylinePrecision !== undefined) {
       activities[i].streams = decodePackedStreams(bytes, polylinePrecision)
+      draw.add(activities[i])
       hits++
       /* Decoding is the real work once the reads are batched, and it is
        * synchronous. Yield now and then so the progress dialog can actually
@@ -183,6 +194,7 @@ async function fillStreamsFromCache(
       const A = byId.get(fetched._id)
       if (A && fetched.streams) {
         A.streams = fetched.streams
+        draw.add(A)
         if (fetched.mpk) writes.push(StreamCache.put(fetched._id, fetched.mpk))
       }
       ImportProgress.progress(hits + ++done, activities.length)
@@ -202,13 +214,152 @@ async function fillStreamsFromCache(
       `holding ${count} activities (${(bytes / 1e6).toFixed(1)} MB)`
   )
 
-  /* Drop any activity we still could not get a track for, rather than handing
-   * the renderer a half-built one. */
-  for (let i = activities.length - 1; i >= 0; i--) {
-    if (!activities[i].streams) activities.splice(i, 1)
+  return error
+}
+
+/* Draws while tracks are arriving are at least this far apart, and further
+ * if a draw is slow: never more than 1/DRAW_SHARE of the time goes to them,
+ * so the map stays responsive to the viewer while a large set comes in. */
+const DRAW_INTERVAL_MS = 1000
+const DRAW_SHARE = 5
+
+/* Draws are one at a time, across renders too: a superseded render's last
+ * draw can still be running when the next render's first one starts. */
+let drawQueue: Promise<void> = Promise.resolve()
+
+/**
+ * Puts activities on the map as they arrive, a batch at a time.
+ *
+ * The first activity is drawn as soon as it arrives, and the rest in batches
+ * about a second apart, so a viewer waiting on Strava's rate limit -- which
+ * can stall a first map for fifteen minutes at a time -- has the map to use
+ * in the meantime rather than a dialog.
+ *
+ * The previous set stays on the map until the first of the new one is ready
+ * to replace it: clearing up front emptied the map for the whole network
+ * round-trip.
+ *
+ * With auto-zoom on, the map is refitted whenever what has arrived reaches
+ * past what it was last fitted to. Moving the map by hand turns auto-zoom off
+ * (MapAPI.ts), after which arrivals leave the view alone.
+ */
+class Progressive {
+  count = 0
+  private pending: ImportedActivity[] = []
+  private idsByDate?: number[]
+  private started = false
+  private finished = false
+  private timer = 0
+  private drawing?: Promise<void>
+  private lastDraw = -Infinity
+  private interval = DRAW_INTERVAL_MS
+  private fitted?: LngLatBounds
+  private error: unknown
+
+  constructor(private signal: AbortSignal) {}
+
+  /** The whole set is known ahead of its tracks: colour it and fit to it now */
+  expect(summaries: ImportedActivity[]): void {
+    this.idsByDate = [...summaries]
+      .sort((a, b) => (b[F.UTC_START_TIME] || 0) - (a[F.UTC_START_TIME] || 0))
+      .map((A) => A._id)
+    this.fit(summaryBounds(summaries))
   }
 
-  return error
+  add(A: ImportedActivity): void {
+    this.pending.push(A)
+    this.schedule()
+  }
+
+  /** Draw what is still waiting, now, and wait for that */
+  async finish(): Promise<void> {
+    this.finished = true
+    clearTimeout(this.timer)
+    await this.drawing
+    if (this.pending.length) this.run()
+    await this.drawing
+    if (this.error) throw this.error
+  }
+
+  private schedule(): void {
+    if (this.finished || this.timer || this.drawing) return
+    const wait = this.lastDraw + this.interval - performance.now()
+    this.timer = window.setTimeout(() => {
+      this.timer = 0
+      this.run()
+    }, Math.max(0, wait))
+  }
+
+  private run(): void {
+    this.drawing = drawQueue = drawQueue
+      .then(() => this.draw())
+      .catch((e) => {
+        this.error = e
+      })
+      .finally(() => {
+        this.drawing = undefined
+        if (this.pending.length) this.schedule()
+      })
+  }
+
+  private async draw(): Promise<void> {
+    if (this.signal.reason === SUPERSEDED || !this.pending.length) return
+    const t0 = performance.now()
+
+    if (!this.started) {
+      this.started = true
+      ActivityCollection.clear()
+      if (this.idsByDate) ActivityCollection.planColors(this.idsByDate)
+      ImportProgress.aside()
+    }
+    for (const A of this.pending) ActivityCollection.add(A)
+    this.count += this.pending.length
+    this.pending = []
+
+    /* reset() packs the streams, builds the per-zoom index sets, draws, and
+     * starts the animation. */
+    await dotLayer.reset()
+
+    /* After reset, not before: ActivityCollection.setDotColors() runs inside
+     * it, so until it has, every Activity.colors.dot is still null and the
+     * table's colour swatches come out blank. */
+    Table.update()
+
+    if (!this.idsByDate) this.fit(await ActivityCollection.getLatLngBounds())
+
+    this.lastDraw = performance.now()
+    this.interval = Math.max(
+      DRAW_INTERVAL_MS,
+      DRAW_SHARE * (this.lastDraw - t0)
+    )
+  }
+
+  /** Fit the map to bounds, if auto-zoom is on and they reach past the last */
+  private fit(bounds: LngLatBounds | undefined): void {
+    if (!bounds || !_state.visual.autozoom) return
+    if (
+      this.fitted?.contains(bounds.getSouthWest()) &&
+      this.fitted.contains(bounds.getNorthEast())
+    )
+      return
+    this.fitted = bounds
+    fitTo(bounds)
+  }
+}
+
+/** The bounds of activities from their summaries, before any track is in */
+function summaryBounds(summaries: ImportedActivity[]): LngLatBounds {
+  let bounds: LngLatBounds
+  for (const A of summaries) {
+    const b = A[F.LATLNG_BOUNDS]
+    if (!b) continue
+    /* the backend sends corners as [lat, lng]; MapLibre wants [lng, lat] */
+    const sw: [number, number] = [b.SW[1], b.SW[0]]
+    const ne: [number, number] = [b.NE[1], b.NE[0]]
+    if (bounds) bounds.extend(new LngLatBounds(sw, ne))
+    else bounds = new LngLatBounds(sw, ne)
+  }
+  return bounds
 }
 
 /**
@@ -219,7 +370,7 @@ async function fillStreamsFromCache(
  */
 export async function renderFromQuery(): Promise<number> {
   if (!_state) throw new Error("initRender() has not been called")
-  const { query, visual } = _state
+  const { query } = _state
 
   /* With the cache on, ask for summaries only and fill the streams in from
    * IndexedDB; without it, ask for everything as before. A summary is 208
@@ -237,7 +388,7 @@ export async function renderFromQuery(): Promise<number> {
   const { signal } = controller
 
   try {
-    return await render(backendQuery, caching, visual.autozoom, signal)
+    return await render(backendQuery, caching, signal)
   } finally {
     if (current === controller) current = undefined
   }
@@ -246,16 +397,14 @@ export async function renderFromQuery(): Promise<number> {
 async function render(
   backendQuery: ReturnType<typeof qToQ>,
   caching: boolean,
-  autozoom: boolean,
   signal: AbortSignal
 ): Promise<number> {
   message("importing…")
   ImportProgress.start()
 
-  /* Collect first, swap at the end. Clearing up front emptied the map for the
-   * whole network round-trip, so the dots visibly vanished while the new set
-   * loaded. */
-  const incoming: ImportedActivity[] = []
+  const draw = new Progressive(signal)
+  /* With the cache on, these are the summaries, whose tracks come after */
+  const summaries: ImportedActivity[] = []
   /* How many the backend says are coming, so the progress bar can be a real
    * bar rather than an indeterminate one. */
   let expected: number | undefined
@@ -265,6 +414,7 @@ async function render(
   let error: string | undefined
 
   try {
+    let received = 0
     for await (const obj of makeActivityQuery(
       backendQuery,
       URLS.query,
@@ -274,8 +424,10 @@ async function render(
       if (!obj) continue
 
       if ("_id" in obj) {
-        incoming.push(<ImportedActivity>(<unknown>obj))
-        ImportProgress.progress(incoming.length, expected)
+        const A = <ImportedActivity>(<unknown>obj)
+        if (caching) summaries.push(A)
+        else if (A.streams) draw.add(A)
+        ImportProgress.progress(++received, expected)
       } else {
         /* Status messages from the backend: {msg} while it builds the index,
          * {count} before the activities start, {wait} while Strava's rate
@@ -285,7 +437,12 @@ async function render(
           polylinePrecision = status.info.polyline_precision
         } else if (typeof status.count === "number") {
           expected = status.count
-          ImportProgress.progress(incoming.length, expected)
+          ImportProgress.progress(received, expected)
+        } else if (status.error && status.login !== undefined) {
+          /* refused outright: nothing else is coming */
+          ImportProgress.refused(status.error, status.login)
+          message(status.error)
+          return 0
         } else if (status.msg || status.wait !== undefined || status.error) {
           error = showStatus(status) || error
         } else {
@@ -296,17 +453,23 @@ async function render(
     if (signal.reason === SUPERSEDED) return 0
 
     if (caching) {
+      draw.expect(summaries)
       error =
-        (await fillStreamsFromCache(incoming, polylinePrecision, signal)) ||
-        error
+        (await fillStreamsFromCache(
+          summaries,
+          polylinePrecision,
+          signal,
+          draw
+        )) || error
     }
+    await draw.finish()
   } catch (e) {
     ImportProgress.finish("import failed")
     throw e
   }
   if (signal.reason === SUPERSEDED) return 0
 
-  const count = incoming.length
+  const count = draw.count
   const stopped = signal.aborted ? "stopped; " : ""
   const summary = `${stopped}${count} activities${error ? ` (${error})` : ""}`
 
@@ -318,23 +481,7 @@ async function render(
   }
 
   ImportProgress.finish(summary, !!error)
-
-  ActivityCollection.clear()
-  for (const activity of incoming) ActivityCollection.add(activity)
-
   message(`${count} activities`)
-
-  /* reset() packs the streams, builds the per-zoom index sets, draws, and
-   * starts the animation. */
-  await dotLayer.reset()
-
-  /* After reset, not before: ActivityCollection.setDotColors() runs inside it,
-   * so until it has, every Activity.colors.dot is still null and the table's
-   * colour swatches come out blank. */
-  Table.update()
-
-  if (autozoom) fitTo(await ActivityCollection.getLatLngBounds())
-
   return count
 }
 
