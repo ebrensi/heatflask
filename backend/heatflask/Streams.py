@@ -177,7 +177,10 @@ async def strava_import(
     await strava.update_access_token()
 
     leftovers: list[Strava.StreamsResult] = []
-    aiterator = strava.get_many_streams(activity_ids, leftovers=leftovers)
+    # whose import it is, for the fair share of Strava's window (RateLimit)
+    aiterator = strava.get_many_streams(
+        activity_ids, leftovers=leftovers, owner=user.get(Users.UserField.ID)
+    )
 
     unsaved: list[StreamsDoc] = []
     now = datetime.datetime.now(datetime.timezone.utc)

@@ -109,6 +109,50 @@ def test_refused_spends_the_window():
     assert lim.read.used_15 >= lim.read.limit_15
 
 
+def test_fair_share_holds_back_only_while_someone_else_waits():
+    lim = RateLimiter(reserve=50)  # 550 bulk reads a window
+    now = time.time()
+    lim.reads_by(1, now)
+    lim._reads_by[1] = 300
+
+    lim._active.update([1])
+    assert not lim.over_fair_share("GET", 1, now)  # alone: no share to keep to
+
+    lim._active.update([2, 2])
+    assert lim.over_fair_share("GET", 1, now)  # 300 of a 275 share
+    assert not lim.over_fair_share("GET", 2, now)
+    assert not lim.over_fair_share("GET", None, now)  # bulk with no owner
+    assert not lim.over_fair_share("POST", 1, now)  # not a read
+
+    # a new window starts everyone's share again
+    assert not lim.over_fair_share("GET", 1, RateLimit.next_window(now) + 1)
+
+
+async def test_a_second_import_is_not_starved_by_the_first(
+    fast_windows, limiter, strava_server, monkeypatch
+):
+    monkeypatch.setattr(RateLimit, "FAIR_SHARE_POLL", 0.1)
+    await strava_server(limit15=25)  # 20 usable with reserve=5
+    await wait_for_window_start()
+    t0 = time.time()
+
+    async def run(owner, n):
+        ids = list(range(owner * 1000, owner * 1000 + n))
+        got = [x async for x in make_client().get_many_streams(ids, owner=owner)]
+        return len(got), time.time() - t0
+
+    big = asyncio.create_task(run(1, 60))
+    await asyncio.sleep(0.3)  # the first window is already the big one's
+    small = await run(2, 10)
+
+    # Half of the second window. Unshared, it got about a third of it, and
+    # finished a window later.
+    assert small[0] == 10
+    assert small[1] < 2 * WINDOW + 1
+    assert (await big)[0] == 60
+    assert not limiter._active
+
+
 async def test_paces_across_windows_without_a_single_429(
     fast_windows, limiter, strava_server
 ):

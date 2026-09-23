@@ -63,6 +63,7 @@ async def api_request(
     url: str,
     *,
     bulk: bool = False,
+    owner: Optional[int] = None,
     on_sent: Optional[Callable[[], None]] = None,
     **kwargs: Any,
 ) -> tuple[int, Any]:
@@ -71,6 +72,8 @@ async def api_request(
 
     `bulk` marks work that can wait for the budget -- stream and index
     imports -- as opposed to a request someone is waiting on. See RateLimit.
+    `owner` is the athlete bulk work is for, so the window can be shared
+    fairly between athletes.
 
     `on_sent` is called once the request has cleared the rate limit and is
     going out, which is the point from which it costs a request whether or
@@ -82,7 +85,7 @@ async def api_request(
     anything else raises RateLimitExceeded.
     """
     for attempt in range(2):
-        async with limiter.slot(method, bulk=bulk) as sent:
+        async with limiter.slot(method, bulk=bulk, owner=owner) as sent:
             if on_sent:
                 on_sent()
             try:
@@ -200,6 +203,7 @@ async def get_streams(
     session: aiohttp.ClientSession,
     activity_id: int,
     on_sent: Optional[Callable[[], None]] = None,
+    owner: Optional[int] = None,
 ) -> StreamsFetchResult:
     t0 = time.perf_counter()
 
@@ -212,6 +216,7 @@ async def get_streams(
             "GET",
             STREAMS_ENDPOINT(activity_id),
             bulk=True,
+            owner=owner,
             on_sent=on_sent,
             params=request_params,
         )
@@ -240,6 +245,7 @@ async def get_many_streams(
     activity_ids: list[int],
     max_errors=MAX_STREAMS_ERRORS,
     leftovers: Optional[list[StreamsResult]] = None,
+    owner: Optional[int] = None,
 ) -> AsyncGenerator[StreamsResult, None]:
     """
     Yield streams for these activities in whatever order they arrive.
@@ -274,7 +280,7 @@ async def get_many_streams(
     sent: set[int] = set()
 
     def request(aid: int):
-        return get_streams(session, aid, on_sent=lambda: sent.add(aid))
+        return get_streams(session, aid, on_sent=lambda: sent.add(aid), owner=owner)
 
     remaining = iter(activity_ids)
     # started and not yet taken, whether finished or not

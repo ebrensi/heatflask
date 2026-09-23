@@ -39,12 +39,22 @@ The policy that follows:
 
   * Nothing waits for the daily reset. Holding a request open until midnight
     helps nobody.
+
+  * Bulk work is shared fairly between athletes. While more than one athlete's
+    import wants reads, none may take more than an equal share of the
+    window's bulk budget; one over its share waits, checking again every
+    FAIR_SHARE_POLL seconds, until the window resets or the others finish.
+    Without this, the first athlete's backfill of a few thousand activities
+    took every read in the window, and everyone who came after it saw
+    nothing for fifteen minutes at a time. An import on its own is not held
+    back at all.
 """
 
 import asyncio
 import random
 import time
 from contextlib import asynccontextmanager
+from collections import Counter
 from dataclasses import dataclass
 from logging import getLogger
 from typing import AsyncIterator, Final, Mapping, Optional
@@ -68,6 +78,10 @@ CONCURRENCY: Final = 10
 # in the same instant.
 SETTLE: Final = 2.0
 JITTER: Final = 3.0
+
+# How often an import held to its fair share looks again, in case the
+# imports it was sharing with have finished and left it the rest
+FAIR_SHARE_POLL: Final = 5.0
 
 
 def next_window(now: float) -> float:
@@ -179,6 +193,13 @@ class RateLimiter:
         self.resume_at: float = 0
         self._waiting = 0
 
+        # For the fair share: bulk requests each athlete has waiting or in
+        # flight, and the reads each has had in the window numbered
+        # _share_window
+        self._active: Counter[int] = Counter()
+        self._reads_by: Counter[int] = Counter()
+        self._share_window = 0
+
         self._semaphore: Optional[asyncio.Semaphore] = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
 
@@ -218,6 +239,28 @@ class RateLimiter:
                 wait = next_window(now) - now
         return wait
 
+    def reads_by(self, owner: int, now: float) -> int:
+        """Bulk reads this athlete has had in the current window"""
+        window = int(now // WINDOW)
+        if window != self._share_window:
+            self._share_window = window
+            self._reads_by.clear()
+        return self._reads_by[owner]
+
+    def over_fair_share(self, method: str, owner: Optional[int], now: float) -> bool:
+        """
+        True if this athlete's import has had its share of the window and
+        another athlete's import is waiting for reads.
+
+        The share is the window's bulk budget divided evenly among athletes
+        with bulk requests waiting or in flight, so an athlete arriving late in
+        a window gets whatever is left of it, and an even split from the next.
+        """
+        if owner is None or method.upper() != "GET" or len(self._active) < 2:
+            return False
+        share = (self.read.limit_15 - self.reserve) // len(self._active)
+        return self.reads_by(owner, now) >= share
+
     @property
     def waiting_until(self) -> Optional[float]:
         """When waiting bulk work resumes, or None if nothing is waiting"""
@@ -225,8 +268,20 @@ class RateLimiter:
             return self.resume_at
         return None
 
-    async def wait(self, seconds: float) -> None:
+    async def wait(self, seconds: float, fair_share: bool = False) -> None:
         now = time.time()
+        if fair_share:
+            # Looked at again shortly, but the most it can wait is the window,
+            # and that is the honest thing to tell a browser
+            resume_at = next_window(now) + SETTLE
+            if resume_at > self.resume_at:
+                self.resume_at = resume_at
+            self._waiting += 1
+            try:
+                await asyncio.sleep(seconds + random.uniform(0, JITTER))
+            finally:
+                self._waiting -= 1
+            return
         resume_at = now + seconds + SETTLE
         if resume_at > self.resume_at:
             log.info(
@@ -244,20 +299,42 @@ class RateLimiter:
 
     @asynccontextmanager
     async def slot(
-        self, method: str = "GET", bulk: bool = False
+        self, method: str = "GET", bulk: bool = False, owner: Optional[int] = None
     ) -> AsyncIterator[float]:
         """
         Hold one request's place in the budget. Yields the time it was sent.
+
+        `owner` is the athlete a bulk request is for, which is what the fair
+        share is divided by. Bulk work without one is not shared out.
 
         Budget is checked before taking a concurrency slot, and again after:
         a task can queue for the semaphore for a while, and must not hold it
         while it sleeps, or it would stall interactive requests behind it.
         """
+        owner = owner if bulk else None
+        if owner is not None:
+            self._active[owner] += 1
+        try:
+            async with self._slot(method, bulk, owner) as sent:
+                yield sent
+        finally:
+            if owner is not None:
+                self._active[owner] -= 1
+                if not self._active[owner]:
+                    del self._active[owner]
+
+    @asynccontextmanager
+    async def _slot(
+        self, method: str, bulk: bool, owner: Optional[int]
+    ) -> AsyncIterator[float]:
         semaphore = self.semaphore()
         while True:
             wait = self.check(method, bulk, time.time())
             if wait:
                 await self.wait(wait)
+                continue
+            if self.over_fair_share(method, owner, time.time()):
+                await self.wait(FAIR_SHARE_POLL, fair_share=True)
                 continue
 
             await semaphore.acquire()
@@ -274,6 +351,9 @@ class RateLimiter:
             sent = time.time()
             for meter in self.meters(method):
                 meter.count(sent)
+            if owner is not None and method.upper() == "GET":
+                self.reads_by(owner, sent)
+                self._reads_by[owner] += 1
             yield sent
         finally:
             semaphore.release()
