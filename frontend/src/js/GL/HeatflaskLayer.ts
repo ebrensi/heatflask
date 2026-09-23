@@ -328,6 +328,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
       "u_sigma",
       "u_final",
       "u_depth",
+      "u_depthRange",
       "u_color",
     ])
 
@@ -664,6 +665,11 @@ export class HeatflaskLayer implements CustomLayerInterface {
     const [silhouette] = this.shadowTextures
     gl.viewport(0, 0, this.shadowWidth, this.shadowHeight)
     gl.disable(gl.DEPTH_TEST)
+    /* The silhouette stores the casting dot's gl_FragCoord.z, which is read
+     * through whatever depth range is in force. MapLibre runs this offscreen
+     * pass at whichever one it last set, so pin it: the composite converts
+     * from here into the range the map is drawn in (see SHADOW_FS). */
+    gl.depthRange(0, 1)
     gl.disable(gl.STENCIL_TEST)
     gl.colorMask(true, true, true, true)
     this.gpuTimer?.begin("shadow")
@@ -788,6 +794,8 @@ export class HeatflaskLayer implements CustomLayerInterface {
         gl.uniform2f(u.u_offset, shadow.x * pixelRatio, -shadow.y * pixelRatio)
         gl.uniform1f(u.u_final, 1)
         gl.uniform1f(u.u_depth, this.shadowHasDepth ? 1 : 0)
+        const depthRange = gl.getParameter(gl.DEPTH_RANGE)
+        gl.uniform2f(u.u_depthRange, depthRange[0], depthRange[1])
         const rgba = packColor(shadow.color)
         gl.uniform4f(
           u.u_color,

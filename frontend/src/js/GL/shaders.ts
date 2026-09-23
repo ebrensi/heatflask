@@ -358,6 +358,7 @@ uniform vec2 u_step;       // one source texel along the blur, in uv
 uniform float u_sigma;     // in source texels
 uniform float u_final;     // 1 for the pass onto the map: no blur
 uniform float u_depth;     // 1 when terrain should occlude the shadow
+uniform vec2 u_depthRange; // glDepthRange in force on the map, near and far
 uniform vec4 u_color;      // the shadow's, premultiplied
 
 out vec4 fragColor;
@@ -376,9 +377,19 @@ void main() {
      * g is (1 - z) premultiplied by coverage and blurred with it, so dividing
      * by coverage recovers a coverage-weighted depth; without that, the soft
      * fringe would average against empty texels and drift to the far plane.
+     *
+     * That z was measured in the offscreen pass, which MapLibre leaves at the
+     * default depth range, while the map's own depth buffer is written in the
+     * narrower range MapLibre reserves for 3D. The two are the same NDC depth
+     * in different units, so the stored one is always the larger and would
+     * lose every LEQUAL test: map it into the range in force here.
+     *
      * Written unconditionally: a shader that writes gl_FragDepth on only some
      * paths leaves it undefined on the others. */
-    gl_FragDepth = u_depth > 0.5 ? 1.0 - s.g / max(a, 1e-4) : gl_FragCoord.z;
+    float z = 1.0 - s.g / max(a, 1e-4);
+    gl_FragDepth = u_depth > 0.5
+      ? mix(u_depthRange.x, u_depthRange.y, z)
+      : gl_FragCoord.z;
     fragColor = u_color * a;
     return;
   }

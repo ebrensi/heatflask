@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>shadow test</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+      }
+      #map {
+        width: 100%;
+        height: 100%;
+        background: #123;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script type="application/json" id="runtime_json" hidden>
+      {
+        "CURRENT_USER": null,
+        "TARGET_USER": null,
+        "ADMIN": false,
+        "APP_VERSION": "test",
+        "OFFLINE": false,
+        "URLS": {
+          "login": "/login",
+          "query": "/activities",
+          "index": "/",
+          "visibility": "/v",
+          "delete": "/d",
+          "logout": "/logout",
+          "admin": "/a",
+          "history": "/h"
+        }
+      }
+    </script>
+    <script type="application/json" id="flashes" hidden></script>
+    <script type="module" src="./shadowtest.ts"></script>
+  </body>
+</html>
