@@ -105,6 +105,8 @@
   "share.copiedUnshared": "連結已複製，但你的地圖未共享，其他人無法開啟。開啟「共享地圖」即可變更。",
   "share.unshared": "你的地圖未共享，其他人無法開啟此連結。開啟「共享地圖」即可變更。",
   "share.copyThis": "複製此連結：",
+  "update.available": "Heatflask 有新版本可用。",
+  "update.reload": "重新載入",
   "import.title": "正在匯入",
   "import.stop": "停止",
   "import.stopping": "正在停止…",

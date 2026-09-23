@@ -105,6 +105,8 @@
   "share.copiedUnshared": "Link kopiert – aber deine Karte ist nicht geteilt, daher kann niemand sonst sie öffnen. Schalte „Geteilte Karten“ ein, um das zu ändern.",
   "share.unshared": "Deine Karte ist nicht geteilt, daher kann niemand sonst diesen Link öffnen. Schalte „Geteilte Karten“ ein, um das zu ändern.",
   "share.copyThis": "Diesen Link kopieren:",
+  "update.available": "Eine neue Version von Heatflask ist verfügbar.",
+  "update.reload": "Neu laden",
   "import.title": "Import läuft",
   "import.stop": "Stopp",
   "import.stopping": "wird gestoppt…",

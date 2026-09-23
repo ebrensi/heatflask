@@ -105,6 +105,8 @@
   "share.copiedUnshared": "kiungo kimenakiliwa — lakini ramani yako haijashirikiwa, kwa hiyo hakuna mtu mwingine anayeweza kuifungua. Washa “Ramani za Kushiriki” ili kubadilisha hilo.",
   "share.unshared": "Ramani yako haijashirikiwa, kwa hiyo hakuna mtu mwingine anayeweza kufungua kiungo hiki. Washa “Ramani za Kushiriki” ili kubadilisha hilo.",
   "share.copyThis": "Nakili kiungo hiki:",
+  "update.available": "Toleo jipya la Heatflask linapatikana.",
+  "update.reload": "Pakia upya",
   "import.title": "Inapakia",
   "import.stop": "Acha",
   "import.stopping": "inasimama…",

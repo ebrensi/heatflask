@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # This file is part of Heatflask. See /LICENSE for terms.
 import os
+import re
 import html
 import json
 from string import Template
@@ -9,6 +10,8 @@ from logging import getLogger
 
 from sanic import Sanic
 from typing import Any
+
+from .config import DEV
 
 # for serving static files (relative to where webserver is run)
 FRONTEND_DIST_DIR = "../frontend/dist"
@@ -29,7 +32,31 @@ def init_app(app: Sanic):
     app.static("docs/b", f"{FRONTEND_DIST_DIR}/docs/backend", name="bdocs")
     app.static("docs/f", f"{FRONTEND_DIST_DIR}/docs/frontend", name="fdocs")
 
+    # Not in development: `parcel watch` keeps a bundle's name across rebuilds
+    # (the hash is of its identity there, not its content), so a browser told
+    # to keep one would go on running the build before last.
+    if not DEV:
+        app.register_middleware(cache_hashed_files, "response")
+
     app.register_listener(load_templates, "before_server_start")
+
+
+# Parcel names every bundle and asset for its content -- splash-page.6405933c.js,
+# logo.44e79cfd.png -- so a file by one of these names never changes, and a new
+# build that changes it names it something else. The HTML that points at them is
+# rendered fresh each time and never cached.
+HASHED_NAME = re.compile(r"\.[0-9a-f]{8}\.[A-Za-z0-9]+(\.map)?$")
+IMMUTABLE = "public, max-age=31536000, immutable"
+
+
+async def cache_hashed_files(request, response):
+    """
+    Let browsers keep content-hashed files for good. Sanic's static handler
+    marks every file no-cache, which had the browser ask again about each
+    bundle on every page load for a file that cannot have changed.
+    """
+    if response.status in (200, 304) and HASHED_NAME.search(request.path):
+        response.headers["Cache-Control"] = IMMUTABLE
 
 
 templates: dict[str, Template] = {}

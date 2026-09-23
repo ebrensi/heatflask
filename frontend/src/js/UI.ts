@@ -44,6 +44,7 @@ import { addShareControl } from "./ShareControl"
 import * as Table from "./Table"
 import { initRender, renderFromQuery } from "./Render"
 import { initImportProgress } from "./ImportProgress"
+import { initUpdateCheck } from "./UpdateCheck"
 import * as StreamCache from "./StreamCache"
 
 const map = MapAPI.CreateMap()
@@ -102,6 +103,9 @@ export async function start() {
 
   // The dialog that shows while activities stream in
   initImportProgress(map)
+
+  // Offer a reload if a newer build is deployed while this page stays open
+  initUpdateCheck(map)
 
   /* Local stream cache, but only when you are looking at your own map: another
    * athlete's tracks are never left behind in your browser. Returns false and

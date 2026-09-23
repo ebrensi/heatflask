@@ -105,6 +105,8 @@
   "share.copiedUnshared": "tautan disalin — tetapi peta Anda tidak dibagikan, jadi orang lain tidak dapat membukanya. Aktifkan “Peta Bersama” untuk mengubahnya.",
   "share.unshared": "Peta Anda tidak dibagikan, jadi orang lain tidak dapat membuka tautan ini. Aktifkan “Peta Bersama” untuk mengubahnya.",
   "share.copyThis": "Salin tautan ini:",
+  "update.available": "Versi baru Heatflask tersedia.",
+  "update.reload": "Muat ulang",
   "import.title": "Mengimpor",
   "import.stop": "Berhenti",
   "import.stopping": "menghentikan…",

@@ -105,6 +105,8 @@
   "share.copiedUnshared": "ሊንኩ ተቀድቷል — ነገር ግን ካርታዎ አልተጋራም፣ ስለዚህ ሌላ ማንም ሊከፍተው አይችልም። ይህን ለመቀየር «የተጋሩ ካርታዎች»ን ያብሩ።",
   "share.unshared": "ካርታዎ አልተጋራም፣ ስለዚህ ሌላ ማንም ይህን ሊንክ ሊከፍተው አይችልም። ይህን ለመቀየር «የተጋሩ ካርታዎች»ን ያብሩ።",
   "share.copyThis": "ይህን ሊንክ ይቅዱ፦",
+  "update.available": "አዲስ የHeatflask ስሪት ይገኛል።",
+  "update.reload": "እንደገና ጫን",
   "import.title": "በማስገባት ላይ",
   "import.stop": "አቁም",
   "import.stopping": "በማቆም ላይ…",

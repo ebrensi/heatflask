@@ -105,6 +105,8 @@
   "share.copiedUnshared": "đã sao chép liên kết — nhưng bản đồ của bạn chưa được chia sẻ nên người khác không mở được. Bật “Chia sẻ bản đồ” để thay đổi.",
   "share.unshared": "Bản đồ của bạn chưa được chia sẻ nên người khác không mở được liên kết này. Bật “Chia sẻ bản đồ” để thay đổi.",
   "share.copyThis": "Sao chép liên kết này:",
+  "update.available": "Đã có phiên bản Heatflask mới.",
+  "update.reload": "Tải lại",
   "import.title": "Đang nhập",
   "import.stop": "Dừng",
   "import.stopping": "đang dừng…",

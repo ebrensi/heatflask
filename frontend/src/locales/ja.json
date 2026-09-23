@@ -105,6 +105,8 @@
   "share.copiedUnshared": "リンクをコピーしました。ただしマップが共有されていないため、他の人は開けません。「マップの共有」をオンにすると開けるようになります。",
   "share.unshared": "マップが共有されていないため、他の人はこのリンクを開けません。「マップの共有」をオンにすると開けるようになります。",
   "share.copyThis": "このリンクをコピーしてください:",
+  "update.available": "Heatflask の新しいバージョンがあります。",
+  "update.reload": "再読み込み",
   "import.title": "読み込み中",
   "import.stop": "停止",
   "import.stopping": "停止しています…",

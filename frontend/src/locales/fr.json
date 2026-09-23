@@ -105,6 +105,8 @@
   "share.copiedUnshared": "lien copié — mais votre carte n’est pas partagée, personne d’autre ne peut donc l’ouvrir. Activez « Cartes partagées » pour changer cela.",
   "share.unshared": "Votre carte n’est pas partagée, personne d’autre ne peut donc ouvrir ce lien. Activez « Cartes partagées » pour changer cela.",
   "share.copyThis": "Copiez ce lien :",
+  "update.available": "Une nouvelle version de Heatflask est disponible.",
+  "update.reload": "Recharger",
   "import.title": "Import en cours",
   "import.stop": "Arrêter",
   "import.stopping": "arrêt en cours…",

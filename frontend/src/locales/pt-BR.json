@@ -105,6 +105,8 @@
   "share.copiedUnshared": "link copiado — mas seu mapa não está compartilhado, então ninguém mais consegue abri-lo. Ative “Mapas compartilhados” para mudar isso.",
   "share.unshared": "Seu mapa não está compartilhado, então ninguém mais consegue abrir este link. Ative “Mapas compartilhados” para mudar isso.",
   "share.copyThis": "Copie este link:",
+  "update.available": "Uma nova versão do Heatflask está disponível.",
+  "update.reload": "Recarregar",
   "import.title": "Importando",
   "import.stop": "Parar",
   "import.stopping": "parando…",

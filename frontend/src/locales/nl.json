@@ -105,6 +105,8 @@
   "share.copiedUnshared": "link gekopieerd — maar je kaart wordt niet gedeeld, dus niemand anders kan hem openen. Zet ‘Gedeelde kaarten’ aan om dat te veranderen.",
   "share.unshared": "Je kaart wordt niet gedeeld, dus niemand anders kan deze link openen. Zet ‘Gedeelde kaarten’ aan om dat te veranderen.",
   "share.copyThis": "Kopieer deze link:",
+  "update.available": "Er is een nieuwe versie van Heatflask beschikbaar.",
+  "update.reload": "Opnieuw laden",
   "import.title": "Importeren",
   "import.stop": "Stoppen",
   "import.stopping": "stoppen…",

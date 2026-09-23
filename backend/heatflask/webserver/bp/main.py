@@ -149,6 +149,7 @@ async def user_page(request: Request, target_user_id=None):
                 "login": app.url_for("auth.authorize"),
                 "query": app.url_for("activities.query"),
                 "index": app.url_for("activities.activities_page"),
+                "version": app.url_for("main.version"),
                 "visibility": app.url_for("main.visibility", setting=""),
                 "delete": app.url_for("main.delete"),
                 "logout": app.url_for("auth.logout"),
@@ -169,6 +170,17 @@ async def demo_page(request: Request):
     return Response.redirect(
         request.app.url_for("main.user_page", target_user_id=Users.ADMIN[0], limit=60)
     )
+
+
+@bp.get("/version")
+async def version(request: Request):
+    """
+    The running build, e.g. "1.7.0+g3f62c77". An open map page polls this and
+    offers a reload when it no longer matches the build the page came from:
+    an installed app, or a phone's suspended tab, can otherwise go on running
+    old JS against a new backend for as long as nobody reloads it.
+    """
+    return Response.text(APP_BUILD, headers={"Cache-Control": "no-store"})
 
 
 @bp.get("/test")

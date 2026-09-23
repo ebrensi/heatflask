@@ -105,6 +105,8 @@
   "share.copiedUnshared": "an kwafi hanyar haɗi — amma ba a raba taswirarka ba, don haka babu wani da zai iya buɗe ta. Kunna “Taswirorin da aka Raba” don canza hakan.",
   "share.unshared": "Ba a raba taswirarka ba, don haka babu wani da zai iya buɗe wannan hanyar haɗi. Kunna “Taswirorin da aka Raba” don canza hakan.",
   "share.copyThis": "Kwafi wannan hanyar haɗi:",
+  "update.available": "Akwai sabon sigar Heatflask.",
+  "update.reload": "Sake lodawa",
   "import.title": "Ana Shigo da su",
   "import.stop": "Tsaya",
   "import.stopping": "ana tsayawa…",

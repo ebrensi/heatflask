@@ -105,6 +105,8 @@
   "share.copiedUnshared": "ሊንክ ተቐዲሑ — ግን ካርታኹም ኣይተኻፈለን፣ ስለዚ ካልእ ሰብ ክኸፍቶ ኣይክእልን። ንምቕያሩ «ዝተኻፈሉ ካርታታት» ወልዑ።",
   "share.unshared": "ካርታኹም ኣይተኻፈለን፣ ስለዚ ካልእ ሰብ ነዚ ሊንክ ክኸፍቶ ኣይክእልን። ንምቕያሩ «ዝተኻፈሉ ካርታታት» ወልዑ።",
   "share.copyThis": "ነዚ ሊንክ ቅድሑ፦",
+  "update.available": "ሓድሽ ስሪት Heatflask ቀሪቡ ኣሎ።",
+  "update.reload": "ደጊምካ ጽዓን",
   "import.title": "የእቱ ኣሎ",
   "import.stop": "ኣቋርጽ",
   "import.stopping": "የቋርጽ ኣሎ…",

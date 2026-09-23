@@ -105,6 +105,8 @@
   "share.copiedUnshared": "link copied — but your map is not shared, so no one else can open it. Turn on Shared Maps to change that.",
   "share.unshared": "Your map is not shared, so no one else can open this link. Turn on Shared Maps to change that.",
   "share.copyThis": "Copy this link:",
+  "update.available": "A new version of Heatflask is available.",
+  "update.reload": "Reload",
   "import.title": "Importing",
   "import.stop": "Stop",
   "import.stopping": "stopping…",

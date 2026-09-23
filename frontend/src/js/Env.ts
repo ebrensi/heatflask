@@ -28,6 +28,8 @@ export type RuntimeJson = {
     login: string
     query: string
     index: string
+    /** The running build as plain text; see UpdateCheck.ts */
+    version: string
     visibility: string
     delete: string
     logout: string

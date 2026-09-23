@@ -105,6 +105,8 @@
   "share.copiedUnshared": "lenken er kopiert – men kartet ditt er ikke delt, så ingen andre kan åpne det. Slå på «Delte kart» for å endre det.",
   "share.unshared": "Kartet ditt er ikke delt, så ingen andre kan åpne denne lenken. Slå på «Delte kart» for å endre det.",
   "share.copyThis": "Kopier denne lenken:",
+  "update.available": "En ny versjon av Heatflask er tilgjengelig.",
+  "update.reload": "Last inn på nytt",
   "import.title": "Importerer",
   "import.stop": "Stopp",
   "import.stopping": "stopper…",

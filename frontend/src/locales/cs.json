@@ -105,6 +105,8 @@
   "share.copiedUnshared": "odkaz zkopírován – vaše mapa ale není sdílená, takže ji nikdo jiný neotevře. Zapněte „Sdílené mapy“, pokud to chcete změnit.",
   "share.unshared": "Vaše mapa není sdílená, takže tento odkaz nikdo jiný neotevře. Zapněte „Sdílené mapy“, pokud to chcete změnit.",
   "share.copyThis": "Zkopírujte tento odkaz:",
+  "update.available": "Je k dispozici nová verze Heatflasku.",
+  "update.reload": "Načíst znovu",
   "import.title": "Import",
   "import.stop": "Zastavit",
   "import.stopping": "zastavování…",
