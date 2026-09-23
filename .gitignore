@@ -136,5 +136,3 @@ frontend/dist/*
 .direnv
 .claude
 .envrc
-*.pdf
-

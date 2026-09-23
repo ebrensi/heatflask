@@ -266,8 +266,65 @@
           exec ./node_modules/.bin/parcel watch 'src/webpages/**/!(tab.*).html' "''${@}"
         '';
 
+        # The publication drafts in docs/publication, rendered to PDF by
+        # pandoc through LuaLaTeX. A shell of its own, so that the default
+        # one does not carry a TeX distribution nobody else needs.
+        # texliveSmall plus what pandoc's template and pdf-header.tex load.
+        texlive = pkgs.texliveSmall.withPackages (ps: with ps; [
+          titlesec
+          titling
+          enumitem
+          fvextra
+          upquote
+          microtype
+          parskip
+          xurl
+          bookmark
+          footnotehyper
+          lualatex-math
+          unicode-math
+          selnolig
+          framed
+          booktabs
+          etoolbox
+          lm
+          lm-math
+        ]);
+
+        pdfScript = pkgs.writeShellScriptBin "heatflask-pdf" ''
+          set -e
+          if [ $# -lt 1 ]; then
+            echo "usage: heatflask-pdf FILE.md [OUT.pdf]" >&2
+            exit 1
+          fi
+          in="$1"
+          out="''${2:-''${in%.md}.pdf}"
+          root=$(${pkgs.git}/bin/git rev-parse --show-toplevel 2>/dev/null) || {
+            echo "ERROR: run this from inside the heatflask repository" >&2
+            exit 1
+          }
+          ${pkgs.pandoc}/bin/pandoc \
+            --defaults="$root/docs/publication/pdf.yaml" \
+            --resource-path="$(dirname "$in")" \
+            -o "$out" "$in"
+          echo "wrote $out"
+        '';
+
       in
       {
+        devShells.publication = pkgs.mkShell {
+          buildInputs = [
+            pkgs.pandoc
+            texlive
+            pdfScript
+          ];
+          shellHook = ''
+            echo "Heatflask publication shell"
+            echo "  heatflask-pdf FILE.md [OUT.pdf]  - render a draft to PDF"
+            echo "  (format: docs/publication/pdf.yaml and pdf-header.tex)"
+          '';
+        };
+
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
             pythonEnv

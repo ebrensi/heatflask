@@ -2,10 +2,10 @@
 title: "The Heatflask Visualization"
 subtitle: "A periodic sampling of recorded motion, and its evaluation on a GPU"
 author: "Efrem Rensi"
-date: "Draft — 20 September 2026"
+date: "Draft — 22 September 2026"
 ---
 
-> **Draft status.** First draft, not for circulation. Part I is the mathematics;
+> **Draft status.** Second draft, not for circulation. Part I is the mathematics;
 > Part II is the WebGL2 realization. Licensing for the text is undecided — see
 > [Colophon](#colophon).
 
@@ -27,7 +27,7 @@ irregular data with two array lookups, and gives error bounds for it.
 ## Notation
 
 | symbol | meaning | units |
-|---|---|---|
+|--|--------|----|
 | $P$ | position along a recording, as a function of time since its start | world pixels |
 | $D$ | duration of a recording | s |
 | $s$ | absolute start time of a recording | s (epoch) |
@@ -40,16 +40,11 @@ irregular data with two array lookups, and gives error bounds for it.
 | $k$ | index of a mark, counted back from the leading one | — |
 | $h$ | resampling step | s |
 | $\nu$ | validity flag of a resampled node | $\{0,1\}$ |
+| $\lambda, \varphi$ | longitude, latitude | rad |
 
 Two of these are user-facing dials, and they are independent: $T$ controls how
 many marks appear, $\tau$ controls how fast they move. Defaults are $T = 60$ s
 and $\tau = 30$.
-
-> **A collision to fix.** The shader source currently writes `tau` for two
-> different things: `visual.tau` is the clock rate $\tau$, while the local
-> `float tau` in `DOT_VS` is the quantity called $\theta_k$ below. They are
-> unrelated. This note uses $\tau$ only for the rate; the shader variable
-> should be renamed `theta`.
 
 ---
 
@@ -220,8 +215,11 @@ once per activity, when it is loaded.
 
 **Fitting the mesh to the recording.** $h$ is not a global constant. Given a
 ceiling $h_{\max}$ (2 s in the implementation), each activity takes
-$$m = \Bigl\lceil \tfrac{D}{h_{\max}} \Bigr\rceil, \qquad h = \tfrac{D}{m},$$
-so that $h \le h_{\max}$ and $mh = D$ *exactly*. The last node lands on the end
+$$m = \min\Bigl( \Bigl\lceil \tfrac{D}{h_{\max}} \Bigr\rceil,\ 2^{14} \Bigr), \qquad h = \tfrac{D}{m},$$
+so that $mh = D$ *exactly*, and $h \le h_{\max}$ for any recording shorter
+than $2^{14} h_{\max}$ — just over nine hours at the default. Past that the
+step lengthens rather than the node count growing, so no single activity can
+claim more than $2^{14} + 2$ texels. The last node lands on the end
 of the recording. The alternative — a fixed grid $0, h_{\max}, 2h_{\max},
 \dots$ — leaves a final partial step whose upper bracket lies beyond $D$, where
 there is no data; a mark in that interval cannot be evaluated and vanishes. The
@@ -386,16 +384,17 @@ $O(\text{marks})$ on hardware built for it.
 Three resources, each with its own update schedule.
 
 | resource | contents | rewritten when |
-|---|---|---|
+|----|-------|-------|
 | **stream texture** | every activity's resampled nodes, concatenated | activities load |
 | **meta texture** | 4 texels per activity | selection, colour, view origin, terrain calibration |
 | **slot buffer** | one $(a, k)$ pair per mark in $K$ | $T$ or the selection changes |
 
 **Stream texture.** One `RGBA32F` texel per node, holding $(x, y, \text{altitude},
 \nu)$ — position relative to the activity's own centre, so the values stay
-small. Activities are laid end to end, wrapping at a texture width of 4096.
-Sizing is done before writing: if the total exceeds
-$\min(4096^2,\ 2^{24})$ texels, $h_{\max}$ doubles and the total is recomputed.
+small. Activities are laid end to end, wrapping at a texture width
+$W = \min(4096, \text{the device's largest texture})$. Sizing is done before
+writing: if the total exceeds $\min(W^2,\ 2^{24})$ texels, $h_{\max}$ doubles
+and the total is recomputed.
 The second cap is there because node offsets are carried through the shader as
 binary32, which represents consecutive integers exactly only up to $2^{24}$.
 
@@ -404,9 +403,12 @@ binary32, which represents consecutive integers exactly only up to $2^{24}$.
 | texel | $x$ | $y$ | $z$ | $w$ |
 |---|---|---|---|---|
 | 0 | node offset | node count | $1/h$ | $\alpha$ |
-| 1 | origin $x$ | origin $y$ | px per metre | altitude offset |
+| 1 | centre $x$ | centre $y$ | px per metre | altitude offset |
 | 2 | colour $r$ | $g$ | $b$ | $a$ |
 | 3 | selected | $D$ | — | — |
+
+The centre in texel 1 is the activity's own, minus the view origin of §15,
+which is why the meta texture is rewritten when that origin moves.
 
 **Slot buffer.** Two `uint16`s per mark. Its length is
 $\sum_a \bigl( \lfloor D_a / T \rfloor + 1 \bigr)$ — Proposition 3, summed —
@@ -437,13 +439,18 @@ if (s0.w < 0.5 || s1.w < 0.5) { clipped(); return; }   // §8: gap
 
 vec4 m1 = fetch(u_meta, a + 1);
 vec3 p = mix(s0.xyz, s1.xyz, f - i0);           // §6: the interpolant
-gl_Position = u_matrix * vec4(p.xy + m1.xy, (p.z + m1.w) * m1.z * u_zScale, 1.0);
+bool hidden;
+gl_Position = project(p.xy + m1.xy, (p.z + m1.w) * m1.z * u_zScale, hidden);
+if (hidden) { clipped(); return; }              // §16: behind the globe
 ```
 
 Line by line against Part I: `mod(u_phase - m0.w, u_T)` is Proposition 4;
 adding `float(a_slot.y) * u_T` is Definition 2; `theta * m0.z` and the `mix` are
-§6; the three early returns are, in order, Definition 2's constraint, the
-concatenation boundary, and §8.
+§6; the first three early returns are, in order, Definition 2's constraint,
+the concatenation boundary, and §8. The fourth has nothing to do with the
+model: `project` is the map projection, which on a flat map is a single
+matrix product and on a globe is §16, and a mark on the far side of the globe
+is dropped the same way.
 
 `clipped()` writes a position outside the clip volume and a point size of zero
 — the cheapest way to make a vertex disappear, since the rasterizer discards it
@@ -462,7 +469,10 @@ percent.
 
 The early returns are therefore *rare*, not common, and the fixed slot buffer
 is very nearly tight. The remaining culls — the bracket test and the gap test —
-are rarer still. Uniform control flow is also what the hardware wants: with
+are rarer still. The horizon test is the exception, and it is the view's doing
+rather than the model's: on a globe it discards roughly the far hemisphere's
+share of the marks, which is the same outcome as the flat map's off-screen
+marks failing clip-space testing. Uniform control flow is also what the hardware wants: with
 almost every invocation in a warp taking the same path, the branches cost
 essentially nothing to divergence.
 
@@ -544,7 +554,8 @@ against a duration, once.
 
 * Marks are not view-culled. The slot buffer is built over *all* loaded
   activities, not the in-view ones, so every mark of every activity is
-  submitted every frame and off-screen ones are rejected by clip-space testing.
+  submitted every frame and off-screen ones are rejected by clip-space testing
+  (or, on a globe, by the horizon test of §16).
   This is a deliberate simplification — it keeps the slot buffer independent of
   the view, so panning uploads nothing — and it holds because a culled vertex
   costs only its own invocation, which is the cheap resource here. It would
@@ -558,7 +569,11 @@ against a duration, once.
   a tuned constant standing in for the thing actually wanted, which is
   clustering with an explicit density readout. Overdraw itself is bounded by
   sprite area rather than mark count, so this is a legibility problem and not a
-  performance one.
+  performance one. Part of it is now addressed outside the GL layer: at map
+  zoom 8 and below, an activity smaller than 10 px on screen gets a marker,
+  and markers within 32 px of one another merge into one. That answers
+  "is anything here?", which the marks alone could not at that scale; it
+  still does not say *how much*, since a marker carries no count.
 
 ## 15. Precision
 
@@ -593,16 +608,75 @@ binary64, once per frame rather than once per vertex, where full precision is
 free. This is the same manoeuvre as §5(b) — reduce in double precision, narrow
 afterwards — applied to space rather than to time, and the two together are
 what make a single-precision pipeline viable over an epoch-scale clock and a
-planet-scale coordinate system.
+planet-scale coordinate system. §16 is the one place the pipeline goes back to
+absolute coordinates, and it does so only where the scale makes that safe.
 
-## 16. Cost
+## 16. The globe
+
+MapLibre can draw the map as a sphere, and the layer follows it. Nothing in
+Part I changes: Definition 2 takes no argument from the view (§5(c)), and a
+projection is part of the view. What changes is the last line of each shader,
+the map from a world position to clip space, which becomes a function `project`
+shared by the path and mark shaders.
+
+**The sphere.** A point at Mercator coordinates $(x, y) \in [0,1)^2$ has
+longitude $\lambda = 2\pi x - \pi$ and Mercator ordinate $\psi = \pi - 2\pi y$,
+from which latitude is the Gudermannian, $\varphi = \operatorname{gd}\psi$.
+The shader never forms $\varphi$. With $t = e^{\psi}$,
+$$\cos\varphi = \operatorname{sech}\psi = \frac{2t}{t^2 + 1}, \qquad
+\sin\varphi = \tanh\psi = \frac{t^2 - 1}{t^2 + 1},$$
+so one exponential and two trigonometric calls on $\lambda$ give the point on the
+unit sphere,
+$$S = (\sin\lambda\cos\varphi,\ \sin\varphi,\ \cos\lambda\cos\varphi).$$
+This is MapLibre's own `projectToSphere`, reproduced so that marks and the
+basemap agree to the arithmetic.
+
+**Height.** Terrain lifts a point by $\zeta$ world pixels. One Mercator unit at
+latitude $\varphi$ spans $2\pi R\cos\varphi$ of ground, so $\zeta$ is a fraction
+$(\zeta/256)\,2\pi\cos\varphi$ of the radius, and the lifted point is
+$$E = S\,\Bigl( 1 + \frac{\zeta}{256}\, 2\pi \cos\varphi \Bigr).$$
+The $\cos\varphi$ is the Mercator scale factor undone: the flat map exaggerates
+heights toward the poles exactly as it exaggerates lengths, and the sphere must
+not.
+
+**The horizon.** MapLibre supplies a plane $(\mathbf{n}, w)$ through the
+horizon circle, and a point is on the visible side iff
+$\langle S, \mathbf{n} \rangle + w \ge 0$. A mark that fails is dropped
+(§13); a path segment is dropped if either end fails. Without the test, the far
+hemisphere's tracks draw through the Earth, since the layer does not write
+depth.
+
+**The transition.** MapLibre does not switch projections at a zoom; it
+blends them. Its globeness $g$ runs from 1 when zoomed out to 0 between map
+zooms 11 and 12, and the layer returns
+$$\operatorname{clip} = (1 - g)\,M_{\text{flat}}\,p \;+\; g\,M_{\text{globe}}\,E,$$
+matching the basemap through the blend. At $g = 0$ the sphere is not computed
+at all.
+
+**Precision.** The sphere needs absolute coordinates: the shader re-forms
+$(x, y) = \text{origin} + p/256$ in binary32 before taking the exponential.
+By the reckoning of §15, a Mercator coordinate below 1 has spacing $2^{-24}$,
+which is $2^{-16}$ world pixels, or $2^{\,z-16}$ screen pixels at zoom $z$.
+The sphere is in use only below map zoom 12, which is $z = 13$ in the 256-pixel
+convention of §15, where that is an eighth of a pixel; zoomed out, where the
+globe is actually a globe, it is thousands of times smaller. The
+transcendental functions add error of their own, which GLSL ES does not bound;
+the figure above is the part that can be computed. Handing the sphere off at
+$g = 0$ is what keeps this safe: street zoom, where §15's margin is needed,
+never touches the absolute path.
+
+## 17. Cost
 
 The per-frame transfer is the camera matrix, a handful of scalars, and $\phi$:
-of order 100 bytes, of which the animation proper is four. Steady state is
-three draw calls — paths, mark shadows, marks — regardless of load.
+of order 100 bytes, of which the animation proper is four; a globe adds a
+second matrix and the horizon plane. Steady state is six draw calls regardless
+of load: the marks' shadow silhouette into a half-resolution buffer, two
+separable blur passes over it, the paths, the shadow composited onto the map,
+and the marks. Only the first and last scale with the number of marks.
 
-Measured on the live site with Chrome's own counters, main-thread JavaScript per
-frame is $0.563$ ms with 60 activities loaded and $0.485$ ms with 1,000 (68,240
+Measured on the live site with Chrome's own counters on 17 September, a day
+before the shadow took its present one-silhouette form, main-thread JavaScript
+per frame is $0.563$ ms with 60 activities loaded and $0.485$ ms with 1,000 (68,240
 marks drawn per frame, 2.0 M texels of stream texture). Seventeen times the
 load, no measurable change; zooming four levels moves it by $0.006$ ms. The one
 term that does respond is dragging, $0.25$ ms dearer at the larger load — that

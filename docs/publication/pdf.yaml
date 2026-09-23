@@ -1,0 +1,28 @@
+# pandoc defaults for rendering the publication drafts to PDF.
+# Used by heatflask-pdf, in the "publication" dev shell:
+#   nix develop .#publication
+#   heatflask-pdf docs/publication/heatflask-visualization.md
+#
+# The article class, tightened: 2 cm margins instead of article's ~4.5 cm,
+# sans-serif headings set close to their text, a compact title block, and smaller code. It keeps
+# Latin Modern for the text and the mathematics.
+
+from: markdown+tex_math_dollars+pipe_tables+implicit_figures
+pdf-engine: lualatex
+standalone: true
+highlight-style: tango
+include-in-header:
+  - ${.}/pdf-header.tex
+variables:
+  documentclass: article
+  classoption: [11pt]
+  papersize: letter
+  geometry:
+    - margin=2cm
+    - top=1.8cm
+    - bottom=2cm
+  linestretch: 1.0
+  colorlinks: true
+  linkcolor: black
+  urlcolor: blue!50!black
+  toccolor: black

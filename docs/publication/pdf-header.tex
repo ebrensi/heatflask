@@ -1,0 +1,31 @@
+% Loaded by pdf.yaml, after pandoc's own preamble.
+
+% Headings: sans-serif and close to their text, rather than article's large
+% serif headings with generous space around them.
+\usepackage{titlesec}
+\titleformat{\section}{\normalfont\large\sffamily\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalfont\normalsize\sffamily\bfseries}{\thesubsection}{0.6em}{}
+\titlespacing*{\section}{0pt}{1.6ex plus .5ex minus .3ex}{0.6ex plus .2ex}
+\titlespacing*{\subsection}{0pt}{1.3ex plus .4ex minus .3ex}{0.4ex plus .2ex}
+
+% The title block: on the first page with the text, without article's
+% half-page of air above it.
+\usepackage{titling}
+\setlength{\droptitle}{-3.5em}
+\pretitle{\begin{flushleft}\LARGE\sffamily\bfseries}
+\posttitle{\par\end{flushleft}\vskip 0.2em}
+\preauthor{\begin{flushleft}\normalsize\sffamily}
+\postauthor{\par\end{flushleft}}
+\predate{\begin{flushleft}\small\sffamily}
+\postdate{\par\end{flushleft}\vskip -0.5em}
+
+% Code in a smaller size, so the shader listings fit the measure unbroken.
+\RecustomVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\},fontsize=\small}
+
+% Tighter lists and display maths.
+\usepackage{enumitem}
+\setlist{itemsep=0.2ex, topsep=0.6ex}
+\AtBeginDocument{%
+  \setlength{\abovedisplayskip}{6pt plus 2pt minus 2pt}%
+  \setlength{\belowdisplayskip}{6pt plus 2pt minus 2pt}%
+}
