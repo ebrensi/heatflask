@@ -16,6 +16,8 @@
  * terrain's exaggeration when terrain is on, and 0 when the map is flat.
  */
 
+import { WORLD_PX } from "../DotLayer/CRS"
+
 /* ---------------------------------------------------------------------- *
  * Paths: each segment is an instanced quad, extruded in screen space so a
  * line is the same number of pixels wide however the camera is pitched.
@@ -39,10 +41,49 @@
  * into hillsides; lower it if they start showing through thin ridges. */
 export const DEPTH_BIAS = 0.002
 
+/* ---------------------------------------------------------------------- *
+ * Globe projection. Under MapLibre's globe, u_matrix is its Mercator
+ * fallback, u_globeMatrix takes the unit sphere to clip space, and u_globe is
+ * how far the map has turned into a globe: 1 zoomed out, easing to 0 between
+ * zoom 11 and 12, as MapLibre's own layers do. At 0 the sphere is never
+ * computed, so street zoom keeps the relative-origin float32 precision.
+ *
+ * The sphere position is MapLibre's projectToSphere, and the horizon test is
+ * its clipping plane. A vertex on the far side reports hidden.
+ * ---------------------------------------------------------------------- */
+const PROJECT_GLSL = `
+uniform mat4 u_matrix;
+uniform float u_globe;         // 0 flat .. 1 globe
+uniform mat4 u_globeMatrix;
+uniform vec4 u_clipPlane;
+uniform vec2 u_origin;         // the view origin, in Mercator units
+
+const float PI = 3.141592653589793;
+
+/* xy: world px relative to the origin. z: height in world px, zScale applied */
+vec4 project(vec2 xy, float z, out bool hidden) {
+  hidden = false;
+  vec4 flatPos = u_matrix * vec4(xy, z, 1.0);
+  if (u_globe <= 0.0) return flatPos;
+
+  vec2 m = u_origin + xy / ${WORLD_PX.toFixed(1)};
+  float sx = m.x * 2.0 * PI + PI;
+  float t = exp(PI - m.y * 2.0 * PI);
+  float cosy = 2.0 * t / (t * t + 1.0);
+  float siny = (t * t - 1.0) / (t * t + 1.0);
+  vec3 s = vec3(sin(sx) * cosy, siny, cos(sx) * cosy);
+  hidden = dot(s, u_clipPlane.xyz) + u_clipPlane.w < 0.0;
+
+  /* A Mercator unit is 2 pi R cos(lat) of ground, so height as a fraction of
+   * the radius is z in Mercator units times 2 pi cos(lat) */
+  vec3 e = s * (1.0 + z / ${WORLD_PX.toFixed(1)} * 2.0 * PI * cosy);
+  return mix(flatPos, u_globeMatrix * vec4(e, 1.0), u_globe);
+}
+`
+
 export const PATH_VS = `#version 300 es
 precision highp float;
-
-uniform mat4 u_matrix;
+${PROJECT_GLSL}
 uniform vec2 u_viewport;   // drawing buffer size, in device pixels
 uniform float u_pixelRatio;
 uniform float u_zScale;
@@ -63,8 +104,13 @@ void main() {
     return;
   }
 
-  vec4 c0 = u_matrix * vec4(a_p0.xy, a_p0.z * u_zScale, 1.0);
-  vec4 c1 = u_matrix * vec4(a_p1.xy, a_p1.z * u_zScale, 1.0);
+  bool h0, h1;
+  vec4 c0 = project(a_p0.xy, a_p0.z * u_zScale, h0);
+  vec4 c1 = project(a_p1.xy, a_p1.z * u_zScale, h1);
+  if (h0 || h1) {
+    gl_Position = vec4(2.0, 2.0, 2.0, 1.0); // behind the globe
+    return;
+  }
 
   vec2 s0 = c0.xy / c0.w * u_viewport;
   vec2 s1 = c1.xy / c1.w * u_viewport;
@@ -140,8 +186,7 @@ export const DOT_VS = `#version 300 es
 precision highp float;
 precision highp int;
 precision highp sampler2D;
-
-uniform mat4 u_matrix;
+${PROJECT_GLSL}
 uniform float u_pixelRatio;
 uniform float u_zScale;
 uniform float u_size;      // CSS px: a cube's edge; a sphere's radius
@@ -187,7 +232,9 @@ void main() {
 
   vec4 m1 = fetch(u_meta, a + 1);
   vec3 p = mix(s0.xyz, s1.xyz, f - i0);
-  gl_Position = u_matrix * vec4(p.xy + m1.xy, (p.z + m1.w) * m1.z * u_zScale, 1.0);
+  bool hidden;
+  gl_Position = project(p.xy + m1.xy, (p.z + m1.w) * m1.z * u_zScale, hidden);
+  if (hidden) { clipped(); return; }
   gl_Position.z -= float(${DEPTH_BIAS}) * gl_Position.w;
 
   v_circle = m3.x;

@@ -316,6 +316,14 @@ export function setTerrain(map: MLMap, on: boolean, tilt = true): void {
   }
 }
 
+/* The projection belongs to the style, so a basemap change resets it to
+ * flat, and the "style.load" handler sets it again. MapLibre's globe turns
+ * back into Web Mercator on its own between zoom 11 and 12. */
+export function setGlobe(map: MLMap, on: boolean): void {
+  if (!styleReady) return // BindMap's style.load handler applies visual.globe
+  map.setProjection({ type: on ? "globe" : "mercator" })
+}
+
 /* ------------------------------------------------------------------ *
  * The map
  * ------------------------------------------------------------------ */
@@ -407,6 +415,7 @@ export function BindMap(map: MLMap, appState: State): void {
     styleReady = true
     for (const hook of styleLoadHooks) hook(map)
     if (visual.terrain) setTerrain(map, true, false)
+    if (visual.globe) setGlobe(map, true)
   })
 
   /* A link or saved setting can name a layer by a name it has since outgrown,
@@ -429,6 +438,7 @@ export function BindMap(map: MLMap, appState: State): void {
   visual.onChange("baselayer", (name: string) => setBaselayer(map, name), false)
 
   visual.onChange("terrain", (on: boolean) => setTerrain(map, !!on), false)
+  visual.onChange("globe", (on: boolean) => setGlobe(map, !!on), false)
 
   warnWhenBlocked(map)
 

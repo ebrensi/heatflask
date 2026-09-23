@@ -251,6 +251,11 @@ export class HeatflaskLayer implements CustomLayerInterface {
   private matrix = new Float64Array(16)
   private model = new Float64Array(16)
   private matrix32 = new Float32Array(16)
+  /* Globe projection: how far the map has turned into a globe (0 when flat),
+   * MapLibre's unit-sphere matrix, and its horizon plane. See PROJECT_GLSL. */
+  private globe = 0
+  private globeMatrix32 = new Float32Array(16)
+  private clipPlane: [number, number, number, number] = [0, 0, 0, 1]
 
   private rebuildTick = 0
   private lastRebuild = 0
@@ -298,6 +303,10 @@ export class HeatflaskLayer implements CustomLayerInterface {
     this.pathProgram = compileProgram(gl, PATH_VS, PATH_FS)
     this.pathU = uniformLocations(gl, this.pathProgram, [
       "u_matrix",
+      "u_globe",
+      "u_globeMatrix",
+      "u_clipPlane",
+      "u_origin",
       "u_viewport",
       "u_pixelRatio",
       "u_zScale",
@@ -306,6 +315,10 @@ export class HeatflaskLayer implements CustomLayerInterface {
     this.dotProgram = compileProgram(gl, DOT_VS, DOT_FS)
     this.dotU = uniformLocations(gl, this.dotProgram, [
       "u_matrix",
+      "u_globe",
+      "u_globeMatrix",
+      "u_clipPlane",
+      "u_origin",
       "u_viewport",
       "u_pixelRatio",
       "u_zScale",
@@ -591,8 +604,16 @@ export class HeatflaskLayer implements CustomLayerInterface {
 
     /* mainMatrix, not modelViewProjectionMatrix: the latter takes world
      * pixels at the current zoom, with z in metres. mainMatrix is the float64
-     * matrix MapLibre builds for custom layers, taking Mercator units. */
-    this.computeMatrix(args.defaultProjectionData.mainMatrix)
+     * matrix MapLibre builds for custom layers, taking Mercator units --
+     * except under the globe, where it takes the unit sphere and the Mercator
+     * one is fallbackMatrix. */
+    const pd = args.defaultProjectionData
+    this.globe = pd.projectionTransition > 0 ? pd.projectionTransition : 0
+    this.computeMatrix(this.globe ? pd.fallbackMatrix : pd.mainMatrix)
+    if (this.globe) {
+      this.globeMatrix32.set(pd.mainMatrix)
+      this.clipPlane = pd.clippingPlane
+    }
 
     const T = +this.visual.T
     if (T !== this.slotsT) {
@@ -620,7 +641,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
     const u = this.dotU
     gl.uniform1i(u.u_streams, 0)
     gl.uniform1i(u.u_meta, 1)
-    gl.uniformMatrix4fv(u.u_matrix, false, this.matrix32)
+    this.setProjection(gl, u)
     gl.uniform1f(u.u_pixelRatio, pixelRatio)
     gl.uniform1f(u.u_zScale, this.zScale())
     gl.uniform1f(u.u_size, this.dotSize())
@@ -762,7 +783,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
       gl.useProgram(this.pathProgram)
       gl.bindVertexArray(this.pathVAO)
       const u = this.pathU
-      gl.uniformMatrix4fv(u.u_matrix, false, this.matrix32)
+      this.setProjection(gl, u)
       gl.uniform2f(u.u_viewport, vw, vh)
       gl.uniform1f(u.u_pixelRatio, pixelRatio)
       gl.uniform1f(u.u_zScale, zScale)
@@ -1046,6 +1067,19 @@ export class HeatflaskLayer implements CustomLayerInterface {
     model[15] = 1
     multiply(this.matrix, <number[]>mvp, model)
     this.matrix32.set(this.matrix)
+  }
+
+  /** The uniforms PROJECT_GLSL declares, for whichever program is bound */
+  private setProjection(
+    gl: WebGL2RenderingContext,
+    u: Record<string, WebGLUniformLocation>
+  ): void {
+    gl.uniformMatrix4fv(u.u_matrix, false, this.matrix32)
+    gl.uniform1f(u.u_globe, this.globe)
+    if (!this.globe) return
+    gl.uniformMatrix4fv(u.u_globeMatrix, false, this.globeMatrix32)
+    gl.uniform4fv(u.u_clipPlane, this.clipPlane)
+    gl.uniform2f(u.u_origin, this.ox / WORLD_PX, this.oy / WORLD_PX)
   }
 
   /** Throttled re-cull while the map moves */

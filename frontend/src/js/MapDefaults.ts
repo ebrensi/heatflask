@@ -6,7 +6,7 @@
 /*
  * MapDefaults -- the map style a reader starts with, if they saved one.
  *
- * Only the style: basemap, terrain and the animation settings. Where the map
+ * Only the style: basemap, terrain, globe and the animation settings. Where the map
  * is looking (center, zoom, pitch, bearing) belongs to a particular view, not
  * to a person, and so does whether it is paused.
  *
@@ -28,6 +28,7 @@ import type { VisualParameters } from "./Model"
 export const STYLE_PARAMS = [
   "baselayer",
   "terrain",
+  "globe",
   "tau",
   "T",
   "sz",

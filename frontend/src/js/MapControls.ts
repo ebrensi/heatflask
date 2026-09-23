@@ -48,7 +48,7 @@ export class ButtonControl implements IControl {
 }
 
 /**
- * The basemap list, and the 3D terrain switch. Replaces Leaflet's
+ * The basemap list, and the 3D terrain and globe switches. Replaces Leaflet's
  * Control.Layers: a button that opens a panel of radio buttons.
  */
 export class LayerPicker implements IControl {
@@ -72,8 +72,11 @@ export class LayerPicker implements IControl {
     panel.hidden = true
     c.appendChild(panel)
 
+    const switches = document.createElement("div")
+    switches.className = "layer-picker-switches"
+    panel.appendChild(switches)
+
     const terrainLabel = document.createElement("label")
-    terrainLabel.className = "layer-picker-terrain"
     const terrainBox = document.createElement("input")
     terrainBox.type = "checkbox"
     terrainBox.checked = !!visual.terrain
@@ -82,7 +85,15 @@ export class LayerPicker implements IControl {
       () => (visual.terrain = terrainBox.checked)
     )
     terrainLabel.append(terrainBox, " 3D terrain")
-    panel.appendChild(terrainLabel)
+    switches.appendChild(terrainLabel)
+
+    const globeLabel = document.createElement("label")
+    const globeBox = document.createElement("input")
+    globeBox.type = "checkbox"
+    globeBox.checked = !!visual.globe
+    globeBox.addEventListener("change", () => (visual.globe = globeBox.checked))
+    globeLabel.append(globeBox, " Globe")
+    switches.appendChild(globeLabel)
 
     const list = document.createElement("div")
     list.className = "layer-picker-list"
@@ -113,6 +124,7 @@ export class LayerPicker implements IControl {
       (on: boolean) => (terrainBox.checked = !!on),
       false
     )
+    visual.onChange("globe", (on: boolean) => (globeBox.checked = !!on), false)
     return c
   }
 

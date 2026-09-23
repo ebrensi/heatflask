@@ -61,6 +61,7 @@ export type VisualParameters = {
   pitch?: number // camera tilt, degrees from straight down
   bearing?: number // camera rotation, degrees clockwise from north
   terrain?: boolean // 3D terrain
+  globe?: boolean // globe projection, rather than flat Web Mercator
 
   // Animation
   tau?: number // time scale: activity-seconds per real second
@@ -95,6 +96,7 @@ export const DefaultVisual: VisualParameters = {
   pitch: 0,
   bearing: 0,
   terrain: false,
+  globe: false,
   tau: 30, // time scale: activity-seconds per real second
   T: 60, // s: spacing between dots, in activity-seconds
   sz: 3,
@@ -130,6 +132,7 @@ export type URLParameters = {
   pitch?: string
   bearing?: string
   terrain?: string
+  globe?: string
   // Animation
   tau?: string
   T?: string

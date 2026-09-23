@@ -121,7 +121,9 @@ export function updateClusters(): void {
       markers.delete(key)
       marker.setLngLat([lng, lat])
     } else {
-      marker = new Marker({ element: makeElement() })
+      /* Covered: behind the globe, or behind a hill. A faded bubble on the
+       * far side of the globe lands in the middle of the wrong continent. */
+      marker = new Marker({ element: makeElement(), opacityWhenCovered: 0 })
         .setLngLat([lng, lat])
         .addTo(_map)
     }
