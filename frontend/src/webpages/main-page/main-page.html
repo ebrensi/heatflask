@@ -10,7 +10,14 @@
     <title>${APP_NAME}</title>
 
     <link rel="shortcut icon" href="~/src/images/favicon.ico" />
-    <link rel="apple-touch-icon" href="~/src/images/logo.png" />
+    <!-- Makes the site installable ("Add to Home Screen"); on every page, so
+         that any of them can be the one it is installed from -->
+    <link
+      rel="apple-touch-icon"
+      href="~/src/images/app-icons/apple-touch-icon.png"
+    />
+    <link rel="manifest" href="../app.webmanifest" />
+    <meta name="theme-color" content="#1b1b1b" />
     <link rel="stylesheet" href="./main-page.css" />
   </head>
 

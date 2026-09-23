@@ -259,9 +259,10 @@
   min-height: 1.2em;
 }
 
-/* Readout while a video capture runs. Centred at the top of the map so it
- * clears the controls in both top corners. */
-.capture-progress {
+/* Readout while a video capture runs, and after a link is shared. Centred at
+ * the top of the map so it clears the controls in both top corners. */
+.capture-progress,
+.share-readout {
   position: absolute;
   top: 10px;
   left: 50%;
@@ -288,4 +289,14 @@
 .capture-progress .capture-sponsor a {
   pointer-events: auto;
   color: #fc4c02;
+}
+
+/* The share readout can be a sentence (the not-shared warning), so it wraps
+ * rather than running off a phone screen. */
+.share-readout {
+  width: max-content;
+  max-width: 70%;
+  white-space: normal;
+  text-align: center;
+  font-family: sans-serif;
 }
