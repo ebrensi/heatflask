@@ -43,7 +43,6 @@ from typing import Optional
 import pymongo
 
 from . import DataAPIs
-from . import RateLimit
 
 log = getLogger(__name__)
 log.propagate = True
@@ -181,15 +180,20 @@ def log_query(request, owner: Optional[int], msg: str, stats: dict) -> None:
 
 class ReadCost:
     """
-    How many Strava reads have been spent since this was made.
+    How many Strava reads one piece of work has sent.
 
         cost = History.ReadCost()
-        ...
+        async for A in strava.get_all_activities(on_sent=cost.sent):
+            ...
         cost.reads
 
-    The meter is the pacer's own, so this counts what Strava says we spent
-    rather than what we think we asked for. It reads 0 across the daily
-    rollover rather than going negative.
+    Counted request by request, through the `on_sent` hook every Strava call
+    takes, so a retry after a 429 counts too: Strava charges for those.
+
+    This used to be the rise in the app's daily meter between the start of the
+    work and its end. The meter is shared by everything the app does, so an
+    import running alongside another athlete's was charged for both: an index
+    of 2,243 activities, a dozen pages, was recorded as costing 1,096 reads.
 
     A plain object rather than a context manager, because the work it
     measures usually ends in a finally clause that has to report after the
@@ -197,11 +201,10 @@ class ReadCost:
     """
 
     def __init__(self):
-        self.before = RateLimit.limiter.read.used_day
+        self.reads = 0
 
-    @property
-    def reads(self) -> int:
-        return max(0, RateLimit.limiter.read.used_day - self.before)
+    def sent(self) -> None:
+        self.reads += 1
 
 
 SORT_SPEC = [("ts", pymongo.DESCENDING)]

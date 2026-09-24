@@ -246,6 +246,7 @@ async def get_many_streams(
     max_errors=MAX_STREAMS_ERRORS,
     leftovers: Optional[list[StreamsResult]] = None,
     owner: Optional[int] = None,
+    on_sent: Optional[Callable[[], None]] = None,
 ) -> AsyncGenerator[StreamsResult, None]:
     """
     Yield streams for these activities in whatever order they arrive.
@@ -275,12 +276,20 @@ async def get_many_streams(
         consumer was busy, or in that grace period -- are appended to
         `leftovers`, if given, so the caller can still keep them.
 
+    `on_sent` is called once for every request that goes out, as in
+    api_request.
+
     Raises RateLimitExceeded when Strava's daily budget is spent.
     """
     sent: set[int] = set()
 
     def request(aid: int):
-        return get_streams(session, aid, on_sent=lambda: sent.add(aid), owner=owner)
+        def was_sent():
+            sent.add(aid)
+            if on_sent:
+                on_sent()
+
+        return get_streams(session, aid, on_sent=was_sent, owner=owner)
 
     remaining = iter(activity_ids)
     # started and not yet taken, whether finished or not
@@ -567,7 +576,11 @@ params = {"per_page": PER_PAGE}
 
 
 async def get_activity_index_page(
-    session: aiohttp.ClientSession, page: int, bulk: bool = True, **extra: Any
+    session: aiohttp.ClientSession,
+    page: int,
+    bulk: bool = True,
+    on_sent: Optional[Callable[[], None]] = None,
+    **extra: Any,
 ) -> list[Activity]:
     t0 = time.perf_counter()
     status, result = await api_request(
@@ -575,6 +588,7 @@ async def get_activity_index_page(
         "GET",
         ACTIVITY_LIST_ENDPOINT,
         bulk=bulk,
+        on_sent=on_sent,
         params={**params, **extra, "page": page},
     )
     elapsed_ms = (time.perf_counter() - t0) * 1000
@@ -584,6 +598,7 @@ async def get_activity_index_page(
 
 async def get_all_activities(
     user_session: aiohttp.ClientSession,
+    on_sent: Optional[Callable[[], None]] = None,
 ) -> AsyncGenerator[Activity, None]:
     """
     Yield every one of the athlete's activities, newest first.
@@ -591,6 +606,9 @@ async def get_all_activities(
     Page 1 goes alone, since most of the time it is also the last; after that
     pages go PAGE_BATCH at a time and are yielded in order, stopping at the
     first page that is not full.
+
+    `on_sent` is called once for every request that goes out, as in
+    api_request.
     """
     log.debug("getting user index")
     t0 = time.perf_counter()
@@ -600,7 +618,7 @@ async def get_all_activities(
     while page <= MAX_PAGE:
         pages = range(page, page + batch)
         results = await asyncio.gather(
-            *(get_activity_index_page(user_session, p) for p in pages)
+            *(get_activity_index_page(user_session, p, on_sent=on_sent) for p in pages)
         )
         for p, result in zip(pages, results):
             for A in result:

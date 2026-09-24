@@ -307,7 +307,7 @@ async def import_user_entries(**user):
     heartbeat = asyncio.create_task(keep_flag_alive())
     error = None
     try:
-        async for A in strava.get_all_activities():
+        async for A in strava.get_all_activities(on_sent=cost.sent):
             if A is not None:
                 docs.append(mongo_doc(**A, ts=now))
     except (ClientResponseError, Strava.RateLimitExceeded) as e:

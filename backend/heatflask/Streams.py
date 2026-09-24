@@ -177,15 +177,18 @@ async def strava_import(
     await strava.update_access_token()
 
     leftovers: list[Strava.StreamsResult] = []
+    cost = History.ReadCost()
     # whose import it is, for the fair share of Strava's window (RateLimit)
     aiterator = strava.get_many_streams(
-        activity_ids, leftovers=leftovers, owner=user.get(Users.UserField.ID)
+        activity_ids,
+        leftovers=leftovers,
+        owner=user.get(Users.UserField.ID),
+        on_sent=cost.sent,
     )
 
     unsaved: list[StreamsDoc] = []
     now = datetime.datetime.now(datetime.timezone.utc)
     imported = 0
-    cost = History.ReadCost()
 
     def pack(aid: int, streams: Strava.Streams) -> PackedStreams | None:
         """

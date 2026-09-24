@@ -42,6 +42,9 @@ class QuerySummary:
 
     owner: int | None = None
     streams: bool = False
+    # which of the four kinds of query this was; see QueryKind. Not "kind",
+    # which every History entry already has: request, import, and so on
+    what: str = "map"
     # the browser's own cache: activities it already had and did not ask for.
     # Reported by the client, because only it knows -- a render served
     # entirely from IndexedDB never reaches us at all, and one served partly
@@ -57,7 +60,7 @@ class QuerySummary:
     seconds: float = 0.0
 
     def message(self, viewer: int | None) -> str:
-        what = "map" if self.streams else "list"
+        what = self.what
         if self.owner is None:
             what += " of all athletes"
         who = "owner" if viewer and viewer == self.owner else (viewer or "anon")
@@ -79,6 +82,7 @@ class QuerySummary:
 
     def stats(self) -> dict:
         return {
+            "what": self.what,
             "streams": self.streams,
             "excluded": self.excluded,
             "new": self.new,
@@ -89,6 +93,45 @@ class QuerySummary:
             "outcome": self.outcome,
             "seconds": round(self.seconds, 2),
         }
+
+
+class QueryKind:
+    """
+    What a query was for, as its History entry names it.
+
+    The server is told none of this outright. It goes by what each client
+    already sends, and every query comes from one of these:
+
+        list          the activity list page, which alone asks for
+                      stream_status
+        map           a map render with the browser's track cache off: one
+                      query, summaries and tracks together
+        summaries     the first of a cached render's two queries, which asks
+                      for summaries only
+        tracks        the second, for the tracks the browser lacks; it
+                      alone reports browser_hits
+
+    A "summaries" entry with no "tracks" after it is a render the
+    browser drew entirely from its own cache: with nothing missing, there is
+    no second query. Every one of these used to be called "list" if it asked
+    for no tracks and "map" if it did, so a cached render looked like a visit
+    to the activity list page.
+    """
+
+    LIST = "list"
+    MAP = "map"
+    SUMMARIES = "summaries"
+    TRACKS = "tracks"
+
+    @classmethod
+    def of(cls, query: dict) -> str:
+        if query.get("stream_status"):
+            return cls.LIST
+        if not query.get("streams"):
+            return cls.SUMMARIES
+        if "browser_hits" in query:
+            return cls.TRACKS
+        return cls.MAP
 
 
 @bp.post("/")
@@ -188,6 +231,7 @@ async def sport_types(request: SessionRequest):
 
 async def run_query(request: SessionRequest, summary: QuerySummary):
     query = request.json
+    summary.what = QueryKind.of(query)
 
     streams = query.pop("streams", False)
     # The activity list asks for this to show which activities we hold streams

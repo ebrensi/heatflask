@@ -16,7 +16,7 @@ import aiohttp
 import pytest
 from sanic import Sanic
 
-from heatflask import History, Index, Streams, Users
+from heatflask import History, Index, Strava, Streams, Users
 from heatflask.webserver import sessions
 from heatflask.webserver.bp import activities as activities_bp
 from heatflask.webserver.bp import auth as auth_bp
@@ -193,11 +193,34 @@ def test_a_query_summary_says_what_it_cost():
     s.outcome, s.sent = "closed by the browser", 150
     assert "closed by the browser, sent 150, 4.1s" in s.message(None)
 
-    everyone = activities_bp.QuerySummary(activities=200, excluded=40)
+    everyone = activities_bp.QuerySummary(
+        what=activities_bp.QueryKind.SUMMARIES, activities=200, excluded=40
+    )
     assert everyone.message(5) == (
-        "list of all athletes, viewed by 5: 200 activities"
+        "summaries of all athletes, viewed by 5: 200 activities"
         " (+40 already in the browser), 0.0s"
     )
+
+
+@pytest.mark.parametrize(
+    "body, what",
+    [
+        # the activity list page: the only query asking for stream_status
+        ({"streams": False, "stream_status": True, "limit": 0}, "list"),
+        # a render with the browser's cache off: one query for everything
+        ({"streams": True}, "map"),
+        # a cached render's first query, summaries only
+        ({"streams": False}, "summaries"),
+        # and its second, for the tracks the browser lacks
+        ({"streams": True, "activity_ids": [3], "browser_hits": 0}, "tracks"),
+    ],
+)
+async def test_a_query_is_named_for_what_asked_for_it(query_route, body, what):
+    # A cached render's summaries used to be called "list", the same as a
+    # visit to the activity list page
+    entry = await query_route({"user_id": 12, **body})
+    assert entry["msg"].startswith(f"{what}, viewed by anon:")
+    assert entry["stats"]["what"] == what
 
 
 @pytest.fixture
@@ -290,19 +313,11 @@ async def test_a_refused_map_is_recorded_as_refused(query_route):
     assert "refused: private" in entry["msg"]
 
 
-def test_read_cost_counts_what_strava_charged(limiter):
-    limiter.read.used_day = 100
+def test_read_cost_counts_each_request_sent():
     cost = History.ReadCost()
-    limiter.read.used_day = 143
-    assert cost.reads == 43
-
-
-def test_read_cost_is_never_negative(limiter):
-    limiter.read.used_day = 100
-    cost = History.ReadCost()
-    # the daily meter rolled over mid-import
-    limiter.read.used_day = 0
-    assert cost.reads == 0
+    for _ in range(3):
+        cost.sent()
+    assert cost.reads == 3
 
 
 async def test_a_streams_import_records_what_it_fetched(
@@ -319,7 +334,67 @@ async def test_a_streams_import_records_what_it_fetched(
     assert entry["streams"] == 10
     assert entry["requested"] == 10
     assert entry["user"] == 1
-    assert entry["reads"] >= 0
+    assert entry["reads"] == 10
+
+
+async def test_imports_side_by_side_are_charged_only_their_own_reads(
+    limiter, strava_server, streams_collection, history
+):
+    # Each import's cost was the rise in the app-wide daily meter while it
+    # ran, so two at once were each charged for both
+    await strava_server()
+
+    async def run(n, uid):
+        return [
+            aid
+            async for aid, _ in Streams.strava_import(
+                list(range(uid * 1000, uid * 1000 + n)), **make_user(uid)
+            )
+        ]
+
+    await asyncio.gather(run(12, 1), run(5, 2))
+    await drain()
+
+    imports = [d for d in history.docs if d["kind"] == History.Kind.IMPORT]
+    assert {d["user"]: d["reads"] for d in imports} == {1: 12, 2: 5}
+    assert "(12 Strava reads)" in next(d["msg"] for d in imports if d["user"] == 1)
+
+
+async def test_an_index_import_counts_its_own_pages(
+    limiter, strava_server, monkeypatch, history
+):
+    await strava_server(n_activities=450)
+
+    class FakeIndex:
+        async def insert_many(self, docs, ordered=True):
+            class R:
+                inserted_ids = [d["_id"] for d in docs]
+
+            return R()
+
+    async def get_collection():
+        return FakeIndex()
+
+    async def nothing(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(Index, "get_collection", get_collection)
+    # the fake's activities are bare ids, which mongo_doc rightly rejects
+    monkeypatch.setattr(Index, "mongo_doc", lambda id, **rest: {"_id": id})
+    monkeypatch.setattr(Index, "delete_user_entries", nothing)
+    monkeypatch.setattr(Index, "set_import_flag", nothing)
+    monkeypatch.setattr(Index, "clear_import_flag", nothing, raising=False)
+    monkeypatch.setattr(Index, "check_import_progress", nothing)
+    # something else spending reads meanwhile must not be charged to it
+    limiter.read.used_day = 1_000
+
+    await Index.import_user_entries(**make_user(7))
+    await drain()
+
+    (entry,) = [d for d in history.docs if d["kind"] == History.Kind.IMPORT]
+    # 450 activities at 200 a page. Page 1 goes alone, then a batch of
+    # PAGE_BATCH at once, and every page sent is charged, empty or not
+    assert entry["reads"] == 1 + Strava.PAGE_BATCH
 
 
 def make_app(monkeypatch, admin: bool):
