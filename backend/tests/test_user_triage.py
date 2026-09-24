@@ -8,9 +8,10 @@ the only token that can revoke our access) is dropped.
 
 import time
 
+import aiohttp
 import pytest
 
-from heatflask import Index, Updates, Users
+from heatflask import Index, Strava, Updates, Users
 
 U = Users.U
 YEAR = Users.TTL
@@ -59,7 +60,6 @@ def user(uid, last_login):
     return {
         U.ID: uid,
         U.LAST_LOGIN: last_login,
-        # current, so no refresh happens first
         U.AUTH: {
             "access_token": f"access-{uid}",
             "refresh_token": "refresh-0",
@@ -85,7 +85,26 @@ async def test_a_confirmed_deauthorization_drops_the_user(setup):
     strava, coll = setup
     counts = await Users.triage()
     assert counts == {"deleted": 1}
-    assert strava.deauths == [f"Bearer access-{STALE}"]
+    # as the application, with the refresh token, and no refresh first
+    app = aiohttp.encode_basic_auth(str(Strava.CLIENT_ID), Strava.CLIENT_SECRET)
+    assert strava.deauths == [(app, "refresh-0", "refresh_token")]
+    assert strava.token_requests == 0
+    assert list(coll.docs) == [ACTIVE]
+
+
+async def test_a_stale_access_token_is_revoked_without_a_refresh(setup):
+    strava, coll = setup
+    coll.docs[STALE][U.AUTH]["expires_at"] = 0
+    assert await Users.triage() == {"deleted": 1}
+    assert strava.token_requests == 0
+    assert [token for _, token, _ in strava.deauths] == ["refresh-0"]
+
+
+async def test_a_user_without_a_token_is_dropped(setup):
+    strava, coll = setup
+    del coll.docs[STALE][U.AUTH]
+    assert await Users.triage() == {"deleted": 1}
+    assert strava.deauths == []
     assert list(coll.docs) == [ACTIVE]
 
 
@@ -101,17 +120,23 @@ async def test_a_passing_failure_keeps_the_user_and_token(setup):
     strava.deauth_status = 503
     assert await Users.triage() == {"error": 1}
     assert U.AUTH in coll.docs[STALE]
-    assert U.DEAUTH_REFUSALS not in coll.docs[STALE]
 
 
-async def test_refused_credentials_are_dropped_only_after_repeated_runs(setup):
+async def test_a_refused_revoke_never_drops_the_user(setup):
+    # revoke accepts dead tokens, so a 401 means our request is wrong and the
+    # athlete's token may still be live
     strava, coll = setup
     strava.deauth_status = 401
-    for run in range(1, Users.MAX_DEAUTH_REFUSALS):
-        assert await Users.triage() == {"refused": 1}
-        assert coll.docs[STALE][U.DEAUTH_REFUSALS] == run
-    assert await Users.triage() == {"deleted": 1}
-    assert list(coll.docs) == [ACTIVE]
+    for _ in range(5):
+        assert await Users.triage() == {"error": 1}
+    assert U.AUTH in coll.docs[STALE]
+
+
+async def test_a_rate_limited_revoke_stops_triage(setup):
+    strava, coll = setup
+    strava.deauth_status = 429
+    assert await Users.triage() == {"limited": 1}
+    assert U.AUTH in coll.docs[STALE]
 
 
 async def test_a_deauthorization_webhook_forgets_the_athlete(setup, monkeypatch):

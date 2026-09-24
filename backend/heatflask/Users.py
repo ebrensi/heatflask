@@ -28,11 +28,6 @@ COLLECTION_NAME = "users_v0"
 # not logging in
 TTL = 365 * 24 * 3600
 
-# Triage runs at each server start (Heroku restarts dynos daily). This is on
-# how many runs Strava must refuse a stale user's credentials before we give up
-# on revoking them and drop the record
-MAX_DEAUTH_REFUSALS = 3
-
 # These are IDs of users we consider to be admin users
 ADMIN = [15972102]
 
@@ -58,7 +53,6 @@ class UserField:
     COUNTRY: Final = "C"
     AUTH: Final = "@"
     PRIVATE: Final = "p"
-    DEAUTH_REFUSALS: Final = "x"
 
 
 U = UserField
@@ -284,18 +278,8 @@ async def delete(user_id, deauthenticate=True):
     #  make sure it is done before deleting this user from mongodb.
     #  Afterwards it is useless so we can delete it.
     if user and (U.AUTH in user) and deauthenticate:
-        client = strava_client(user)
-        try:
-            await client.deauthenticate(raise_exception=True)
-        except ClientResponseError as e:
-            log.info(
-                "user %s is already deauthenticated? (%s, %s)",
-                user_id,
-                e.status,
-                e.message,
-            )
-        except Exception:
-            log.exception("strava error?")
+        # logs its own failure
+        await strava_client(user).deauthenticate()
 
     users = await get_collection()
     try:
@@ -316,25 +300,22 @@ async def delete(user_id, deauthenticate=True):
 async def deauthorize(user: dict) -> str:
     """
     Revoke our Strava access for this user. Returns
-      "revoked"  Strava confirmed it
-      "refused"  Strava would not take our credentials: the athlete already
-                 revoked us, or the stored refresh token is dead. A refresh that
-                 failed for a passing reason looks the same, hence the retries
-                 in retire().
-      "limited"  out of API budget; stop and try again later
-      "error"    anything else (network, Strava 5xx); try again later
+      "revoked"  Strava confirmed it, or there was no token to revoke. Strava
+                 confirms a token it does not know, too: one the athlete
+                 already revoked, or a dead refresh token.
+      "limited"  Strava answered 429; stop and try again later
+      "error"    anything else; try again later. A 4xx here means our request
+                 is wrong, not the athlete's token, so the token may still
+                 be live.
     """
-    if U.AUTH not in user:
-        return "refused"
+    if not user.get(U.AUTH):
+        return "revoked"
     try:
-        # bulk: this can wait for rate-limit budget; nobody is waiting on it
-        await strava_client(user).deauthenticate(raise_exception=True, bulk=True)
-    except Strava.RateLimitExceeded:
-        return "limited"
+        await strava_client(user).deauthenticate(raise_exception=True)
     except ClientResponseError as e:
-        if e.status in (400, 401, 403):
-            return "refused"
-        log.info(
+        if e.status == 429:
+            return "limited"
+        log.warning(
             "user %s deauthorization failed: %s %s", user[U.ID], e.status, e.message
         )
         return "error"
@@ -349,20 +330,19 @@ async def retire(user: dict) -> str:
     Deauthorize an inactive user and drop their record, but never drop a record
     whose token might still revoke access: once it is gone, Strava keeps
     sending us that athlete's webhook events and nothing can stop it.
+
+    Records used to be dropped anyway after Strava refused their token on
+    three runs, since /oauth/deauthorize could not tell a dead token from a
+    live one. /oauth/revoke accepts a dead one, so a refusal now means only
+    that our request failed.
     """
     outcome = await deauthorize(user)
+    if outcome != "revoked":
+        return outcome
     users = await get_collection()
-    refusals = user.get(U.DEAUTH_REFUSALS, 0) + (outcome == "refused")
-
-    if outcome == "revoked" or refusals >= MAX_DEAUTH_REFUSALS:
-        await users.delete_one({U.ID: user[U.ID]})
-        log.info("retired user %s (%s)", user[U.ID], outcome)
-        return "deleted"
-    if outcome == "refused":
-        await users.update_one(
-            {U.ID: user[U.ID]}, {"$set": {U.DEAUTH_REFUSALS: refusals}}
-        )
-    return outcome
+    await users.delete_one({U.ID: user[U.ID]})
+    log.info("retired user %s", user[U.ID])
+    return "deleted"
 
 
 async def triage(*_app, only_find=False):

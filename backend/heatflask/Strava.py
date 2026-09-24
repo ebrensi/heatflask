@@ -41,8 +41,8 @@ STALE_TOKEN: Final = 300  # Refresh access token if only this many seconds left
 def log_failure(client, func, e: Exception) -> None:
     """
     Log a failed call without its URL. An aiohttp ClientResponseError's text
-    includes the request URL, and the token and subscription endpoints take
-    client_secret (and refresh tokens, auth codes) in the query string.
+    includes the request URL, and the subscription endpoints take
+    client_secret in the query string.
     """
     if isinstance(e, aiohttp.ClientResponseError):
         log.warning(
@@ -779,22 +779,39 @@ async def get_access_token(
         )
     )
 
-    async with session.post(TOKEN_EXCHANGE_ENDPOINT, params=params) as response:
+    # In the form body, not the query string, where client_secret and the
+    # token or code would land in every URL that gets logged
+    async with session.post(TOKEN_EXCHANGE_ENDPOINT, data=params) as response:
         rjson = await response.json()
     return cast(TokenExchangeResponse, rjson)
 
 
-class DeauthResponse(TypedDict):
-    access_token: str
+REVOKE_ENDPOINT = "/oauth/revoke"
 
 
-DEAUTH_ENDPOINT = "/oauth/deauthorize"
+async def revoke(
+    session: aiohttp.ClientSession,
+    token: str,
+    token_type_hint: Literal["refresh_token", "access_token"] = "refresh_token",
+) -> None:
+    """
+    Revoke an athlete's grant to us. Revoking either of their tokens revokes
+    the other, and Strava answers 200 whether or not it knew the token, so a
+    token that is already dead comes back as revoked too.
 
-
-async def deauth(session, bulk: bool = False):
-    log.debug("  deauthenticating")
-    status, response = await api_request(session, "POST", DEAUTH_ENDPOINT, bulk=bulk)
-    return cast(DeauthResponse, response)
+    This replaces POST /oauth/deauthorize, which Strava retires on 1 June 2027.
+    That one authenticated with the athlete's access token, so a stale token
+    had to be refreshed first. This one authenticates as the application
+    (HTTP Basic, client_id:client_secret) and takes the refresh token, which
+    does not expire. The header here replaces any Bearer header the session
+    sends by default.
+    """
+    auth = aiohttp.encode_basic_auth(str(CLIENT_ID), CLIENT_SECRET)
+    data = {"token": token, "token_type_hint": token_type_hint}
+    async with session.post(
+        REVOKE_ENDPOINT, data=data, headers={"Authorization": auth}
+    ) as response:
+        response.raise_for_status()
 
 
 # ---------------------------------------------------------------------------- #
@@ -1112,8 +1129,7 @@ class AsyncClient:
             )
         except Exception as e:
             # Not %r of the exception: a ClientResponseError's repr carries the
-            # request URL, whose query string holds client_secret and the
-            # refresh token or auth code
+            # request URL, and the credentials used to ride in its query string
             detail = (
                 f"{e.status} {e.message}"
                 if isinstance(e, aiohttp.ClientResponseError)
@@ -1143,10 +1159,38 @@ class AsyncClient:
         log.info("%s token refresh took %d", self.name, elapsed)
         return new_auth_info
 
+    async def deauthenticate(self, raise_exception: bool = False) -> bool:
+        """
+        Revoke this athlete's grant to us. True if Strava confirmed it.
+
+        No refresh first: revoke takes the refresh token as it is. It does
+        take the refresh lock, and the latest stored credentials, so that it
+        cannot revoke a refresh token that a refresh in flight is replacing.
+        """
+        async with refresh_lock(self.name):
+            if self.token_store:
+                latest = await self.token_store.load()
+                if latest:
+                    self.set_credentials(latest)
+            token = self.refresh_token or self.access_token
+            if not token:
+                return False
+            hint: Literal["refresh_token", "access_token"] = (
+                "refresh_token" if self.refresh_token else "access_token"
+            )
+            try:
+                async with aiohttp.ClientSession(
+                    DOMAIN, raise_for_status=True
+                ) as session:
+                    await revoke(session, token, hint)
+            except Exception as e:
+                if raise_exception:
+                    raise
+                log_failure(self, revoke, e)
+                return False
+        return True
+
     # Wrapped functions
-    def deauthenticate(self, **kwargs: Any) -> Awaitable[DeauthResponse]:
-        """Revoke this client's Credentials"""
-        return self.__run_with_session(deauth, **kwargs)
 
     def get_athlete(self, **kwargs: Any) -> Awaitable[Athlete]:
         """Return the current Athlete, whose credentials we are using"""

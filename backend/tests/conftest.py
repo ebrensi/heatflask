@@ -67,9 +67,10 @@ class FakeStrava:
         self.token_requests = 0
         self.subscription: int | None = 555
         self.subscription_lookups = 0
-        # what POST /oauth/deauthorize answers, and the access tokens it was sent
+        # what POST /oauth/revoke answers, and the (Authorization header,
+        # token, token_type_hint) of each request it was sent
         self.deauth_status = 200
-        self.deauths: list[str] = []
+        self.deauths: list[tuple[str, str, str]] = []
         self.url = ""
 
     def count(self) -> int:
@@ -145,7 +146,7 @@ class FakeStrava:
         invalidates the one used, at once.
         """
         self.token_requests += 1
-        old = request.query.get("refresh_token")
+        old = (await request.post()).get("refresh_token")
         if old not in self.valid_refresh_tokens:
             return web.json_response({"message": "Bad Request"}, status=400)
         self.valid_refresh_tokens.discard(old)
@@ -162,11 +163,19 @@ class FakeStrava:
             }
         )
 
-    async def deauthorize(self, request):
-        self.deauths.append(request.headers.get("Authorization", ""))
+    async def revoke(self, request):
+        """Like Strava: 200 and an empty body, known token or not"""
+        form = await request.post()
+        self.deauths.append(
+            (
+                request.headers.get("Authorization", ""),
+                form.get("token", ""),
+                form.get("token_type_hint", ""),
+            )
+        )
         if self.deauth_status != 200:
             return web.json_response({"message": "no"}, status=self.deauth_status)
-        return web.json_response({"access_token": "revoked"})
+        return web.Response(status=200)
 
     async def activity(self, request):
         ok, used = self.metered()
@@ -214,7 +223,7 @@ async def strava_server(monkeypatch):
         app.router.add_get("/api/v3/activities/{id}", fake.activity)
         app.router.add_get("/api/v3/athlete/activities", fake.activities)
         app.router.add_post("/oauth/token", fake.token)
-        app.router.add_post("/oauth/deauthorize", fake.deauthorize)
+        app.router.add_post("/oauth/revoke", fake.revoke)
         app.router.add_get("/api/v3/push_subscriptions", fake.subscriptions)
         app.router.add_delete(
             "/api/v3/push_subscriptions/{id}", fake.delete_subscription
