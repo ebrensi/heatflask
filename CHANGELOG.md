@@ -47,6 +47,47 @@ feel of the original, with several updates:
 - Faster data transfer and caching
 - Improved pan and zoom performance
 
+### How it got here
+
+About 690 commits separate this from 0.4.0-alpha. Most of them went into a
+rewrite, frontend first and then backend, that was set aside in 2022 and
+finished in September 2026. The 2020 app, kept on the `legacy2020` branch,
+served www.heatflask.com the whole time.
+
+- **2020: a real frontend build.** Parcel bundling began in March 2020, in
+  place of Flask-Assets, and in April "total frontend refactoring" started:
+  the code became ES modules with npm dependencies, Leaflet was imported as
+  modules, and Parcel 2 (then in beta) built it. Map tiles were cached in
+  IndexedDB and made much faster to read back that October, and the backend
+  gained an offline mode for development without a network.
+- **2021: TypeScript, and WebAssembly.** The frontend moved to TypeScript in
+  January 2021. The same winter, drawing was moved into AssemblyScript
+  compiled to WebAssembly. It measured slower than plain JavaScript and was
+  never switched on, and it was deleted in 2026 along with the incremental
+  redraw machinery it had been written for.
+- **2022: a new backend.** Early in 2022 the Flask backend was rewritten as an
+  async Sanic app with MongoDB and Redis: new Strava, Users, Index and Streams
+  modules, a script to migrate users from the old PostgreSQL database, Strava
+  webhook callbacks, OpenAPI docs, and activity streams encoded compactly for
+  transfer and decoded in the browser. Work stopped in May 2022 with the new
+  frontend not yet drawing anything.
+- **2025: keeping the old app alive.** In late 2025 a Nix development
+  environment was added, and the production app was moved from the retired
+  heroku-18 stack to heroku-24.
+- **September 2026: finishing it.** The rewrite was picked up again, with
+  help from Claude, and finished in four days:
+  - the WASM layer deleted and the dot animation connected, which it had
+    never been on the new branch
+  - activity streams cached in the browser, and MP4 recording
+  - one MongoDB database (Redis dropped), Python 3.13 and Sanic 25.12
+  - Strava requests paced by the rate-limit headers, imports that can be
+    stopped from the browser, webhook payloads checked against Strava, and
+    escaping for text from Strava and URLs
+  - a backend test suite, a Dockerfile and Heroku's container stack
+
+  On 2026-09-14 the new code became the main branch and went live on
+  www.heatflask.com, with 3,740 users moved from PostgreSQL to MongoDB Atlas.
+
 ## [0.4.0-alpha] — 2020-07-16
 
 The first tagged release, after four and a half years and about 2,100
