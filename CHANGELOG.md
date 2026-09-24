@@ -8,6 +8,13 @@ everything since the one before it.
 
 ## Unreleased
 
+## [1.7.3] — 2026-09-24
+
+### Under the hood
+- Access is revoked through Strava's new **`/oauth/revoke`** endpoint rather than `/oauth/deauthorize`, which Strava retires on 1 June 2027. It takes the refresh token as is, so revoking no longer costs a token refresh first, and it accepts tokens that are already dead, so inactive users whose tokens have died are retired on the first try instead of the third.
+- Token exchanges send the client secret and token in the form body instead of the URL.
+- Strava's move of the API to a new host (`api-v3.strava.com`) is still to come: the host does not exist until 4 January 2027.
+
 ## [1.7.2] — 2026-09-23
 
 The first release since v1.0.0: nine days, a new map engine, and a lot of new ways to look at your activities. Every map link made since v1.0.0 still opens the same map (see [docs/VERSIONING.md](docs/VERSIONING.md)).
@@ -130,6 +137,7 @@ At the tag, the app was Flask with gevent and flask-sockets, Leaflet with the
 canvas dot layer, and PostgreSQL, Redis and MongoDB behind it. Work on a
 Parcel build for the frontend had started that March on a separate branch.
 
+[1.7.3]: https://github.com/ebrensi/heatflask/compare/v1.7.2...v1.7.3
 [1.7.2]: https://github.com/ebrensi/heatflask/compare/v1.0.0...v1.7.2
 [1.0.0]: https://github.com/ebrensi/heatflask/releases/tag/v1.0.0
 [0.4.0-alpha]: https://github.com/ebrensi/heatflask/releases/tag/v0.4.0-alpha
