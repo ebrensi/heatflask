@@ -113,6 +113,10 @@ says exactly what they were running.
    it; nothing reads it, but a stale number there is a lie).
 3. Add the release to the list above if it moved the URL surface, with the commit
    that did it.
-4. Commit, then tag: `git tag -a v1.4.0 -m "…"` and `git push --tags`.
-5. Pushing `main` deploys production; check the console banner on the deployed
+4. Move what has gathered under **Unreleased** in [`CHANGELOG.md`](../CHANGELOG.md)
+   into a section for the new version, with its date and a compare link.
+5. Commit, then tag: `git tag -a v1.4.0 -m "…"` and `git push --tags`.
+6. Pushing `main` deploys production; check the console banner on the deployed
    site to confirm the version it reports.
+7. For a GitHub release, `gh release create v1.4.0 --notes-file <notes>`, with
+   the new changelog section as the notes.
