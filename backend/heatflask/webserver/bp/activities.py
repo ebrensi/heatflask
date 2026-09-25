@@ -357,7 +357,9 @@ async def run_query(request: SessionRequest, summary: QuerySummary):
     streams_iter = Streams.aiter_query(
         activity_ids=ids, user=target_user, counts=summary.counts
     )
-    items = with_wait_notices(streams_iter, sendPacked)
+    items = with_wait_notices(
+        streams_iter, sendPacked, owner=target_user[U.ID] if target_user else None
+    )
     try:
         async with aclosing(items):
             async for aid, packed_streams in items:
@@ -366,8 +368,17 @@ async def run_query(request: SessionRequest, summary: QuerySummary):
                 await sendPacked(A)
                 summary.sent += 1
     except Strava.RateLimitExceeded as e:
-        summary.outcome = "rate limit"
-        await sendPacked({"error": e.message})
+        summary.outcome = "rationed for today" if e.rationed else "rate limit"
+        # The message is for the log. The browser says it in the reader's
+        # language, from the rest.
+        await sendPacked(
+            {
+                "error": e.message,
+                "until": round(e.resume_at),
+                "daily": e.daily,
+                "rationed": e.rationed,
+            }
+        )
 
 
 # While a query is stalled waiting on Strava's rate limit, the browser is told
@@ -377,10 +388,13 @@ async def run_query(request: SessionRequest, summary: QuerySummary):
 WAIT_NOTICE_INTERVAL = 10
 
 
-async def with_wait_notices(aiterator, sendPacked):
+async def with_wait_notices(aiterator, sendPacked, owner: int | None = None):
     """
     Yield from aiterator, sending {"wait": epoch} whenever it has produced
     nothing for WAIT_NOTICE_INTERVAL seconds and Strava's rate limit is why.
+
+    With `rationed` too, when `owner` has had their DAILY_QUOTA of tracks
+    today: the browser tells them why they, in particular, are slower.
 
     On the way out, for any reason -- finished, failed, or cancelled because
     the client disconnected -- aiterator is closed, which stops its Strava
@@ -398,7 +412,12 @@ async def with_wait_notices(aiterator, sendPacked):
                         break
                     resume_at = Strava.limiter.waiting_until
                     if resume_at:
-                        await sendPacked({"wait": round(resume_at)})
+                        await sendPacked(
+                            {
+                                "wait": round(resume_at),
+                                "rationed": Strava.limiter.is_rationed(owner),
+                            }
+                        )
             except BaseException:
                 next_item.cancel()
                 await asyncio.gather(next_item, return_exceptions=True)

@@ -14,7 +14,7 @@ import aiohttp
 import msgpack
 from sanic import Sanic
 
-from heatflask import Index, Streams
+from heatflask import RateLimit, Index, Streams
 from heatflask.webserver.bp import activities
 
 from conftest import make_user
@@ -59,7 +59,30 @@ async def test_wait_notices_while_stalled_on_the_rate_limit(limiter, monkeypatch
 
     assert got == ["item"]
     assert len(sent) >= 2
-    assert all(doc == {"wait": round(limiter.resume_at)} for doc in sent)
+    assert all(
+        doc == {"wait": round(limiter.resume_at), "rationed": False} for doc in sent
+    )
+
+
+async def test_a_wait_notice_says_when_the_athlete_is_rationed(limiter, monkeypatch):
+    # so the browser can tell them it is their share of the day, not an outage
+    monkeypatch.setattr(activities, "WAIT_NOTICE_INTERVAL", 0.1)
+    limiter.tracks_today(7, time.time())
+    limiter._today[7] = RateLimit.DAILY_QUOTA
+    sent = []
+
+    async def send(doc):
+        sent.append(doc)
+
+    async def stalled():
+        limiter._waiting += 1
+        limiter.resume_at = time.time() + 60
+        await asyncio.sleep(0.3)
+        limiter._waiting -= 1
+        yield "item"
+
+    [x async for x in activities.with_wait_notices(stalled(), send, owner=7)]
+    assert sent and all(doc["rationed"] for doc in sent)
 
 
 async def test_no_wait_notices_when_the_rate_limit_is_not_why(limiter, monkeypatch):

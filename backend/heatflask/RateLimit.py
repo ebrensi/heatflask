@@ -48,6 +48,25 @@ The policy that follows:
     took every read in the window, and everyone who came after it saw
     nothing for fifteen minutes at a time. An import on its own is not held
     back at all.
+
+  * Bulk work comes in three priorities, and each stops further short of
+    the limits than the one above it, so what a lower priority leaves is
+    there for a higher one:
+
+        INDEX     an athlete's index: a few reads, and nothing can be drawn
+                  until it is done. Stops RESERVE // 5 short.
+        TRACKS    track imports. Stops RESERVE short.
+        RATIONED  track imports for an athlete who has already had
+                  DAILY_QUOTA tracks from Strava today. Stops RESERVE plus
+                  RATIONED_HOLDBACK of each limit short, so however much of
+                  a catalogue one athlete wants, a third of every window and
+                  of every day is left for everyone else.
+
+    As of 2026-09-24 a first map of a few thousand activities spent whole
+    windows on its own: a new athlete signing up behind it waited fifteen
+    minutes for an index that costs five reads, and the athlete importing
+    gave up at the stall, again and again. Whole catalogues are meant to
+    come from Strava's data export instead.
 """
 
 import asyncio
@@ -56,6 +75,7 @@ import time
 from contextlib import asynccontextmanager
 from collections import Counter
 from dataclasses import dataclass
+from enum import IntEnum
 from logging import getLogger
 from typing import AsyncIterator, Final, Mapping, Optional
 
@@ -78,6 +98,22 @@ CONCURRENCY: Final = 10
 # in the same instant.
 SETTLE: Final = 2.0
 JITTER: Final = 3.0
+
+# Tracks an athlete may have from Strava in a UTC day before their imports
+# drop to RATIONED priority
+DAILY_QUOTA: Final = 200
+
+# The fraction of each limit RATIONED work leaves for everyone else
+RATIONED_HOLDBACK: Final = 1 / 3
+
+
+class Priority(IntEnum):
+    """How urgent a piece of bulk work is. See the module docstring."""
+
+    RATIONED = 0
+    TRACKS = 1
+    INDEX = 2
+
 
 # How often an import held to its fair share looks again, in case the
 # imports it was sharing with have finished and left it the rest
@@ -104,12 +140,16 @@ class RateLimitExceeded(Exception):
 
     status = 429
 
-    def __init__(self, resume_at: float, daily: bool = False):
+    def __init__(self, resume_at: float, daily: bool = False, rationed: bool = False):
         self.resume_at = resume_at
         self.daily = daily
+        # stopped by this athlete's share of the day, not the app's whole limit
+        self.rationed = rationed
         when = time.strftime("%H:%M UTC", time.gmtime(resume_at))
         which = "daily" if daily else "15-minute"
         self.message = f"Strava {which} rate limit reached; try again after {when}"
+        if rationed:
+            self.message += " (this athlete has had their share today)"
         super().__init__(self.message)
 
 
@@ -199,6 +239,10 @@ class RateLimiter:
         self._active: Counter[int] = Counter()
         self._reads_by: Counter[int] = Counter()
         self._share_window = 0
+        # Tracks each athlete has had from Strava in the UTC day numbered
+        # _quota_day, for DAILY_QUOTA. Kept in memory, so a restart forgives it.
+        self._today: Counter[int] = Counter()
+        self._quota_day = 0
 
         self._semaphore: Optional[asyncio.Semaphore] = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
@@ -220,24 +264,70 @@ class RateLimiter:
         assert self._semaphore is not None
         return self._semaphore
 
-    def check(self, method: str, bulk: bool, now: float) -> float:
+    def held_back(self, limit: int, priority: Priority) -> int:
+        """How far short of `limit` bulk work of this priority stops"""
+        if priority >= Priority.INDEX:
+            return self.reserve // 5
+        if priority == Priority.TRACKS:
+            return self.reserve
+        return self.reserve + int(limit * RATIONED_HOLDBACK)
+
+    def check(
+        self,
+        method: str,
+        bulk: bool,
+        now: float,
+        priority: Priority = Priority.TRACKS,
+    ) -> float:
         """
         Seconds to wait before this request may go, 0 if it may go now.
 
         Raises RateLimitExceeded when the day is spent, and for interactive
-        requests when the 15-minute window is.
+        requests when the 15-minute window is. For bulk work, "spent" is
+        short of the limit by what its priority leaves for others.
         """
-        reserve = self.reserve if bulk else 0
         wait = 0.0
         for meter in self.meters(method):
             meter.roll(now)
-            if meter.used_day >= meter.limit_day - reserve:
-                raise RateLimitExceeded(next_day(now), daily=True)
+            day_reserve = self.held_back(meter.limit_day, priority) if bulk else 0
+            if meter.used_day >= meter.limit_day - day_reserve:
+                raise RateLimitExceeded(
+                    next_day(now),
+                    daily=True,
+                    rationed=bulk
+                    and priority == Priority.RATIONED
+                    and meter.used_day < meter.limit_day - self.reserve,
+                )
+            reserve = self.held_back(meter.limit_15, priority) if bulk else 0
             if meter.used_15 >= meter.limit_15 - reserve:
                 if not bulk:
                     raise RateLimitExceeded(next_window(now))
                 wait = next_window(now) - now
         return wait
+
+    def tracks_today(self, owner: int, now: float) -> int:
+        """Tracks this athlete has had from Strava today, UTC"""
+        day = int(now // DAY)
+        if day != self._quota_day:
+            self._quota_day = day
+            self._today.clear()
+        return self._today[owner]
+
+    def is_rationed(self, owner: Optional[int], now: Optional[float] = None) -> bool:
+        """True once this athlete has had DAILY_QUOTA tracks today"""
+        if owner is None:
+            return False
+        return self.tracks_today(owner, time.time() if now is None else now) >= (
+            DAILY_QUOTA
+        )
+
+    def priority_of(
+        self, priority: Priority, owner: Optional[int], now: float
+    ) -> Priority:
+        """A track import drops to RATIONED once its athlete is past the quota"""
+        if priority == Priority.TRACKS and self.is_rationed(owner, now):
+            return Priority.RATIONED
+        return priority
 
     def reads_by(self, owner: int, now: float) -> int:
         """Bulk reads this athlete has had in the current window"""
@@ -299,13 +389,20 @@ class RateLimiter:
 
     @asynccontextmanager
     async def slot(
-        self, method: str = "GET", bulk: bool = False, owner: Optional[int] = None
+        self,
+        method: str = "GET",
+        bulk: bool = False,
+        owner: Optional[int] = None,
+        priority: Priority = Priority.TRACKS,
     ) -> AsyncIterator[float]:
         """
         Hold one request's place in the budget. Yields the time it was sent.
 
         `owner` is the athlete a bulk request is for, which is what the fair
-        share is divided by. Bulk work without one is not shared out.
+        share is divided by, and whose DAILY_QUOTA a track import draws on.
+        Bulk work without one is not shared out, and not rationed.
+
+        `priority` only matters for bulk work; see Priority.
 
         Budget is checked before taking a concurrency slot, and again after:
         a task can queue for the semaphore for a while, and must not hold it
@@ -315,7 +412,7 @@ class RateLimiter:
         if owner is not None:
             self._active[owner] += 1
         try:
-            async with self._slot(method, bulk, owner) as sent:
+            async with self._slot(method, bulk, owner, priority) as sent:
                 yield sent
         finally:
             if owner is not None:
@@ -325,11 +422,14 @@ class RateLimiter:
 
     @asynccontextmanager
     async def _slot(
-        self, method: str, bulk: bool, owner: Optional[int]
+        self, method: str, bulk: bool, owner: Optional[int], priority: Priority
     ) -> AsyncIterator[float]:
         semaphore = self.semaphore()
         while True:
-            wait = self.check(method, bulk, time.time())
+            # looked at every time round: an import can cross the quota while
+            # it waits, and the day can turn over
+            level = self.priority_of(priority, owner, time.time())
+            wait = self.check(method, bulk, time.time(), level)
             if wait:
                 await self.wait(wait)
                 continue
@@ -339,7 +439,7 @@ class RateLimiter:
 
             await semaphore.acquire()
             try:
-                wait = self.check(method, bulk, time.time())
+                wait = self.check(method, bulk, time.time(), level)
             except BaseException:
                 semaphore.release()
                 raise
@@ -354,6 +454,9 @@ class RateLimiter:
             if owner is not None and method.upper() == "GET":
                 self.reads_by(owner, sent)
                 self._reads_by[owner] += 1
+                if priority <= Priority.TRACKS:
+                    self.tracks_today(owner, sent)
+                    self._today[owner] += 1
             yield sent
         finally:
             semaphore.release()

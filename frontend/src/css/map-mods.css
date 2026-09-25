@@ -254,6 +254,17 @@
   display: none;
 }
 
+/* The countdown while Strava's rate limit holds an import up */
+.import-progress .import-wait {
+  margin-top: 0.4rem;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.1rem;
+}
+
+.import-progress .import-wait[hidden] {
+  display: none;
+}
+
 .import-progress .import-count {
   margin-top: 0.4rem;
   font-family: monospace;

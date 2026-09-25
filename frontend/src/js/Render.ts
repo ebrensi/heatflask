@@ -23,6 +23,7 @@ import {
 } from "./DataImport"
 import { nextTask } from "./appUtil"
 import { URLS } from "./Env"
+import { t } from "./i18n"
 
 import { LngLatBounds } from "maplibre-gl"
 import type { Map as MLMap } from "maplibre-gl"
@@ -72,7 +73,13 @@ type Status = {
   count?: number
   info?: QueryInfo
   wait?: number
+  /** with wait or error: this athlete has had today's quota of tracks */
+  rationed?: boolean
   error?: string
+  /** with error: Strava's limit is spent until this epoch second */
+  until?: number
+  /** with until: it is the daily limit, not the 15-minute one */
+  daily?: boolean
   /** with error: the map was refused to a viewer who could log in */
   login?: boolean
 }
@@ -85,14 +92,20 @@ function showStatus(status: Status): string | undefined {
   if (status.msg) {
     ImportProgress.message(status.msg)
   } else if (typeof status.wait === "number") {
-    const at = new Date(status.wait * 1000).toLocaleTimeString([], {
-      hour: "numeric",
-      minute: "2-digit",
-    })
-    ImportProgress.message(`Strava rate limit reached; resuming at ${at}`)
+    ImportProgress.waiting(status.wait, status.rationed)
   } else if (typeof status.error === "string") {
-    ImportProgress.message(status.error)
-    return status.error
+    /* The backend's own text is English, for its log; a rate limit it
+     * describes in parts, so the reader gets it in their language */
+    const msg =
+      typeof status.until === "number"
+        ? status.daily
+          ? ImportProgress.dailyLimit(status.until, status.rationed)
+          : t("import.waitStrava", {
+              time: ImportProgress.localTime(status.until),
+            })
+        : status.error
+    ImportProgress.message(msg)
+    return msg
   }
 }
 

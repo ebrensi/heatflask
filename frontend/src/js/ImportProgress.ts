@@ -22,7 +22,7 @@
 
 import { icon } from "./Icons"
 import { Dialog } from "./Dialog"
-import { t } from "./i18n"
+import { t, getLocale } from "./i18n"
 import { URLS } from "./Env"
 
 import type { Map as MLMap } from "maplibre-gl"
@@ -31,11 +31,14 @@ let win: Dialog
 let msgEl: HTMLElement
 let barEl: HTMLProgressElement
 let countEl: HTMLElement
+let waitEl: HTMLElement
 let stopEl: HTMLButtonElement
 let loginEl: HTMLButtonElement
 let visible = false
 let hideTimer: ReturnType<typeof setTimeout> | undefined
 let stopHandler: (() => void) | undefined
+/* Ticks the countdown while Strava's rate limit holds the import up */
+let waitTimer: ReturnType<typeof setInterval> | undefined
 
 /** How long the finished state stays up before the dialog closes. */
 const LINGER_MS = 700
@@ -51,6 +54,7 @@ export function initImportProgress(map: MLMap): void {
         <div class="info-message"></div>
         <progress class="progbar"></progress>
         <div class="import-count"></div>
+        <div class="import-wait" hidden></div>
         <button type="button" class="btn btn-c btn-sm smooth import-stop">
           <i class="hf hf-cancel-circle"></i> ${t("import.stop")}
         </button>
@@ -62,6 +66,7 @@ export function initImportProgress(map: MLMap): void {
   msgEl = root.querySelector(".info-message")
   barEl = root.querySelector(".progbar")
   countEl = root.querySelector(".import-count")
+  waitEl = root.querySelector(".import-wait")
   stopEl = root.querySelector(".import-stop")
   loginEl = root.querySelector(".import-login")
   loginEl.addEventListener("click", () => {
@@ -86,6 +91,7 @@ export function start(message = t("import.contacting")): void {
   /* A previous render's dialog may still be lingering on its final message;
    * without this its timer would close the one we are opening. */
   clearTimeout(hideTimer)
+  endWait()
   if (msgEl) msgEl.textContent = message
   if (countEl) countEl.textContent = ""
   if (stopEl) {
@@ -119,6 +125,11 @@ export function message(msg: string): void {
  */
 export function progress(received: number, total?: number): void {
   if (!win || !visible) return
+  /* Something arrived, so whatever we were waiting for is over */
+  if (waitTimer !== undefined) {
+    endWait()
+    if (msgEl) msgEl.textContent = ""
+  }
 
   if (countEl) {
     countEl.textContent = total
@@ -144,6 +155,7 @@ export function finish(finalMessage?: string, isError = false): void {
   if (!win || !visible) return
 
   if (finalMessage && msgEl) msgEl.textContent = finalMessage
+  endWait()
   if (stopEl) stopEl.hidden = true
   visible = false
   hideTimer = setTimeout(
@@ -178,6 +190,68 @@ export function refused(msg: string, login: boolean): void {
 /** Close immediately, leaving an error on screen is the caller's business. */
 export function hide(): void {
   if (!win) return
+  endWait()
   visible = false
   win.hide()
+}
+
+/**
+ * A time the reader can act on, in their own language's format: just the
+ * clock time today, with the weekday when it is not today (the daily limit
+ * resets at midnight UTC, which is tomorrow or later for most of the world).
+ */
+export function localTime(epochSeconds: number): string {
+  const when = new Date(epochSeconds * 1000)
+  const sameDay = when.toDateString() === new Date().toDateString()
+  return when.toLocaleTimeString(getLocale(), {
+    weekday: sameDay ? undefined : "short",
+    hour: "numeric",
+    minute: "2-digit",
+  })
+}
+
+/**
+ * Strava's rate limit is holding the import up until `until` (epoch
+ * seconds). `rationed`: because this athlete has had today's quota.
+ *
+ * The explanation is one short sentence, because it is translated into every
+ * language the app ships. The countdown under it needs no translating, and
+ * is what tells someone who cannot read the sentence that the wait has an
+ * end, and that it is the same end however often they reload.
+ */
+export function waiting(until: number, rationed = false): void {
+  if (!win) return
+  const msg = t(rationed ? "import.waitRationed" : "import.waitStrava", {
+    time: localTime(until),
+  })
+  if (!visible) start(msg)
+  else if (msgEl) msgEl.textContent = msg
+
+  clearInterval(waitTimer)
+  const tick = () => {
+    const left = Math.max(0, Math.round(until - Date.now() / 1000))
+    const m = Math.floor(left / 60)
+    const sec = String(left % 60).padStart(2, "0")
+    waitEl.innerHTML = `${icon("pause2")} <span dir="ltr">${m}:${sec}</span>`
+  }
+  tick()
+  waitEl.hidden = false
+  waitTimer = setInterval(tick, 1000)
+}
+
+/**
+ * Strava's daily limit is spent, for the app or (`rationed`) for this
+ * athlete's share of it. Returns the message, for the caller to keep on
+ * screen.
+ */
+export function dailyLimit(until: number, rationed = false): string {
+  return t(rationed ? "import.dailyRationed" : "import.dailyLimit", {
+    time: localTime(until),
+  })
+}
+
+function endWait(): void {
+  clearInterval(waitTimer)
+  waitTimer = undefined
+  if (waitEl) waitEl.hidden = true
 }

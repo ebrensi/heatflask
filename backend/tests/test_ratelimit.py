@@ -102,6 +102,107 @@ def test_nothing_waits_for_the_daily_limit():
     assert e.value.status == 429
 
 
+P = RateLimit.Priority
+
+
+def test_an_index_goes_ahead_of_track_imports():
+    # 2026-09-24: a new athlete's five-read index waited fifteen minutes
+    # behind someone else's backfill
+    lim = RateLimiter(reserve=50)
+    now = time.time()
+    lim.read.roll(now)
+    lim.read.used_15 = 560  # tracks stop here, 50 short of 600
+
+    assert lim.check("GET", bulk=True, now=now, priority=P.TRACKS) > 0
+    assert lim.check("GET", bulk=True, now=now, priority=P.INDEX) == 0
+
+    lim.read.used_15 = 595  # an index stops 10 short
+    assert lim.check("GET", bulk=True, now=now, priority=P.INDEX) > 0
+
+
+def test_rationed_imports_leave_a_third_of_every_window():
+    lim = RateLimiter(reserve=50)
+    now = time.time()
+    lim.read.roll(now)
+
+    lim.read.used_15 = 349
+    assert lim.check("GET", bulk=True, now=now, priority=P.RATIONED) == 0
+    lim.read.used_15 = 350  # 600 - 50 - 200
+    assert lim.check("GET", bulk=True, now=now, priority=P.RATIONED) > 0
+    assert lim.check("GET", bulk=True, now=now, priority=P.TRACKS) == 0
+
+
+def test_rationed_imports_stop_for_the_day_first():
+    lim = RateLimiter(reserve=50)
+    now = time.time()
+    lim.read.roll(now)
+    lim.read.used_day = 20_000  # past 30,000 - 50 - 10,000
+
+    with pytest.raises(RateLimitExceeded) as e:
+        lim.check("GET", bulk=True, now=now, priority=P.RATIONED)
+    assert e.value.daily and e.value.rationed
+    # everyone else carries on
+    assert lim.check("GET", bulk=True, now=now, priority=P.TRACKS) == 0
+
+    lim.read.used_day = 29_990
+    with pytest.raises(RateLimitExceeded) as e:
+        lim.check("GET", bulk=True, now=now, priority=P.RATIONED)
+    # the whole app is out, not just this athlete's share
+    assert e.value.daily and not e.value.rationed
+
+
+def test_an_athlete_is_rationed_after_the_daily_quota():
+    lim = RateLimiter()
+    now = time.time()
+    lim.tracks_today(7, now)
+    lim._today[7] = RateLimit.DAILY_QUOTA - 1
+    assert lim.priority_of(P.TRACKS, 7, now) == P.TRACKS
+    lim._today[7] += 1
+    assert lim.is_rationed(7, now)
+    assert lim.priority_of(P.TRACKS, 7, now) == P.RATIONED
+    # only their track imports: their index still goes first
+    assert lim.priority_of(P.INDEX, 7, now) == P.INDEX
+    assert not lim.is_rationed(8, now)
+    # and tomorrow they start again
+    assert not lim.is_rationed(7, RateLimit.next_day(now) + 1)
+
+
+async def test_track_requests_count_toward_the_quota_and_index_pages_do_not():
+    lim = RateLimiter()
+    for _ in range(3):
+        async with lim.slot("GET", bulk=True, owner=7):
+            pass
+    async with lim.slot("GET", bulk=True, owner=7, priority=P.INDEX):
+        pass
+    assert lim.tracks_today(7, time.time()) == 3
+
+
+async def test_a_rationed_athlete_waits_while_others_import(monkeypatch):
+    lim = RateLimiter(reserve=50)
+    now = time.time()
+    lim.read.roll(now)
+    lim.read.used_15 = 400  # past what rationed work may use, not tracks
+    lim.tracks_today(7, now)
+    lim._today[7] = RateLimit.DAILY_QUOTA
+
+    waited = []
+
+    async def wait(seconds, fair_share=False):
+        waited.append(seconds)
+        raise asyncio.CancelledError  # enough to know it would have waited
+
+    monkeypatch.setattr(lim, "wait", wait)
+
+    async with lim.slot("GET", bulk=True, owner=8):
+        pass  # a fresh athlete goes straight through
+    assert not waited
+
+    with pytest.raises(asyncio.CancelledError):
+        async with lim.slot("GET", bulk=True, owner=7):
+            pass
+    assert waited and waited[0] > 0
+
+
 def test_refused_spends_the_window():
     lim = RateLimiter()
     now = time.time()

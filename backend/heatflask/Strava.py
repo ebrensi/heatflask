@@ -26,7 +26,7 @@ from typing import (
 
 
 from .Types import epoch, urlstr
-from .RateLimit import limiter, RateLimitExceeded
+from .RateLimit import limiter, Priority, RateLimitExceeded
 
 log = getLogger(__name__)
 log.propagate = True
@@ -64,6 +64,7 @@ async def api_request(
     *,
     bulk: bool = False,
     owner: Optional[int] = None,
+    priority: Priority = Priority.TRACKS,
     on_sent: Optional[Callable[[], None]] = None,
     **kwargs: Any,
 ) -> tuple[int, Any]:
@@ -73,7 +74,7 @@ async def api_request(
     `bulk` marks work that can wait for the budget -- stream and index
     imports -- as opposed to a request someone is waiting on. See RateLimit.
     `owner` is the athlete bulk work is for, so the window can be shared
-    fairly between athletes.
+    fairly between athletes. `priority` says which bulk work goes first.
 
     `on_sent` is called once the request has cleared the rate limit and is
     going out, which is the point from which it costs a request whether or
@@ -85,7 +86,9 @@ async def api_request(
     anything else raises RateLimitExceeded.
     """
     for attempt in range(2):
-        async with limiter.slot(method, bulk=bulk, owner=owner) as sent:
+        async with limiter.slot(
+            method, bulk=bulk, owner=owner, priority=priority
+        ) as sent:
             if on_sent:
                 on_sent()
             try:
@@ -588,6 +591,8 @@ async def get_activity_index_page(
         "GET",
         ACTIVITY_LIST_ENDPOINT,
         bulk=bulk,
+        # an athlete's index goes ahead of everyone's track imports
+        priority=Priority.INDEX,
         on_sent=on_sent,
         params={**params, **extra, "page": page},
     )
