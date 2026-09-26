@@ -19,7 +19,11 @@ USER = 1
 @pytest.fixture
 async def app_url(monkeypatch, sanic_server):
     calls = []
-    users = {USER: {"_id": USER, "p": True, "f": "A", "l": "B"}}
+    admin = Users.ADMIN[0]
+    users = {
+        USER: {"_id": USER, "p": True, "f": "A", "l": "B"},
+        admin: {"_id": admin, "p": True, "f": "C", "l": "D"},
+    }
 
     async def get_user(uid):
         return users.get(int(uid)) if uid else None
@@ -67,6 +71,27 @@ async def test_visibility_changes_on_post(app_url):
             assert r.status == 200
             assert await r.json() is True
     assert calls == [("add_or_update", {"_id": USER, "private": False})]
+
+
+async def test_only_the_athlete_can_change_their_sharing(app_url):
+    """Not even the admin: Shared Maps is what keeps the admin out too"""
+    base, calls = app_url
+    admin = {sessions.COOKIE_NAME: sessions.sign({"user": Users.ADMIN[0]})}
+    async with aiohttp.ClientSession(cookies=admin) as s:
+        for setting in ("on", "off"):
+            async with s.post(f"{base}/visibility/{setting}?user={USER}") as r:
+                assert r.status == 403
+    assert calls == []
+
+
+async def test_the_admin_can_delete_an_account(app_url):
+    base, calls = app_url
+    admin = {sessions.COOKIE_NAME: sessions.sign({"user": Users.ADMIN[0]})}
+    async with aiohttp.ClientSession(cookies=admin) as s:
+        async with s.post(f"{base}/delete?user={USER}", allow_redirects=False) as r:
+            assert r.status == 302
+    assert ("delete", USER, True) in calls
+    assert ("delete_index", USER) in calls
 
 
 async def test_delete_revokes_strava_access(app_url):

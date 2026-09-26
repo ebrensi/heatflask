@@ -11,7 +11,7 @@ import sys
 from typing import Optional
 from sanic import Sanic
 
-from .webserver.config import MONGODB_URL
+from .webserver.config import MONGODB_URL, SKIP_TTL
 
 log = logging.getLogger(__name__)
 log.propagate = True
@@ -104,7 +104,13 @@ async def update_collection_ttl(name: str, new_ttl: int):
     # rather than raise.
     current_ttl = info["ts"].get("expireAfterSeconds")
 
-    if current_ttl != new_ttl:
+    if current_ttl is not None and current_ttl != new_ttl and SKIP_TTL:
+        log.info(
+            "%s TTL left at %s (SKIP_TTL)",
+            name,
+            datetime.timedelta(seconds=current_ttl),
+        )
+    elif current_ttl != new_ttl:
         await db.mongodb.command(
             "collMod",
             name,

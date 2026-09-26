@@ -30,7 +30,7 @@ ACTIVITIES = [
     # (id, owner, private, visibility)
     (10, OWNER, False, "everyone"),
     (11, OWNER, True, "only_me"),
-    (12, OWNER, False, "followers"),
+    (12, OWNER, False, "followers_only"),  # Strava's spelling, not "followers"
     (13, OWNER, None, None),  # an older entry without the fields
     (20, OTHER, False, "everyone"),
     (21, OTHER, True, "everyone"),  # flagged private, whatever visibility says
@@ -138,16 +138,20 @@ async def test_privacy_holds_with_other_filters_and_exclusions(index):
     assert await got([OTHER]) == set()
 
 
-async def test_admins_see_everything(index):
-    assert await ids() == {a[0] for a in ACTIVITIES}
+async def test_followers_only_is_private_to_everyone_but_the_owner(index):
+    """Heatflask cannot tell who follows whom, so it cannot show them either"""
+    assert 12 not in await ids(privacy=Index.visible_to(OTHER, sharing=[OWNER]))
+    assert 12 in await ids(privacy=Index.visible_to(OWNER, sharing=[]))
 
 
 SHARING = 3  # an athlete who has turned sharing on
+ADMIN = Users.ADMIN[0]
 
 USERS = {
     OWNER: {"_id": OWNER, "f": "A", "l": "B", "p": True},
     OTHER: {"_id": OTHER, "f": "C", "l": "D"},  # never asked: counts as not sharing
     SHARING: {"_id": SHARING, "f": "E", "l": "F", "p": False},
+    ADMIN: {"_id": ADMIN, "f": "G", "l": "H", "p": True},
 }
 
 
@@ -224,11 +228,12 @@ async def test_the_route_sets_privacy_whatever_the_client_sends(route):
     assert await privacy(as_user(OWNER)) == Index.visible_to(OWNER, sharing=[SHARING])
     # a forged, unsigned cookie is anonymous
     assert await privacy('{"user": 1}') == Index.visible_to(None, sharing=[SHARING])
-    assert await privacy(as_user(Users.ADMIN[0])) is None
+    # the admin is a viewer like any other
+    assert await privacy(as_user(ADMIN)) == Index.visible_to(ADMIN, sharing=[SHARING])
 
 
 async def test_an_unshared_map_is_refused_to_everyone_but_its_owner(route):
-    for cookie in (None, as_user(SHARING), '{"user": 1}'):
+    for cookie in (None, as_user(SHARING), as_user(ADMIN), '{"user": 1}'):
         for target in (OWNER, OTHER):
             sent, calls = await route({"user_id": target}, cookie)
             assert len(sent) == 1 and "private" in sent[0]["error"]
@@ -239,9 +244,6 @@ async def test_an_unshared_map_is_refused_to_everyone_but_its_owner(route):
     assert "error" not in sent[0]
     assert calls["query"]["privacy"] == Index.visible_to(OWNER, sharing=[])
     assert calls["top_up"] == OWNER
-
-    _, calls = await route({"user_id": OWNER}, as_user(Users.ADMIN[0]))
-    assert calls["query"].get("privacy") is None
 
 
 async def test_a_shared_map_shows_only_its_owners_public_activities(route):
@@ -255,14 +257,14 @@ async def test_a_shared_map_shows_only_its_owners_public_activities(route):
 
 
 def test_the_map_page_names_only_athletes_who_share():
-    def info(target, viewer=None, admin=False):
+    def info(target, viewer=None):
         viewer = USERS[viewer] if viewer else None
-        return main.target_info(USERS[target], viewer, admin)
+        return main.target_info(USERS[target], viewer)
 
     hidden = {"id": OWNER, "private": True}
     assert info(OWNER) == hidden
     assert info(OWNER, viewer=SHARING) == hidden
     assert info(OTHER) == {"id": OTHER, "private": True}
     assert info(OWNER, viewer=OWNER)["name"] == "A B"
-    assert info(OWNER, admin=True)["name"] == "A B"
+    assert info(OWNER, viewer=ADMIN) == hidden
     assert info(SHARING)["name"] == "E F"

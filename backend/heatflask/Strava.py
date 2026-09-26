@@ -525,7 +525,7 @@ class PolylineMap(TypedDict):
     summary_polyline: str
 
 
-Visibility = Literal["everyone", "followers", "only_me"]
+Visibility = Literal["everyone", "followers_only", "only_me"]
 
 
 class Activity(TypedDict):

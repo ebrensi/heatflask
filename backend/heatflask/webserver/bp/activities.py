@@ -172,7 +172,7 @@ class Access:
 
     target_user: dict | None = None
     is_owner: bool = False
-    # a Mongo filter for Index.query, None for an admin, who sees everything
+    # a Mongo filter for Index.query
     privacy: dict | None = None
     # why the viewer may see nothing at all
     refused: str | None = None
@@ -192,9 +192,8 @@ class Access:
         access.is_owner = bool(
             viewer and target_user and viewer[U.ID] == target_user[U.ID]
         )
-        if request.ctx.is_admin:
-            return access
-
+        # No exception for the admin: the privacy rules are the owners', and
+        # being able to read the database does not make someone their audience.
         viewer_id = viewer[U.ID] if viewer else None
         if target_user is None:
             sharing = await Users.sharing_ids()
@@ -455,10 +454,10 @@ async def activities_page(request: SessionRequest):
 
         query["user_id"] = target_user_id
         is_owner = current_user_id == target_user_id
-        if not (is_owner or request.ctx.is_admin):
+        if not is_owner:
             query["private"] = False
 
-    elif not request.ctx.is_admin:
+    else:
         # For now, users cannot see private activities in the general index,
         # even if that user is the owner of those activities.
         #

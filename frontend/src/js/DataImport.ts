@@ -43,7 +43,7 @@ export type ActivityQuery = {
    * served from IndexedDB from one it paid Mongo or Strava for.
    */
   browser_hits?: number
-  visibility?: "everyone" | "followers" | "only_me"
+  visibility?: "everyone" | "followers_only" | "only_me"
   overlaps?: BBounds
 }
 

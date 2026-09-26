@@ -99,6 +99,14 @@ if not MONGODB_URL:
     else:
         raise RuntimeError("MONGODB_URL must be set when APP_ENV is not development")
 
+# Leave the TTLs of existing collections as they are, rather than setting them
+# from this app's INDEX_TTL, MONGO_STREAMS_TTL and HISTORY_TTL. For an app that
+# shares another's database -- heatflask-dev shares production's -- since a
+# TTL belongs to the collection, and each app resetting it to its own values
+# at startup meant the last one to boot decided for both. A collection that
+# has no TTL yet still gets one.
+SKIP_TTL = bool(os.environ.get("SKIP_TTL"))
+
 # Informational only (shown in the startup banner) -- it no longer selects
 # which database to talk to.
 USE_REMOTE_DB = not any(h in MONGODB_URL for h in ("localhost", "127.0.0.1"))

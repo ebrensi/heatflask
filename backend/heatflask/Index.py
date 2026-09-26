@@ -41,7 +41,7 @@ SECS_IN_DAY = 24 * SECS_IN_HOUR
 # stopped coming and nobody else's. Rebuilding one is cheap in Strava reads --
 # about one per fifty activities, against one per activity for streams -- but
 # it costs the user a wait, so it wants to be long.
-TTL = int(os.environ.get("INDEX_TTL", 90)) * SECS_IN_DAY
+TTL = int(os.environ.get("INDEX_TTL", 60)) * SECS_IN_DAY
 
 myBox = types.SimpleNamespace(collection=None)
 
@@ -664,7 +664,7 @@ SORT_SPECS = [(F.UTC_START_TIME, DESCENDING)]
 # Strava visibility settings that keep an activity from the public. Followers
 # is among them: Heatflask cannot tell who follows whom, so it cannot honour
 # "followers only" except by treating it as private.
-NON_PUBLIC_VISIBILITY = ["only_me", "followers"]
+NON_PUBLIC_VISIBILITY = ["only_me", "followers_only"]
 
 
 def visible_to(viewer_id: int | None, sharing: Iterable[int]) -> dict:
@@ -752,7 +752,7 @@ async def query(
         )
 
     if visibility:
-        # ["everyone", "followers", "only_me"]
+        # ["everyone", "followers_only", "only_me"]
         mongo_query[F.VISIBILITY] = {"$in": visibility}
 
     if private is not None:

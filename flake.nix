@@ -190,7 +190,7 @@
 
           echo "MONGODB_URL: $MONGODB_URL"
           echo "APP_ENV:     $APP_ENV"
-          echo "TTLs (days): streams ''${MONGO_STREAMS_TTL:-10} index ''${INDEX_TTL:-20} history ''${HISTORY_TTL:-30}"
+          echo "TTLs (days): streams ''${MONGO_STREAMS_TTL:-10} index ''${INDEX_TTL:-60} history ''${HISTORY_TTL:-30}"
           echo ""
 
           exec python -m heatflask.webserver.serve "''${@}"

@@ -66,7 +66,7 @@ async def splash_page(request: Request):
     return Response.html(html)
 
 
-def target_info(target_user, viewer, is_admin: bool):
+def target_info(target_user, viewer):
     """
     What the map page may say about whose map it is. A map its owner has not
     shared is refused by /activities, and their name and photo are Strava data
@@ -77,7 +77,6 @@ def target_info(target_user, viewer, is_admin: bool):
     if (
         info
         and not Users.is_sharing(target_user)
-        and not is_admin
         and not (viewer and viewer[U.ID] == target_user[U.ID])
     ):
         return {"id": target_user[U.ID], "private": True}
@@ -140,9 +139,7 @@ async def user_page(request: Request, target_user_id=None):
             # at non-visible element "#runtime_json"
             "APP_VERSION": APP_BUILD,
             "CURRENT_USER": relevant_info(request.ctx.current_user),
-            "TARGET_USER": target_info(
-                target_user, request.ctx.current_user, request.ctx.is_admin
-            ),
+            "TARGET_USER": target_info(target_user, request.ctx.current_user),
             "ADMIN": request.ctx.is_admin,
             "OFFLINE": OFFLINE,
             "URLS": {
@@ -224,12 +221,29 @@ def self_or_admin(func):
     return decorator(func)
 
 
+# Only for the logged-in user's own account, with no admin override. Shared
+# Maps decides who may see someone's activities -- the admin included -- so
+# letting the admin turn it on for them would be a way around it.
+def self_only(func):
+    @wraps(func)
+    async def decorated_function(request, *args, **kwargs):
+        if request.args.get("user"):
+            raise SanicException(
+                "only the athlete can change this", status_code=403, quiet=True
+            )
+        if not request.ctx.current_user:
+            raise SanicException("Who are you?", status_code=400, quiet=True)
+        return await func(request, request.ctx.current_user, *args, **kwargs)
+
+    return decorated_function
+
+
 # POST, like /delete: these change data, and a GET would let any page on the web
 # change it for a logged-in visitor with nothing more than a link, since the
 # SameSite=Lax session cookie is still sent on top-level cross-site GETs
 @bp.post(r"/visibility/<setting:(on|off|^$)>")
 @session_cookie(get=True)
-@self_or_admin
+@self_only
 async def visibility(request: Request, target_user, setting=None):
     if setting is not None:
         private = False if setting == "on" else True
