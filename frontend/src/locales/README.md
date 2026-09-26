@@ -111,13 +111,13 @@ text. Translate only the value.
 **`{fields}` must survive, spelled exactly.** They are filled in at runtime:
 
 ```json
-"users.daysAgo":  "{count} days ago",
+"import.countOf": "{received} of {total} activities",
 "tab.query.title": "{name}'s map",
 "capture.record":  "Record video ({period}s loop)"
 ```
 
 They can move anywhere in the sentence — that is the point of them. A field
-that is misspelled or dropped shows up as literal `{count}` in the UI.
+that is misspelled or dropped shows up as literal `{total}` in the UI.
 
 **Inline HTML must survive, and may move.** 15 strings carry a `<kbd>`, an
 icon `<i>`, or a link:
@@ -128,20 +128,16 @@ icon `<i>`, or a link:
 ```
 
 Keep the tags and their attributes byte-for-byte; put them wherever the
-sentence needs them. `tab.profile.publicNote` contains the whole
-`<a id="profile-directory-link">…</a>` for exactly this reason — the app finds
+sentence needs them. `tab.profile.sharedMapsNote` contains the whole
+`<a id="profile-privacy-link">…</a>` for exactly this reason — the app finds
 that link by its id _after_ translating, so it can sit anywhere in the
 sentence.
 
-**Plurals.** There is no plural machinery -- one key, one string. Most of the
-counted strings are safe because the count cannot be 1 where it would matter,
-but `users.monthsAgo` and `users.yearsAgo` can be, so every language uses an
-abbreviation there ("{count} mes.", "vor {count} Mon.") the way the English
-itself does with "mo" and "yr". Not every language can: Arabic, Swahili and
-Marathi change the noun with the number, and "1 month ago" in them reads a
-little off. That is the case for real plural rules, when someone reports it. `import.count` sidesteps it by putting the
-noun first: "Aktivitäten: {received}". If a language needs real plural rules,
-that is a change to `t()`, not a thing to fake in the catalog.
+**Plurals.** There is no plural machinery -- one key, one string. The counts
+that can be 1 are the import dialog's, and `import.count` and
+`import.countOf` sidestep the noun's form by putting it first:
+"Aktivitäten: {received}". If a language needs real plural rules, that is a
+change to `t()`, not a thing to fake in the catalog.
 
 **Leave these alone:**
 
@@ -165,7 +161,6 @@ are the places text goes that a catalog diff does not show you:
   and where a long German compound will show up first
 - the **`i` tab**, which holds a fifth of all the strings
 - the **query tab** mid-import, for the progress dialog and its counts
-- the **user directory** at `/users`, for the column headings and "3 days ago"
 - **tooltips**: the map controls, and the two cache columns in the activity
   index
 
@@ -195,9 +190,19 @@ menu clears it.
 
 It only ever checks `en.json`. Other languages are allowed to be incomplete.
 
+## Admin-only strings
+
+`users.*` and `tab.profile.adminDirectory` are English only, on purpose.
+`/users` is an admin page -- anyone else is sent to log in -- so only the
+maintainer ever reads those strings. They are in `en.json` so the checker
+sees every key, and no other catalog carries them; a new language should
+leave them out.
+
 ## Where the strings are
 
-195 in total, 24 of them carrying `{fields}` and 15 carrying inline markup.
+206 in total, 28 of them carrying `{fields}` and 15 carrying inline markup.
+The 20 admin-only ones (below, and `tab.profile.adminDirectory`) are not
+translated, which leaves 186.
 
 | Namespace        | n   |                                     |
 | ---------------- | --- | ----------------------------------- |
@@ -210,9 +215,11 @@ It only ever checks `en.json`. Other languages are allowed to be incomplete.
 | `tab.info`       | 19  | sidebar: the help text              |
 | `map`            | 3   | map control tooltips                |
 | `capture`        | 12  | video export                        |
-| `import`         | 6   | the import-progress dialog          |
+| `share`          | 5   | the share-link button               |
+| `update`         | 2   | the new-version prompt              |
+| `import`         | 10  | the import-progress dialog          |
 | `table`          | 2   | the activity list                   |
-| `users`          | 19  | the public user directory           |
+| `users`          | 19  | the admin user directory (English)  |
 | `sport`          | 56  | Strava's sport types, by name       |
 | `activities`     | 11  | the activity index page             |
 
@@ -222,7 +229,7 @@ Arabic, Persian and Urdu are written right to left. `RTL` in `i18n.ts` lists
 them, and `initI18n` sets `<html dir="rtl">` for them; a new one is a line
 there as well as a catalog.
 
-That is all the splash, user-directory and activity-index pages need -- they
+That is all the splash and activity-index pages need -- they
 are text and tables, and their CSS uses `start`/`end` rather than
 `left`/`right`, so it turns around with them. The map page does not turn
 around as a whole. [`../css/rtl.css`](../css/rtl.css) holds its frame
