@@ -46,6 +46,7 @@ import ID_JSON from "../locales/id.json"
 import IT_JSON from "../locales/it.json"
 import JA_JSON from "../locales/ja.json"
 import KN_JSON from "../locales/kn.json"
+import KO_JSON from "../locales/ko.json"
 import MR_JSON from "../locales/mr.json"
 import NB_JSON from "../locales/nb.json"
 import NL_JSON from "../locales/nl.json"
@@ -95,6 +96,7 @@ const CATALOGS: Record<string, Catalog> = {
   it: <Catalog>IT_JSON,
   ja: <Catalog>JA_JSON,
   kn: <Catalog>KN_JSON,
+  ko: <Catalog>KO_JSON,
   mr: <Catalog>MR_JSON,
   nb: <Catalog>NB_JSON,
   nl: <Catalog>NL_JSON,

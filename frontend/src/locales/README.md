@@ -4,10 +4,10 @@ One JSON file per language. `en.json` is the source of truth: every string the
 front end shows is in it, and English is the fallback for any key a translation
 has not got to yet.
 
-Shipping thirty-two. English; in Europe, Czech, Dutch, French, German,
+Shipping thirty-three. English; in Europe, Czech, Dutch, French, German,
 Italian, Norwegian (Bokmål), Polish, Brazilian and European Portuguese,
 Russian, Spanish and Ukrainian; in Asia, Chinese in both Simplified and
-Traditional, Indonesian, Japanese, Thai and Vietnamese; in the Middle East and
+Traditional, Indonesian, Japanese, Korean, Thai and Vietnamese; in the Middle East and
 South Asia, Arabic, Persian, Urdu, Hindi, Bengali, Marathi, Tamil, Telugu and
 Kannada; in Africa, Amharic, Tigrinya, Swahili and Hausa. All but English are a
 machine first pass -- **they have not been read by a native speaker**, and
@@ -246,6 +246,10 @@ longer is), and anything that mixes a Latin name into a sentence, like
   deliberate together.
 - Check the sidebar at its real width (~230px) — it is the tightest space in
   the app.
+- Korean is written with spaces between words and wraps at them, but browsers
+  break Hangul between any two syllables unless told otherwise.
+  [`../css/lang.css`](../css/lang.css) sets `word-break: keep-all` for
+  `:lang(ko)`; a language with the same need goes there too.
 
 ## Not covered yet
 

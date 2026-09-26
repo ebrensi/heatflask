@@ -1,0 +1,13 @@
+/*
+ * Line breaking that a language needs and the browser does not give it
+ * (i18n.ts sets <html lang> to whichever catalog won).
+ *
+ * Korean puts spaces between words and wraps at them, but browsers treat
+ * Hangul like Chinese and break between any two syllables, splitting words
+ * across lines. keep-all breaks only at the spaces; break-word lets a word
+ * too long for its box -- the sidebar is ~230px -- break rather than overflow.
+ */
+:lang(ko) {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
