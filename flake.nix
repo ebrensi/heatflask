@@ -258,7 +258,8 @@
           # output first every build leaves all of its predecessors behind.
           rm -rf dist/* .parcel-cache
           cp -n src/dist/* dist/ 2>/dev/null || true
-          exec ./node_modules/.bin/parcel build 'src/webpages/**/!(tab.*).html' "''${@}"
+          ./node_modules/.bin/parcel build 'src/webpages/**/!(tab.*).html' "''${@}" \
+            && node tools/build-id.mjs
         '';
 
         frontendWatchScript = pkgs.writeShellScriptBin "heatflask-frontend-watch" ''

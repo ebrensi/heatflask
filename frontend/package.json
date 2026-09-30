@@ -12,7 +12,7 @@
   "scripts": {
     "parcel-watch": "parcel watch --log-level info 'src/webpages/**/!(tab.*).html'",
     "parcel-build": "parcel build 'src/webpages/**/!(tab.*).html'",
-    "build": "npm run clean; npm run parcel-build",
+    "build": "npm run clean; npm run parcel-build && node tools/build-id.mjs",
     "watch": "npm run parcel-watch",
     "typecheck": "tsc --noEmit",
     "i18n:check": "node tools/check-i18n.mjs",

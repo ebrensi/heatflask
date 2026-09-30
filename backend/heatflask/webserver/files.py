@@ -11,7 +11,7 @@ from logging import getLogger
 from sanic import Sanic
 from typing import Any
 
-from .config import DEV
+from .config import APP_BUILD, DEV
 
 # for serving static files (relative to where webserver is run)
 FRONTEND_DIST_DIR = "../frontend/dist"
@@ -57,6 +57,26 @@ async def cache_hashed_files(request, response):
     """
     if response.status in (200, 304) and HASHED_NAME.search(request.path):
         response.headers["Cache-Control"] = IMMUTABLE
+
+
+def read_frontend_build() -> str:
+    """
+    What the frontend in dist/ was built from: the hash of its source that
+    `npm run build` writes to dist/BUILD_ID. An open page compares it with the
+    one it was served (see UpdateCheck.ts), so only a deploy that changed the
+    frontend asks anyone to reload.
+
+    `parcel watch` does not write it, so a development server falls back to
+    the build string, which changes with every commit.
+    """
+    try:
+        with open(f"{FRONTEND_DIST_DIR}/BUILD_ID") as file:
+            return file.read().strip() or APP_BUILD
+    except OSError:
+        return APP_BUILD
+
+
+FRONTEND_BUILD = read_frontend_build()
 
 
 templates: dict[str, Template] = {}

@@ -18,6 +18,7 @@ from ... import Index
 from ... import History
 
 from ..config import APP_BUILD, APP_BASE_NAME, OFFLINE
+from ..files import FRONTEND_BUILD
 from ..sessions import session_cookie
 
 log = getLogger("heatflask.webserver.main")
@@ -138,6 +139,7 @@ async def user_page(request: Request, target_user_id=None):
             # These will be available to the client as a JSON string
             # at non-visible element "#runtime_json"
             "APP_VERSION": APP_BUILD,
+            "FRONTEND_BUILD": FRONTEND_BUILD,
             "CURRENT_USER": relevant_info(request.ctx.current_user),
             "TARGET_USER": target_info(target_user, request.ctx.current_user),
             "ADMIN": request.ctx.is_admin,
@@ -172,12 +174,17 @@ async def demo_page(request: Request):
 @bp.get("/version")
 async def version(request: Request):
     """
-    The running build, e.g. "1.7.0+g3f62c77". An open map page polls this and
-    offers a reload when it no longer matches the build the page came from:
-    an installed app, or a phone's suspended tab, can otherwise go on running
-    old JS against a new backend for as long as nobody reloads it.
+    The running build, e.g. {"app": "1.7.0+g3f62c77", "frontend": "0e08f98b8e66"}.
+    An open map page polls this and offers a reload when "frontend" no longer
+    matches the frontend the page came from: an installed app, or a phone's
+    suspended tab, can otherwise go on running old JS for as long as nobody
+    reloads it. A deploy that changed only the backend leaves "frontend" as it
+    was, and asks nobody to reload.
     """
-    return Response.text(APP_BUILD, headers={"Cache-Control": "no-store"})
+    return Response.json(
+        {"app": APP_BUILD, "frontend": FRONTEND_BUILD},
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @bp.get("/test")

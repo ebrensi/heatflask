@@ -8,6 +8,9 @@ everything since the one before it.
 
 ## Unreleased
 
+### Under the hood
+- The **update prompt** appears only when a deploy changed the frontend. An open page used to be asked to reload after every deploy, backend-only ones included; now the build names its frontend by a hash of the frontend's source (`frontend/tools/build-id.mjs`), and `/version` reports it alongside the app version.
+
 ## [1.7.3] — 2026-09-24
 
 ### Under the hood

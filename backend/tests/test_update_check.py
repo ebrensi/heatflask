@@ -3,7 +3,8 @@
 # This file is part of Heatflask. See /LICENSE for terms.
 """
 What keeps a long-open page, or an installed app, current across deploys:
-/version says which build is running and is never cached, and the
+/version says which build is running, and which frontend, and is never
+cached; and the
 content-hashed bundles are cached for good while the pages naming them are not.
 """
 
@@ -26,8 +27,23 @@ async def test_version_is_the_running_build_and_never_cached(sanic_server):
     async with aiohttp.ClientSession() as s:
         async with s.get(f"{base_url}/version") as r:
             assert r.status == 200
-            assert await r.text() == APP_BUILD
+            assert await r.json() == {
+                "app": APP_BUILD,
+                "frontend": files.FRONTEND_BUILD,
+            }
             assert r.headers["Cache-Control"] == "no-store"
+
+
+def test_frontend_build_is_what_the_build_wrote(tmp_path, monkeypatch):
+    (tmp_path / "BUILD_ID").write_text("0e08f98b8e66\n")
+    monkeypatch.setattr(files, "FRONTEND_DIST_DIR", str(tmp_path))
+    assert files.read_frontend_build() == "0e08f98b8e66"
+
+
+def test_frontend_build_without_one_is_the_app_build(tmp_path, monkeypatch):
+    # as under `parcel watch`, which does not write BUILD_ID
+    monkeypatch.setattr(files, "FRONTEND_DIST_DIR", str(tmp_path))
+    assert files.read_frontend_build() == APP_BUILD
 
 
 @pytest.fixture

@@ -14,12 +14,15 @@
  *
  * So the page asks the server which build it is running -- when it comes back
  * into view, which is the moment a resumed app matters, and now and then
- * while it stays in view -- and if that is not the build this page was served
- * with, says so. Reloading loses nothing but the time to redraw: the view is
- * all in the URL, and your own streams are in the local cache.
+ * while it stays in view -- and if its frontend is not the one this page was
+ * served with, says so. The frontend is named by a hash of its source
+ * (tools/build-id.mjs), not by the commit, so a deploy that changed only the
+ * backend leaves open pages alone. Reloading loses nothing but the time to
+ * redraw: the view is all in the URL, and your own streams are in the local
+ * cache.
  */
 
-import { APP_VERSION, URLS } from "./Env"
+import { FRONTEND_BUILD, URLS } from "./Env"
 import { Dialog } from "./Dialog"
 import { t } from "./i18n"
 
@@ -42,17 +45,20 @@ async function check(parent: HTMLElement): Promise<void> {
     return
   }
 
-  let running: string
+  let running: { app: string; frontend: string }
   try {
     const response = await fetch(URLS.version, { cache: "no-store" })
     if (!response.ok) return
-    running = (await response.text()).trim()
+    running = await response.json()
   } catch {
     return // offline, or mid-deploy; ask again next time
   }
-  if (!running || running === APP_VERSION) return
+  if (!running?.frontend || running.frontend === FRONTEND_BUILD) return
 
-  console.log(`update available: ${APP_VERSION} -> ${running}`)
+  console.log(
+    `update available: frontend ${FRONTEND_BUILD} -> ${running.frontend}` +
+      ` (${running.app})`
+  )
   dialog = new Dialog(parent, {
     position: "top",
     title: t("update.available"),

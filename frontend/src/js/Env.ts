@@ -20,6 +20,8 @@ export type UserInfo = {
 export type RuntimeJson = {
   /** The running build, e.g. "1.3.0+g1d39764" -- see /docs/VERSIONING.md */
   APP_VERSION: string
+  /** What this page's frontend was built from; see UpdateCheck.ts */
+  FRONTEND_BUILD: string
   CURRENT_USER: UserInfo
   TARGET_USER: UserInfo
   ADMIN: boolean
@@ -28,7 +30,7 @@ export type RuntimeJson = {
     login: string
     query: string
     index: string
-    /** The running build as plain text; see UpdateCheck.ts */
+    /** The running build, as {app, frontend}; see UpdateCheck.ts */
     version: string
     visibility: string
     delete: string
@@ -41,8 +43,15 @@ export type RuntimeJson = {
 }
 
 const argstring = document.getElementById("runtime_json").innerText
-export const { CURRENT_USER, TARGET_USER, ADMIN, APP_VERSION, URLS, OFFLINE } =
-  <RuntimeJson>JSON.parse(argstring)
+export const {
+  CURRENT_USER,
+  TARGET_USER,
+  ADMIN,
+  APP_VERSION,
+  FRONTEND_BUILD,
+  URLS,
+  OFFLINE,
+} = <RuntimeJson>JSON.parse(argstring)
 
 const flashes_text = document.getElementById("flashes").innerText
 export const FLASHES = flashes_text ? <string[]>JSON.parse(flashes_text) : null
