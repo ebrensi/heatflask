@@ -116,6 +116,7 @@
   "import.waitRationed": "የዛሬ ፈጣን ማውረዶች አልቀዋል። የቀሩት በ{time} በዝግታ ይቀጥላሉ። ይህን ገጽ ክፍት ይተዉት።",
   "import.dailyLimit": "የStrava ዕለታዊ የማውረድ ገደብ ተሟልቷል። ከ{time} በኋላ እንደገና ይሞክሩ።",
   "import.dailyRationed": "የዛሬ የStrava ማውረድ ድርሻዎ አልቋል። ከ{time} በኋላ እንደገና ይሞክሩ።",
+  "import.noActivitiesYet": "የStrava መለያዎ ገና ምንም እንቅስቃሴ የለውም። በStrava ላይ አንዱን ይቅዱ ወይም ይስቀሉ፣ እዚህ ይታያል።",
   "table.noActivities": "ምንም እንቅስቃሴ የለም",
   "table.untitled": "(ርዕስ የለውም)",
   "activities.pageTitle": "{app} — የእንቅስቃሴዎች ማውጫ",

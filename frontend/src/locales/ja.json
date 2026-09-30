@@ -116,6 +116,7 @@
   "import.waitRationed": "本日の高速ダウンロード分を使い切りました。残りは {time} から、ゆっくり再開します。このまま開いておいてください。",
   "import.dailyLimit": "Strava の1日のダウンロード上限に達しました。{time} 以降にもう一度お試しください。",
   "import.dailyRationed": "本日の Strava ダウンロードの割り当てを使い切りました。{time} 以降にもう一度お試しください。",
+  "import.noActivitiesYet": "Strava アカウントにはまだアクティビティがありません。Strava でアクティビティを記録またはアップロードすると、ここに表示されます。",
   "table.noActivities": "アクティビティなし",
   "table.untitled": "(タイトルなし)",
   "activities.pageTitle": "{app} — アクティビティ索引",

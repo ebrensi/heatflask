@@ -116,6 +116,7 @@
   "import.waitRationed": "As suas transferências rápidas de hoje esgotaram-se. O resto continua às {time}, mais devagar. Deixe esta página aberta.",
   "import.dailyLimit": "O limite diário de transferências do Strava esgotou-se. Tente novamente depois das {time}.",
   "import.dailyRationed": "Já usou a sua quota de transferências do Strava hoje. Tente novamente depois das {time}.",
+  "import.noActivitiesYet": "A sua conta do Strava ainda não tem atividades. Grave ou carregue uma no Strava e ela aparecerá aqui.",
   "table.noActivities": "sem atividades",
   "table.untitled": "(sem título)",
   "activities.pageTitle": "{app} — índice de atividades",

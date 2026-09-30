@@ -319,7 +319,13 @@ async def run_query(request: SessionRequest, summary: QuerySummary):
 
     summaries = query_result["docs"]
     summary.activities = len(summaries)
-    await sendPacked({"count": len(summaries)})
+    count: dict = {"count": len(summaries)}
+    if not summaries and is_owner and await Index.found_empty(target_user_id):
+        # Not a filter that matched nothing: their Strava account has no
+        # activities yet, which the page explains rather than showing an
+        # empty map that looks broken
+        count["empty"] = True
+    await sendPacked(count)
 
     info = {"atypes": Strava.ATYPES, "polyline_precision": Streams.POLYLINE_PRECISION}
     if not target_user_id:

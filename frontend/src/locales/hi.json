@@ -116,6 +116,7 @@
   "import.waitRationed": "आज के तेज़ डाउनलोड पूरे हो गए। बाकी {time} पर धीरे-धीरे जारी रहेंगे। यह पेज खुला रहने दें।",
   "import.dailyLimit": "Strava की दैनिक डाउनलोड सीमा पूरी हो गई। {time} के बाद फिर से कोशिश करें।",
   "import.dailyRationed": "आज के लिए Strava डाउनलोड में आपका हिस्सा पूरा हो गया। {time} के बाद फिर से कोशिश करें।",
+  "import.noActivitiesYet": "आपके Strava खाते में अभी कोई गतिविधि नहीं है। Strava पर कोई गतिविधि रिकॉर्ड या अपलोड करें, वह यहाँ दिखाई देगी।",
   "table.noActivities": "कोई गतिविधि नहीं",
   "table.untitled": "(बिना शीर्षक)",
   "activities.pageTitle": "{app} — गतिविधि इंडेक्स",

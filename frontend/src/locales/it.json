@@ -116,6 +116,7 @@
   "import.waitRationed": "Hai esaurito i download veloci di oggi. Il resto riprende alle {time}, più lentamente. Lascia aperta questa pagina.",
   "import.dailyLimit": "Il limite giornaliero di download di Strava è esaurito. Riprova dopo le {time}.",
   "import.dailyRationed": "Hai usato la tua quota di download da Strava per oggi. Riprova dopo le {time}.",
+  "import.noActivitiesYet": "Il tuo account Strava non ha ancora attività. Registrane o caricane una su Strava e comparirà qui.",
   "table.noActivities": "nessuna attività",
   "table.untitled": "(senza titolo)",
   "activities.pageTitle": "{app} — indice delle attività",

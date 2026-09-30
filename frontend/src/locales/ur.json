@@ -116,6 +116,7 @@
   "import.waitRationed": "آج کے تیز ڈاؤن لوڈ ختم ہو گئے۔ باقی {time} پر آہستہ جاری رہیں گے۔ یہ صفحہ کھلا رہنے دیں۔",
   "import.dailyLimit": "Strava کی روزانہ ڈاؤن لوڈ حد پوری ہو گئی۔ {time} کے بعد دوبارہ کوشش کریں۔",
   "import.dailyRationed": "آج کے لیے Strava ڈاؤن لوڈز میں آپ کا حصہ ختم ہو گیا۔ {time} کے بعد دوبارہ کوشش کریں۔",
+  "import.noActivitiesYet": "آپ کے Strava اکاؤنٹ میں ابھی کوئی سرگرمی نہیں ہے۔ Strava پر ایک ریکارڈ یا اپ لوڈ کریں، وہ یہاں نظر آئے گی۔",
   "table.noActivities": "کوئی سرگرمی نہیں",
   "table.untitled": "(بلا عنوان)",
   "activities.pageTitle": "{app} — سرگرمیوں کا اشاریہ",

@@ -116,6 +116,7 @@
   "import.waitRationed": "Bạn đã dùng hết lượt tải nhanh hôm nay. Phần còn lại tiếp tục lúc {time}, chậm hơn. Hãy để trang này mở.",
   "import.dailyLimit": "Đã hết giới hạn tải xuống hằng ngày của Strava. Hãy thử lại sau {time}.",
   "import.dailyRationed": "Bạn đã dùng hết phần tải xuống từ Strava hôm nay. Hãy thử lại sau {time}.",
+  "import.noActivitiesYet": "Tài khoản Strava của bạn chưa có hoạt động nào. Hãy ghi lại hoặc tải lên một hoạt động trên Strava, nó sẽ hiện ở đây.",
   "table.noActivities": "không có hoạt động",
   "table.untitled": "(không có tiêu đề)",
   "activities.pageTitle": "{app} — Chỉ mục hoạt động",

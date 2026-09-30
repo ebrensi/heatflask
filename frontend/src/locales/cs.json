@@ -116,6 +116,7 @@
   "import.waitRationed": "Dnešní rychlá stahování jsou vyčerpaná. Zbytek pokračuje v {time}, pomaleji. Nech stránku otevřenou.",
   "import.dailyLimit": "Denní limit stahování Stravy je vyčerpán. Zkus to znovu po {time}.",
   "import.dailyRationed": "Tvůj dnešní podíl stahování ze Stravy je vyčerpán. Zkus to znovu po {time}.",
+  "import.noActivitiesYet": "Tvůj účet na Stravě zatím nemá žádné aktivity. Nahraj nebo zaznamenej nějakou na Stravě a objeví se tady.",
   "table.noActivities": "žádné aktivity",
   "table.untitled": "(bez názvu)",
   "activities.pageTitle": "{app} — Index aktivit",

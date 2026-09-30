@@ -116,6 +116,7 @@
   "import.waitRationed": "Je snelle downloads voor vandaag zijn op. De rest gaat om {time} langzamer verder. Laat dit open staan.",
   "import.dailyLimit": "De dagelijkse downloadlimiet van Strava is bereikt. Probeer het na {time} opnieuw.",
   "import.dailyRationed": "Je deel van de Strava-downloads voor vandaag is op. Probeer het na {time} opnieuw.",
+  "import.noActivitiesYet": "Je Strava-account heeft nog geen activiteiten. Leg er een vast of upload er een op Strava, dan verschijnt die hier.",
   "table.noActivities": "geen activiteiten",
   "table.untitled": "(zonder titel)",
   "activities.pageTitle": "{app} — Activiteitenindex",

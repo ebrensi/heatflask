@@ -202,7 +202,14 @@ def self_or_admin(func):
                     quiet=True,
                 )
             elif not request.ctx.current_user:
-                raise SanicException("Who are you?", status_code=400, quiet=True)
+                # A login that expired while the page stayed open (or a tab the
+                # browser restored from its cache) still shows the account
+                # controls. Log in again and land on their own map, where they
+                # can try again, rather than a bare 400. Nothing happens
+                # without that second click.
+                return Response.redirect(
+                    request.app.url_for("auth.authorize", state="/")
+                )
 
             target_user = (
                 await Users.get(target_user_id)

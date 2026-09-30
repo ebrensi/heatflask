@@ -116,6 +116,7 @@
   "import.waitRationed": "Vos téléchargements rapides du jour sont épuisés. La suite reprend à {time}, plus lentement. Laissez cette page ouverte.",
   "import.dailyLimit": "La limite quotidienne de téléchargement de Strava est atteinte. Réessayez après {time}.",
   "import.dailyRationed": "Vous avez utilisé votre part de téléchargements Strava pour aujourd'hui. Réessayez après {time}.",
+  "import.noActivitiesYet": "Votre compte Strava n'a encore aucune activité. Enregistrez-en une ou importez-la sur Strava, et elle apparaîtra ici.",
   "table.noActivities": "aucune activité",
   "table.untitled": "(sans titre)",
   "activities.pageTitle": "{app} — index des activités",

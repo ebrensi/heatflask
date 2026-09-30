@@ -117,6 +117,7 @@
   "import.waitRationed": "You've had today's fast downloads. The rest continue at {time}, more slowly. Leave this open.",
   "import.dailyLimit": "Strava's daily download limit is used up. Try again after {time}.",
   "import.dailyRationed": "You've had your share of Strava downloads for today. Try again after {time}.",
+  "import.noActivitiesYet": "Your Strava account has no activities yet. Record or upload one on Strava and it will appear here.",
   "table.noActivities": "no activities",
   "table.untitled": "(untitled)",
   "users.pageTitle": "{app} — User Directory",

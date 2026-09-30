@@ -116,6 +116,7 @@
   "import.waitRationed": "Unduhan cepat hari ini sudah habis. Sisanya berlanjut pukul {time}, lebih lambat. Biarkan halaman ini terbuka.",
   "import.dailyLimit": "Batas unduhan harian Strava sudah habis. Coba lagi setelah {time}.",
   "import.dailyRationed": "Jatah unduhan Strava Anda untuk hari ini sudah habis. Coba lagi setelah {time}.",
+  "import.noActivitiesYet": "Akun Strava Anda belum memiliki aktivitas. Rekam atau unggah satu di Strava, dan aktivitas itu akan muncul di sini.",
   "table.noActivities": "tidak ada aktivitas",
   "table.untitled": "(tanpa judul)",
   "activities.pageTitle": "{app} — Indeks Aktivitas",

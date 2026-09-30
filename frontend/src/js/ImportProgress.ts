@@ -177,6 +177,7 @@ export function aside(): void {
  * The map was refused, and stays refused until the dialog is closed. With
  * `login`, the viewer is not logged in and is offered a login that comes back
  * here: accounts start private, so the one refused is often the owner.
+ * Without it, this is also any message that must stay until it is read.
  */
 export function refused(msg: string, login: boolean): void {
   if (!win) return

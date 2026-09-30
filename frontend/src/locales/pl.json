@@ -116,6 +116,7 @@
   "import.waitRationed": "Dzisiejsze szybkie pobieranie zostało wykorzystane. Reszta ruszy o {time}, wolniej. Zostaw tę stronę otwartą.",
   "import.dailyLimit": "Dzienny limit pobierania Stravy został wyczerpany. Spróbuj ponownie po {time}.",
   "import.dailyRationed": "Twój dzisiejszy przydział pobrań ze Stravy został wykorzystany. Spróbuj ponownie po {time}.",
+  "import.noActivitiesYet": "Twoje konto Strava nie ma jeszcze żadnych aktywności. Zarejestruj lub prześlij jedną na Stravie, a pojawi się tutaj.",
   "table.noActivities": "brak aktywności",
   "table.untitled": "(bez tytułu)",
   "activities.pageTitle": "{app} — Indeks aktywności",

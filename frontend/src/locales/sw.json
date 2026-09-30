@@ -116,6 +116,7 @@
   "import.waitRationed": "Upakuaji wa haraka wa leo umekwisha. Zilizobaki zitaendelea saa {time}, polepole zaidi. Acha ukurasa huu wazi.",
   "import.dailyLimit": "Kikomo cha upakuaji cha kila siku cha Strava kimefikiwa. Jaribu tena baada ya {time}.",
   "import.dailyRationed": "Sehemu yako ya upakuaji kutoka Strava kwa leo imekwisha. Jaribu tena baada ya {time}.",
+  "import.noActivitiesYet": "Akaunti yako ya Strava bado haina shughuli yoyote. Rekodi au pakia moja kwenye Strava na itaonekana hapa.",
   "table.noActivities": "hakuna shughuli",
   "table.untitled": "(bila jina)",
   "activities.pageTitle": "{app} — Orodha ya Shughuli",

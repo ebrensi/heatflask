@@ -116,6 +116,7 @@
   "import.waitRationed": "今天的快速下载额度已用完。其余部分将于 {time} 较慢地继续。请保持此页面打开。",
   "import.dailyLimit": "Strava 每日下载上限已用完。请在 {time} 之后再试。",
   "import.dailyRationed": "你今天的 Strava 下载份额已用完。请在 {time} 之后再试。",
+  "import.noActivitiesYet": "你的 Strava 账户还没有任何活动。在 Strava 上记录或上传一项活动后，它就会显示在这里。",
   "table.noActivities": "没有活动",
   "table.untitled": "(无标题)",
   "activities.pageTitle": "{app} — 活动索引",

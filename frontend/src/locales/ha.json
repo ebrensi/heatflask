@@ -116,6 +116,7 @@
   "import.waitRationed": "Saukewar gaggawa ta yau ta ƙare. Sauran za su ci gaba da {time}, a hankali. Ka bar wannan shafi a buɗe.",
   "import.dailyLimit": "Iyakar saukewa ta yau da kullum ta Strava ta cika. Sake gwadawa bayan {time}.",
   "import.dailyRationed": "Rabonka na saukewa daga Strava na yau ya ƙare. Sake gwadawa bayan {time}.",
+  "import.noActivitiesYet": "Asusunka na Strava ba shi da wani aiki tukuna. Yi rikodin ko ɗora ɗaya a Strava, zai bayyana a nan.",
   "table.noActivities": "babu ayyuka",
   "table.untitled": "(babu suna)",
   "activities.pageTitle": "{app} — Jerin Ayyuka",

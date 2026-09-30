@@ -22,7 +22,7 @@ import {
   ACTIVITY_FIELDNAMES as F,
 } from "./DataImport"
 import { nextTask } from "./appUtil"
-import { URLS } from "./Env"
+import { CURRENT_USER, URLS } from "./Env"
 import { t } from "./i18n"
 
 import { LngLatBounds } from "maplibre-gl"
@@ -82,6 +82,8 @@ type Status = {
   daily?: boolean
   /** with error: the map was refused to a viewer who could log in */
   login?: boolean
+  /** with count 0: the owner's Strava account has no activities at all */
+  empty?: boolean
 }
 
 /**
@@ -425,6 +427,8 @@ async function render(
   let polylinePrecision: number | undefined
   /* The last error the backend reported, kept on screen at the end */
   let error: string | undefined
+  /* The owner's Strava account has no activities, so nothing is filtered out */
+  let empty = false
 
   try {
     let received = 0
@@ -450,8 +454,19 @@ async function render(
           polylinePrecision = status.info.polyline_precision
         } else if (typeof status.count === "number") {
           expected = status.count
+          empty = !!status.empty
           ImportProgress.progress(received, expected)
         } else if (status.error && status.login !== undefined) {
+          if (status.login && CURRENT_USER) {
+            /* The page was made for a logged-in user, but the server no
+             * longer knows them: the login expired, or the browser restored
+             * this tab from its cache. Its account controls would fail, so
+             * reload it as what it really is: a visitor's page, which offers
+             * a login. The reloaded page has no CURRENT_USER, so this
+             * happens once. */
+            window.location.reload()
+            return 0
+          }
           /* refused outright: nothing else is coming */
           ImportProgress.refused(status.error, status.login)
           message(status.error)
@@ -485,6 +500,16 @@ async function render(
   const count = draw.count
   const stopped = signal.aborted ? "stopped; " : ""
   const summary = `${stopped}${count} activities${error ? ` (${error})` : ""}`
+
+  if (!count && empty && !error) {
+    /* A new account with nothing on Strava yet: an empty map with "no
+     * activities" in a corner looked broken, and people deleted and rejoined
+     * to fix it. This stays up until they close it. */
+    const msg = t("import.noActivitiesYet")
+    ImportProgress.refused(msg, false)
+    message(msg)
+    return 0
+  }
 
   if (!count) {
     ImportProgress.finish(error || `${stopped}no activities`, !!error)

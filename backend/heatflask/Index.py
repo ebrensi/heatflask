@@ -246,6 +246,33 @@ async def check_import_progress(user_id: int):
     return doc["msg"]
 
 
+async def set_empty_flag(user_id: int):
+    """Note that an import found no activities at all; see found_empty"""
+    flags = await get_flag_collection()
+    key = f"empty:{int(user_id)}"
+    now = datetime.datetime.now(datetime.timezone.utc)
+    await flags.replace_one(
+        {"_id": key},
+        {"_id": key, "msg": "no activities", "ttl": IMPORT_FLAG_TTL, "ts": now},
+        upsert=True,
+    )
+
+
+async def found_empty(user_id: int) -> bool:
+    """
+    Whether the import that just ran found no activities on Strava at all.
+    With no index entries every query imports again, so this is always about
+    the latest one; an import that failed leaves no such flag. Under its own
+    key, like due_for_update's, so check_import_progress never sees it.
+    """
+    flags = await get_flag_collection()
+    doc = await flags.find_one({"_id": f"empty:{int(user_id)}"})
+    if not doc:
+        return False
+    age = datetime.datetime.now(datetime.timezone.utc) - doc["ts"]
+    return age.total_seconds() <= doc.get("ttl", IMPORT_FLAG_TTL)
+
+
 # # **************************************
 async def fake_import(uid=None):
     log.info("Starting fake import for user %s", uid)
@@ -339,6 +366,20 @@ async def import_user_entries(**user):
     fetch_time = (t1 - t0) * 1000
 
     if not docs:
+        # A Strava account with no activities. This used to return with the
+        # import flag still set, so every query waited out IMPORT_FLAG_TTL for
+        # an import that had already finished, and the page said nothing
+        # useful. Say so instead, for the query that is waiting on it.
+        await set_empty_flag(uid)
+        History.record_soon(
+            History.Kind.IMPORT,
+            f"imported index of 0 activities ({cost.reads} Strava reads)",
+            user=uid,
+            activities=0,
+            reads=cost.reads,
+            ms=round(fetch_time),
+        )
+        await clear_import_flag(uid)
         return
 
     index = await get_collection()

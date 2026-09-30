@@ -116,6 +116,7 @@
   "import.waitRationed": "استنفدت التنزيلات السريعة لهذا اليوم. يستمر الباقي عند {time} بوتيرة أبطأ. اترك هذه الصفحة مفتوحة.",
   "import.dailyLimit": "استُنفد حد التنزيل اليومي في Strava. حاول مرة أخرى بعد {time}.",
   "import.dailyRationed": "استنفدت حصتك من تنزيلات Strava لهذا اليوم. حاول مرة أخرى بعد {time}.",
+  "import.noActivitiesYet": "لا توجد أنشطة في حسابك على Strava بعد. سجّل نشاطًا أو ارفعه على Strava وسيظهر هنا.",
   "table.noActivities": "لا توجد أنشطة",
   "table.untitled": "(بلا عنوان)",
   "activities.pageTitle": "{app} — فهرس الأنشطة",

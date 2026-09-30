@@ -116,6 +116,7 @@
   "import.waitRationed": "دانلودهای سریع امروز شما تمام شد. بقیه از {time} با سرعت کمتر ادامه می‌یابد. این صفحه را باز بگذارید.",
   "import.dailyLimit": "سقف دانلود روزانه Strava پر شده است. بعد از {time} دوباره امتحان کنید.",
   "import.dailyRationed": "سهم دانلود امروز شما از Strava تمام شده است. بعد از {time} دوباره امتحان کنید.",
+  "import.noActivitiesYet": "حساب Strava شما هنوز هیچ فعالیتی ندارد. یک فعالیت در Strava ثبت یا بارگذاری کنید تا اینجا نمایش داده شود.",
   "table.noActivities": "فعالیتی نیست",
   "table.untitled": "(بی‌عنوان)",
   "activities.pageTitle": "{app} — نمایه‌ی فعالیت‌ها",

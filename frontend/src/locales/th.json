@@ -116,6 +116,7 @@
   "import.waitRationed": "ใช้การดาวน์โหลดแบบเร็วของวันนี้หมดแล้ว ส่วนที่เหลือจะดำเนินต่อเวลา {time} แต่ช้ากว่า เปิดหน้านี้ไว้",
   "import.dailyLimit": "ถึงขีดจำกัดการดาวน์โหลดรายวันของ Strava แล้ว ลองใหม่หลัง {time}",
   "import.dailyRationed": "คุณใช้โควตาการดาวน์โหลดจาก Strava ของวันนี้หมดแล้ว ลองใหม่หลัง {time}",
+  "import.noActivitiesYet": "บัญชี Strava ของคุณยังไม่มีกิจกรรม บันทึกหรืออัปโหลดกิจกรรมบน Strava แล้วกิจกรรมจะแสดงที่นี่",
   "table.noActivities": "ไม่มีกิจกรรม",
   "table.untitled": "(ไม่มีชื่อ)",
   "activities.pageTitle": "{app} — ดัชนีกิจกรรม",

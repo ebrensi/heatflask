@@ -116,6 +116,7 @@
   "import.waitRationed": "আজকের দ্রুত ডাউনলোড শেষ। বাকিগুলো {time}-এ ধীরে চলবে। পেজটি খোলা রাখুন।",
   "import.dailyLimit": "Strava-র দৈনিক ডাউনলোড সীমা শেষ। {time}-এর পরে আবার চেষ্টা করুন।",
   "import.dailyRationed": "আজ Strava ডাউনলোডে আপনার ভাগ শেষ। {time}-এর পরে আবার চেষ্টা করুন।",
+  "import.noActivitiesYet": "আপনার Strava অ্যাকাউন্টে এখনও কোনো অ্যাক্টিভিটি নেই। Strava-তে একটি রেকর্ড বা আপলোড করুন, তা এখানে দেখা যাবে।",
   "table.noActivities": "কোনো কার্যকলাপ নেই",
   "table.untitled": "(শিরোনামহীন)",
   "activities.pageTitle": "{app} — কার্যকলাপ সূচি",

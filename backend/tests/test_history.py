@@ -397,6 +397,37 @@ async def test_an_index_import_counts_its_own_pages(
     assert entry["reads"] == 1 + Strava.PAGE_BATCH
 
 
+async def test_an_account_with_no_activities_finishes_its_import(
+    limiter, strava_server, monkeypatch, history
+):
+    """It used to return with the import flag still set, so every query
+    waited out the flag's TTL for an import that was over"""
+    await strava_server(n_activities=0)
+    calls = []
+
+    async def nothing(*args, **kwargs):
+        return None
+
+    async def record(name):
+        async def f(uid, *args):
+            calls.append((name, uid))
+
+        return f
+
+    monkeypatch.setattr(Index, "set_import_flag", nothing)
+    monkeypatch.setattr(Index, "check_import_progress", nothing)
+    monkeypatch.setattr(Index, "clear_import_flag", await record("clear"))
+    monkeypatch.setattr(Index, "set_empty_flag", await record("empty"))
+
+    await Index.import_user_entries(**make_user(7))
+    await drain()
+
+    assert ("clear", 7) in calls
+    assert ("empty", 7) in calls
+    (entry,) = [d for d in history.docs if d["kind"] == History.Kind.IMPORT]
+    assert entry["activities"] == 0
+
+
 def make_app(monkeypatch, admin: bool):
     app = Sanic(f"history_test_{time.monotonic_ns()}")
     app.blueprint(history_bp.bp)

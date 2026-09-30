@@ -124,8 +124,11 @@ async def test_demo_is_the_admins_map_not_an_index(app_url):
 
 
 async def test_nothing_happens_without_a_session(app_url):
+    """An expired login: back through Strava to their own map, where they can
+    try again. It used to be a bare 400 "Who are you?"."""
     base, calls = app_url
     async with aiohttp.ClientSession() as s:
         async with s.post(f"{base}/delete", allow_redirects=False) as r:
-            assert r.status == 400
+            assert r.status == 302
+            assert r.headers["Location"] == "/auth/authorize?state=%2F"
     assert calls == []

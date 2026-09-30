@@ -116,6 +116,7 @@
   "import.waitRationed": "오늘의 빠른 다운로드를 모두 사용했습니다. 나머지는 {time}부터 더 천천히 이어집니다. 이 창을 열어 두세요.",
   "import.dailyLimit": "Strava의 일일 다운로드 한도를 모두 사용했습니다. {time} 이후에 다시 시도하세요.",
   "import.dailyRationed": "오늘 사용할 수 있는 Strava 다운로드를 모두 사용했습니다. {time} 이후에 다시 시도하세요.",
+  "import.noActivitiesYet": "Strava 계정에 아직 활동이 없습니다. Strava에서 활동을 기록하거나 업로드하면 여기에 표시됩니다.",
   "table.noActivities": "활동 없음",
   "table.untitled": "(제목 없음)",
   "activities.pageTitle": "{app} — 활동 색인",

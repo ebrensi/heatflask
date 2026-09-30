@@ -116,6 +116,7 @@
   "import.waitRationed": "आजचे जलद डाउनलोड संपले. उरलेले {time} ला हळू सुरू राहील. हे पान उघडे ठेवा.",
   "import.dailyLimit": "Strava ची दैनिक डाउनलोड मर्यादा संपली. {time} नंतर पुन्हा प्रयत्न करा.",
   "import.dailyRationed": "आजचा तुमचा Strava डाउनलोडचा वाटा संपला. {time} नंतर पुन्हा प्रयत्न करा.",
+  "import.noActivitiesYet": "तुमच्या Strava खात्यात अजून कोणतीही ॲक्टिव्हिटी नाही. Strava वर एक रेकॉर्ड किंवा अपलोड करा, ती इथे दिसेल.",
   "table.noActivities": "एकही उपक्रम नाही",
   "table.untitled": "(शीर्षक नाही)",
   "activities.pageTitle": "{app} — उपक्रम अनुक्रमणिका",

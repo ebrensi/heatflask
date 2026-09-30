@@ -187,11 +187,15 @@ async def route(monkeypatch, sanic_server):
         return
         yield
 
+    async def found_empty(uid):
+        return False
+
     monkeypatch.setattr(Index, "query", fake_query)
     monkeypatch.setattr(Index, "has_user_entries", has_user_entries)
     monkeypatch.setattr(Index, "has_legacy_entries", has_legacy_entries)
     monkeypatch.setattr(Index, "due_for_update", due_for_update)
     monkeypatch.setattr(Index, "import_index_progress", import_index_progress)
+    monkeypatch.setattr(Index, "found_empty", found_empty)
     monkeypatch.setattr(Users, "get", get_user)
     monkeypatch.setattr(Users, "sharing_ids", sharing_ids)
 
