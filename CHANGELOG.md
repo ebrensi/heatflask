@@ -8,8 +8,26 @@ everything since the one before it.
 
 ## Unreleased
 
+## [1.7.4] — 2026-09-30
+
+### The app
+- **Fairer imports under Strava's rate limit.** An athlete's activity index, which costs a few reads and without which nothing can be drawn, now goes ahead of everyone's track imports. An athlete who has had 200 tracks from Strava in a day drops to a lower priority that leaves a third of every window for everyone else. The map says when it is waiting on the rate limit, and counts down to when it will carry on.
+- A new account with no activities on Strava yet gets a message saying so, instead of an empty map that looked broken.
+- A page whose login expired while it stayed open reloads as a visitor's page, which offers a login, instead of showing account controls that no longer work. Using those controls after the login expired now leads to logging in again instead of an error.
+- The **info tab** shows the app version.
+- **Korean.** Its line breaking is set to wrap only between words; browsers otherwise treat Hangul like Chinese and split words across lines.
+- The update prompt appears only when a deploy changed the frontend. Open pages used to be asked to reload after every deploy, including ones that changed only the backend.
+
+### Privacy
+- **Followers-only activities were shown on shared maps.** The filter looked for the visibility `followers`, but Strava calls it `followers_only`, so those activities passed as public. They are now hidden from everyone but their owner.
+- The admin no longer gets around an athlete's privacy settings: maps that are not shared, and private activities, are hidden from the admin as from anyone else, and only the athlete can turn Shared Maps on or off.
+- Activity summaries are kept for 60 days after you last open your own map, down from 90.
+
 ### Under the hood
-- The **update prompt** appears only when a deploy changed the frontend. An open page used to be asked to reload after every deploy, backend-only ones included; now the build names its frontend by a hash of the frontend's source (`frontend/tools/build-id.mjs`), and `/version` reports it alongside the app version.
+- The frontend build is named by a hash of the frontend's source (`frontend/tools/build-id.mjs`), and `/version` reports it alongside the app version. Parcel's output is not reproducible, so the source is hashed rather than the build.
+- `SKIP_TTL` leaves the TTLs of existing collections as they are, for an app that shares another's database (heatflask-dev shares production's), where each app otherwise reset them to its own values at startup.
+- The `/users` admin listing shows each user's language and their browser's, and is sorted by when they last opened a map.
+- Translation catalogues no longer carry strings the app does not use.
 
 ## [1.7.3] — 2026-09-24
 
@@ -140,6 +158,7 @@ At the tag, the app was Flask with gevent and flask-sockets, Leaflet with the
 canvas dot layer, and PostgreSQL, Redis and MongoDB behind it. Work on a
 Parcel build for the frontend had started that March on a separate branch.
 
+[1.7.4]: https://github.com/ebrensi/heatflask/compare/v1.7.3...v1.7.4
 [1.7.3]: https://github.com/ebrensi/heatflask/compare/v1.7.2...v1.7.3
 [1.7.2]: https://github.com/ebrensi/heatflask/compare/v1.0.0...v1.7.2
 [1.0.0]: https://github.com/ebrensi/heatflask/releases/tag/v1.0.0
