@@ -42,6 +42,7 @@ Strava shows you, and nobody else can ask Heatflask for it.
 | What | Where it comes from | How long |
 | --- | --- | --- |
 | Your Strava athlete ID, name, city/region/country, profile photo URL | Your Strava profile at login | Until you delete your account |
+| The language your browser prefers, and the one Heatflask shows you (for example "ja-JP" and "ja") | Your browser, when you open a map while logged in | Until you delete your account |
 | Your Strava access and refresh tokens | Strava, when you log in | Until you delete your account or revoke access on Strava |
 | Activity summaries (id, name, type, time, distance, map outline, privacy flags) | Strava | 60 days after you last open your own map while logged in, then re-imported when you come back |
 | Activity streams (the GPS track and the timing behind the animation) | Strava | 20 days after the last time they are drawn |

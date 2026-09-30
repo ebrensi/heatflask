@@ -6,8 +6,43 @@
 @import "~/src/css/lang.css";
 @import "~/src/css/jstable.scss";
 
+/* Dark, like the map and the other pages (theme-color #1b1b1b) */
+html,
+body {
+  background: #1b1b1b;
+  color: #e6e6e6;
+}
+
 body {
   padding: 0 16px 24px;
+}
+
+h3 {
+  color: #fff;
+}
+
+/* The framework's table is light, with #ddd stripes */
+#users,
+#users th,
+#users td {
+  background: transparent;
+  color: inherit;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+#users tbody > :nth-child(2n-1) {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* English is most rows; the other translations are the point */
+#users .dim {
+  color: #777;
+}
+
+/* The spinner's dark arc vanishes on a dark page */
+.spinner:before {
+  border-color: #444;
+  border-top-color: #fc4c02;
 }
 
 #users {
@@ -16,6 +51,7 @@ body {
 }
 
 #users th {
+  color: #fff;
   text-align: start;
   white-space: nowrap;
   cursor: pointer;
@@ -25,7 +61,7 @@ body {
 }
 
 #users th:hover {
-  background: rgba(128, 128, 128, 0.15);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 #users td {
@@ -47,7 +83,7 @@ body {
 }
 
 #users tbody tr:hover {
-  background: rgba(128, 128, 128, 0.18);
+  background: rgba(252, 76, 2, 0.2);
 }
 
 #users td img {

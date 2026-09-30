@@ -6,6 +6,7 @@ Functions and constants directly pertaining to our User database
 """
 
 from logging import getLogger
+import re
 import datetime
 import pymongo
 from pymongo import DESCENDING
@@ -53,6 +54,10 @@ class UserField:
     COUNTRY: Final = "C"
     AUTH: Final = "@"
     PRIVATE: Final = "p"
+    # The translation the page shows them, and the language their browser
+    # asks for: see set_languages
+    LANG: Final = "L"
+    BROWSER_LANG: Final = "B"
 
 
 U = UserField
@@ -212,7 +217,8 @@ async def get_all():
     return users.find()
 
 
-default_out_fields = {
+# What the admin listing at /users shows. Never U.AUTH.
+DUMP_FIELDS = {
     U.ID: True,
     U.FIRSTNAME: True,
     U.LASTNAME: True,
@@ -220,18 +226,15 @@ default_out_fields = {
     U.CITY: True,
     U.STATE: True,
     U.COUNTRY: True,
-    # Shown as "last active", which is also what the listing is sorted by
-    # (SORT_SPEC below)
-    U.LAST_LOGIN: True,
-    #
-    # U.LOGIN_COUNT=False
-    # U.LAST_INDEX_ACCESS=False
-    # U.AUTH: False,
-    # U.PRIVATE: False,
+    U.LAST_INDEX_ACCESS: True,
+    U.PRIVATE: True,
+    U.LANG: True,
+    U.BROWSER_LANG: True,
 }
 
-
-SORT_SPEC = [(U.LAST_LOGIN, DESCENDING)]
+# Last index access, not last login: a login lasts ten days and most visits
+# never make one, but every map someone opens touches the index.
+SORT_SPEC = [(U.LAST_INDEX_ACCESS, DESCENDING)]
 
 
 def is_sharing(user: dict) -> bool:
@@ -252,20 +255,44 @@ async def sharing_ids() -> list[int]:
 
 async def dump(output="json"):
     """Every registered user, for the admin listing at /users"""
-    out_fields = {
-        **default_out_fields,
-        U.LOGIN_COUNT: True,
-        U.LAST_INDEX_ACCESS: True,
-        U.PRIVATE: True,
-    }
     users = await get_collection()
-    cursor = users.find(projection=out_fields, sort=SORT_SPEC)
-    keys = list(out_fields.keys())
+    cursor = users.find(projection=DUMP_FIELDS, sort=SORT_SPEC)
+    keys = list(DUMP_FIELDS.keys())
     csv = output == "csv"
     if csv:
         yield keys
     async for u in cursor:
         yield [u.get(k, "") for k in keys] if csv else u
+
+
+# A BCP 47 tag, as a browser or the page sends one: "ja", "pt-BR", "zh-Hans"
+LANG_TAG = re.compile(r"^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8}){0,3}$")
+
+
+def lang_tag(value: str | None) -> str | None:
+    """A language tag worth storing, or None for anything that is not one"""
+    value = (value or "").strip()
+    return value if len(value) <= 24 and LANG_TAG.match(value) else None
+
+
+async def set_languages(user: dict, lang: str | None, browser_lang: str | None):
+    """
+    Record which translation a logged-in user sees, and what their browser
+    asks for, so the admin listing can show which translations are in use.
+    Written only when one changes, so a query costs no write.
+    """
+    update = {}
+    for field, value in (
+        (U.LANG, lang_tag(lang)),
+        (U.BROWSER_LANG, lang_tag(browser_lang)),
+    ):
+        if value and user.get(field) != value:
+            update[field] = value
+    if not update:
+        return
+    users = await get_collection()
+    await users.update_one({U.ID: user[U.ID]}, {"$set": update})
+    user.update(update)
 
 
 async def delete(user_id, deauthenticate=True):

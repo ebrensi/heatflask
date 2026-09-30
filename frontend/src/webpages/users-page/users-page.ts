@@ -5,7 +5,7 @@
  */
 /*
  * The user listing at /users: every registered user, with the operational
- * columns (login count, last login, last index access, shared). Admin only --
+ * columns (last index access, shared, language). Admin only --
  * there used to be a public directory here too, of athletes who had made
  * their profile public, and it is gone along with the idea that sharing a map
  * means being listed somewhere.
@@ -18,7 +18,13 @@
 import { img, sleep, escapeHTML } from "~/src/js/appUtil"
 import { icon } from "~/src/js/Icons"
 import { USER_FIELDNAMES as U } from "~/src/js/DataImport"
-import { initI18n, applyTranslations, t, getLocale } from "~/src/js/i18n"
+import {
+  initI18n,
+  applyTranslations,
+  t,
+  getLocale,
+  localeName,
+} from "~/src/js/i18n"
 
 const status_el = document.getElementById("status")
 
@@ -66,6 +72,41 @@ function since(ts: number): string {
   if (days < 31) return t("users.daysAgo", { count: Math.floor(days) })
   if (days < 365) return t("users.monthsAgo", { count: Math.floor(days / 30) })
   return t("users.yearsAgo", { count: (days / 365).toFixed(1) })
+}
+
+/** "ja", with its name on hover; English is dimmed so the others stand out */
+function langHTML(tag: string): string {
+  if (!tag) return ""
+  const cls = tag.split("-")[0] === "en" ? ' class="dim"' : ""
+  return `<span${cls} title="${escapeHTML(localeName(tag))}">${escapeHTML(
+    tag
+  )}</span>`
+}
+
+/**
+ * How many users see each translation other than English, busiest first:
+ * the question the language columns are for. Only users who have opened a
+ * map since the page started saying which one it shows are counted.
+ */
+function languageTally(): string {
+  const counts: Record<string, number> = {}
+  for (const r of rows) {
+    const tag = <string>r[U.LANG]
+    if (tag && tag !== "en") counts[tag] = (counts[tag] || 0) + 1
+  }
+  const known = rows.filter((r) => r[U.LANG]).length
+  const parts = Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .map(
+      ([tag, n]) =>
+        `<span title="${escapeHTML(localeName(tag))}">${escapeHTML(
+          tag
+        )}</span> ${n}`
+    )
+  return t("users.languages", {
+    known,
+    list: parts.length ? parts.join(", ") : "—",
+  })
 }
 
 const priv_icon = icon("eye-blocked")
@@ -117,16 +158,26 @@ const adminColumns: Column[] = [
     field: U.PRIVATE,
     render: (r) => (r[U.PRIVATE] ? priv_icon : pub_icon),
   },
-  { titleKey: "users.col.logins", field: U.LOGIN_COUNT, numeric: true },
-  {
-    titleKey: "users.col.lastLogin",
-    field: U.LAST_LOGIN,
-    render: (r) => ts_to_dt(<number>r[U.LAST_LOGIN]),
-  },
+  /* Login count and last login were here. A login lasts ten days and most
+   * visits never make one; every map someone opens touches the index. */
   {
     titleKey: "users.col.indexAccess",
     field: U.LAST_INDEX_ACCESS,
-    render: (r) => ts_to_dt(<number>r[U.LAST_INDEX_ACCESS]),
+    render: (r) => {
+      const ts = <number>r[U.LAST_INDEX_ACCESS]
+      return ts ? `<span title="${ts_to_dt(ts, true)}">${since(ts)}</span>` : ""
+    },
+    sortKey: (r) => <number>r[U.LAST_INDEX_ACCESS] || 0,
+  },
+  {
+    titleKey: "users.col.language",
+    field: U.LANG,
+    render: (r) => langHTML(<string>r[U.LANG]),
+  },
+  {
+    titleKey: "users.col.browser",
+    field: U.BROWSER_LANG,
+    render: (r) => langHTML(<string>r[U.BROWSER_LANG]),
   },
   { titleKey: "users.col.city", field: U.CITY },
   { titleKey: "users.col.region", field: U.STATE },
@@ -139,8 +190,8 @@ const adminColumns: Column[] = [
 
 const columns = adminColumns
 let rows: Row[] = []
-/* The backend already sorts by last login descending, so start there. */
-let sortCol = columns.findIndex((c) => c.field === U.LAST_LOGIN)
+/* The backend already sorts by last index access descending, so start there. */
+let sortCol = columns.findIndex((c) => c.field === U.LAST_INDEX_ACCESS)
 let sortAsc = false
 
 const table_element = <HTMLTableElement>document.getElementById("users")
@@ -244,6 +295,7 @@ async function run() {
   renderTable()
   await sleep(0.2)
   status_el.classList.remove("spinner")
+  status_el.innerHTML = languageTally()
 }
 
 ;(async () => {

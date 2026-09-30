@@ -10,6 +10,7 @@
 import { decodeMultiStream, decode } from "@msgpack/msgpack"
 import { decode2Buf } from "./Polyline"
 import { rld_decode } from "./StreamDecode"
+import { getLocale } from "./i18n"
 import type { QueryParameters } from "./Model"
 import type { ActivityType } from "./Strava"
 const BACKEND_QUERY_URL = "/query"
@@ -224,6 +225,9 @@ export async function* makeActivityQuery(
       headers: {
         Accept: "application/msgpack",
         "Content-Type": "application/msgpack",
+        /* The translation this page is showing, which the admin listing
+         * counts. The browser's own language comes in Accept-Language. */
+        "X-Heatflask-Lang": getLocale(),
       },
       body: JSON.stringify(query),
       signal,
@@ -285,6 +289,10 @@ export const USER_FIELDNAMES = {
   STATE: "s",
   COUNTRY: "C",
   PRIVATE: "p",
+  /** The translation the page shows them; see Users.set_languages */
+  LANG: "L",
+  /** The first language their browser asks for */
+  BROWSER_LANG: "B",
 } as const
 
 // /*

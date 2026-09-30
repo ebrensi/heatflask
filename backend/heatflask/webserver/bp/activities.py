@@ -260,6 +260,17 @@ async def run_query(request: SessionRequest, summary: QuerySummary):
     access = await Access.of(request, target_user_id)
     target_user, is_owner = access.target_user, access.is_owner
 
+    if request.ctx.current_user:
+        # Which translations are in use, for the admin listing. The page says
+        # which one it is showing; the browser's own first choice comes with
+        # every request anyway.
+        accept = request.headers.get("accept-language", "")
+        await Users.set_languages(
+            request.ctx.current_user,
+            request.headers.get("x-heatflask-lang"),
+            accept.split(",")[0].split(";")[0],
+        )
+
     if access.refused:
         # Refused before anything below can import their index with their token
         summary.outcome = "refused: private"
