@@ -5,7 +5,7 @@
  */
 import { icon } from "~/src/js/Icons"
 import { State } from "~/src/js/Model"
-import { OFFLINE, SPONSOR_URL } from "~/src/js/Env"
+import { APP_VERSION, OFFLINE, SPONSOR_URL } from "~/src/js/Env"
 
 import CONTENT from "bundle-text:./tab.info.html"
 export { CONTENT }
@@ -34,6 +34,10 @@ for (const [icon_name, url] of contact_specs) {
 export function SETUP(state: State) {
   const contacts_el = document.getElementById("contacts")
   contacts_el.innerHTML = html_tags.join("")
+
+  /* A version number reads the same in every language, so no catalog entry */
+  const version_el = document.getElementById("app-version")
+  if (version_el) version_el.textContent = `Heatflask ${APP_VERSION}`
 
   /* The sponsor page is on GitHub, which is no use to someone running
    * Heatflask offline */
