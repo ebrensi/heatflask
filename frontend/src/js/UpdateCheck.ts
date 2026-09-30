@@ -80,6 +80,9 @@ export function initUpdateCheck(map: MLMap): void {
     if (document.visibilityState === "visible") check(parent)
   }
   document.addEventListener("visibilitychange", checkIfVisible)
+  // Coming back to a desktop window that was only behind others: that
+  // changes no visibility, so without this it waited for the interval
+  window.addEventListener("focus", checkIfVisible)
   // a page restored from the back/forward cache
   window.addEventListener("pageshow", (e) => e.persisted && checkIfVisible())
   setInterval(checkIfVisible, INTERVAL_MS)
