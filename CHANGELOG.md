@@ -16,7 +16,7 @@ everything since the one before it.
 - A page whose login expired while it stayed open reloads as a visitor's page, which offers a login, instead of showing account controls that no longer work. Using those controls after the login expired now leads to logging in again instead of an error.
 - The **info tab** shows the app version.
 - **Korean.** Its line breaking is set to wrap only between words; browsers otherwise treat Hangul like Chinese and split words across lines.
-- The update prompt appears only when a deploy changed the frontend. Open pages used to be asked to reload after every deploy, including ones that changed only the backend.
+- The update prompt appears only when a deploy changed the frontend. Open pages used to be asked to reload after every deploy, including ones that changed only the backend. A desktop window also checks when it is clicked back into, rather than only when it is shown again after being minimised or on another tab.
 
 ### Privacy
 - **Followers-only activities were shown on shared maps.** The filter looked for the visibility `followers`, but Strava calls it `followers_only`, so those activities passed as public. They are now hidden from everyone but their owner.
