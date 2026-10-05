@@ -178,7 +178,7 @@ function buildLanguagePicker(): void {
   const options = [
     `<option value="">${t("tab.profile.languageAuto")}</option>`,
     ...LOCALES.map(
-      (tag) => `<option value="${tag}">${localeName(tag)}</option>`
+      (tag) => `<option value="${tag}">${localeName(tag)}</option>`,
     ),
   ]
   select.innerHTML = options.join("")
@@ -263,7 +263,7 @@ function buildMapDefaults(appState: State): void {
 /** Wire every element carrying data-action="<name>" to a handler. */
 function onAction(action: string, fn: () => void): void {
   for (const e of Array.from(
-    document.querySelectorAll(`[data-action="${action}"]`)
+    document.querySelectorAll(`[data-action="${action}"]`),
   )) {
     e.addEventListener("click", fn)
   }

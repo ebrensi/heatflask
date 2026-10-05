@@ -42,7 +42,7 @@ export type { MLMap }
  * there once Parcel has bundled it; without the worker, vector tiles and
  * raster-dem terrain silently never load. */
 setWorkerUrl(
-  new URL("npm:maplibre-gl/dist/maplibre-gl-worker.mjs", import.meta.url).href
+  new URL("npm:maplibre-gl/dist/maplibre-gl-worker.mjs", import.meta.url).href,
 )
 
 /* ------------------------------------------------------------------ *
@@ -54,7 +54,7 @@ type RasterOptions = Partial<RasterSourceSpecification>
 function rasterStyle(
   tiles: string,
   attribution: string,
-  opts: RasterOptions = {}
+  opts: RasterOptions = {},
 ): StyleSpecification {
   return {
     version: 8,
@@ -85,7 +85,7 @@ const mapboxRaster = (id: string) =>
   rasterStyle(
     `https://api.mapbox.com/styles/v1/mapbox/${id}/tiles/512/{z}/{x}/{y}?access_token=${MAPBOX_ACCESS_TOKEN}`,
     '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> ' + OSM,
-    { tileSize: 512 }
+    { tileSize: 512 },
   )
 
 export type Basemap = {
@@ -188,7 +188,7 @@ export const baselayers: Record<string, Basemap> = {
     style: rasterStyle(
       "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
       ESRI,
-      { maxzoom: 19 }
+      { maxzoom: 19 },
     ),
   },
   "Esri.NatGeoWorldMap": {
@@ -196,7 +196,7 @@ export const baselayers: Record<string, Basemap> = {
     style: rasterStyle(
       "https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}",
       ESRI,
-      { maxzoom: 16 }
+      { maxzoom: 16 },
     ),
   },
 
@@ -227,7 +227,7 @@ export const baselayers: Record<string, Basemap> = {
     style: rasterStyle(
       "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png",
       GSI,
-      { minzoom: 2, maxzoom: 18 }
+      { minzoom: 2, maxzoom: 18 },
     ),
     aka: ["GSI.Standard 地理院 標準地図"],
   },
@@ -236,7 +236,7 @@ export const baselayers: Record<string, Basemap> = {
     style: rasterStyle(
       "https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png",
       GSI,
-      { minzoom: 2, maxzoom: 18 }
+      { minzoom: 2, maxzoom: 18 },
     ),
     aka: ["GSI.Pale 地理院 淡色地図"],
   },
@@ -339,7 +339,7 @@ export const fromMapZoom = (mapZoom: number) => mapZoom + 1
 export function CreateMap(
   container: HTMLElement | string = "map",
   center: latlng = { lat: 0, lng: 0 },
-  zoom = 3
+  zoom = 3,
 ): MLMap {
   const map = new MLMap({
     container,
@@ -352,14 +352,14 @@ export function CreateMap(
 
   map.addControl(
     new NavigationControl({ visualizePitch: true }),
-    "bottom-right"
+    "bottom-right",
   )
   map.addControl(
     new GeolocateControl({
       positionOptions: { enableHighAccuracy: true },
       trackUserLocation: true,
     }),
-    "bottom-right"
+    "bottom-right",
   )
   map.addControl(new Watermarks(), "bottom-left")
   return map
@@ -494,7 +494,7 @@ function warnWhenBlocked(map: MLMap): void {
         `<p>The map could not reach ${list.join(", ")}.</p>` +
           "<p>If you use NoScript, uBlock or another blocker, allow " +
           `${hosts.size > 1 ? "these sites" : "this site"} to see the ` +
-          "basemap and 3D terrain.</p>"
+          "basemap and 3D terrain.</p>",
       )
       .show()
   })

@@ -81,7 +81,7 @@ const DEFAULT_ZOOM = 3
 const DEFAULT_GEOHASH: string = Geohash.encode(
   DEFAULT_CENTER.lat,
   DEFAULT_CENTER.lng,
-  DEFAULT_ZOOM
+  DEFAULT_ZOOM,
 )
 /* The Mapbox token and CARTO key are hardcoded in Env.ts, so any layer
  * would work here. OSM is keyless and uses neither quota. */

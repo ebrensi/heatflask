@@ -6,9 +6,13 @@
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
-    flake-utils.lib.eachDefaultSystem (system:
-      let
+  outputs = {
+    self,
+    nixpkgs,
+    flake-utils,
+  }:
+    flake-utils.lib.eachDefaultSystem (
+      system: let
         pkgs = import nixpkgs {
           inherit system;
           # For mongodb-ce, which is SSPL-1.0 and so unfree by nixpkgs' reckoning.
@@ -32,19 +36,20 @@
         # from inside it, and they are invoked as `python -m ...` from there
         # (see heatflask-test) rather than by their own console scripts, which
         # would run under this interpreter and not find sanic.
-        pythonEnv = pkgs.python313.withPackages (ps: with ps; [
-          pip
-          setuptools
-          wheel
-          virtualenv
+        pythonEnv = pkgs.python313.withPackages (ps:
+          with ps; [
+            pip
+            setuptools
+            wheel
+            virtualenv
 
-          # Development tools
-          pytest
-          pytest-asyncio
-          mypy
-          pdoc
-          ipython
-        ]);
+            # Development tools
+            pytest
+            pytest-asyncio
+            mypy
+            pdoc
+            ipython
+          ]);
 
         # MongoDB is the only datastore. Postgres and Redis are gone:
         # Postgres survives only as a one-shot user import (Users.migrate(),
@@ -271,26 +276,27 @@
         # pandoc through LuaLaTeX. A shell of its own, so that the default
         # one does not carry a TeX distribution nobody else needs.
         # texliveSmall plus what pandoc's template and pdf-header.tex load.
-        texlive = pkgs.texliveSmall.withPackages (ps: with ps; [
-          titlesec
-          titling
-          enumitem
-          fvextra
-          upquote
-          microtype
-          parskip
-          xurl
-          bookmark
-          footnotehyper
-          lualatex-math
-          unicode-math
-          selnolig
-          framed
-          booktabs
-          etoolbox
-          lm
-          lm-math
-        ]);
+        texlive = pkgs.texliveSmall.withPackages (ps:
+          with ps; [
+            titlesec
+            titling
+            enumitem
+            fvextra
+            upquote
+            microtype
+            parskip
+            xurl
+            bookmark
+            footnotehyper
+            lualatex-math
+            unicode-math
+            selnolig
+            framed
+            booktabs
+            etoolbox
+            lm
+            lm-math
+          ]);
 
         pdfScript = pkgs.writeShellScriptBin "heatflask-pdf" ''
           set -e
@@ -310,9 +316,7 @@
             -o "$out" "$in"
           echo "wrote $out"
         '';
-
-      in
-      {
+      in {
         devShells.publication = pkgs.mkShell {
           buildInputs = [
             pkgs.pandoc
@@ -328,6 +332,7 @@
 
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
+            uv
             pythonEnv
             # The let-bound mongodb-ce: a let binding outranks `with pkgs`.
             mongodb

@@ -166,7 +166,7 @@ type TerrainInternals = {
   tileManager: { maxzoom: number }
   getElevationForLngLatZoom(
     lnglat: { lng: number; lat: number; wrap(): unknown },
-    zoom: number
+    zoom: number,
   ): number
 }
 
@@ -405,7 +405,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
     gl.bufferData(
       gl.ARRAY_BUFFER,
       new Float32Array([0, -1, 0, 1, 1, -1, 1, 1]),
-      gl.STATIC_DRAW
+      gl.STATIC_DRAW,
     )
     gl.enableVertexAttribArray(0)
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0)
@@ -472,7 +472,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
    * fall back to drawing over the terrain as they always have. */
   private sizeShadowBuffers(
     gl: WebGL2RenderingContext,
-    wantDepth: boolean
+    wantDepth: boolean,
   ): void {
     const w = Math.max(1, Math.round(gl.drawingBufferWidth * SHADOW_SCALE))
     const h = Math.max(1, Math.round(gl.drawingBufferHeight * SHADOW_SCALE))
@@ -499,7 +499,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
         0,
         depth ? gl.RG : gl.RED,
         depth ? gl.HALF_FLOAT : gl.UNSIGNED_BYTE,
-        null
+        null,
       )
       gl.bindFramebuffer(gl.FRAMEBUFFER, this.shadowFramebuffers[i])
       gl.framebufferTexture2D(
@@ -507,7 +507,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
         gl.COLOR_ATTACHMENT0,
         gl.TEXTURE_2D,
         tex,
-        0
+        0,
       )
     }
     gl.bindTexture(gl.TEXTURE_2D, null)
@@ -562,7 +562,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
   private textureWidth(): number {
     return Math.min(
       TEXTURE_WIDTH,
-      this.gl.getParameter(this.gl.MAX_TEXTURE_SIZE)
+      this.gl.getParameter(this.gl.MAX_TEXTURE_SIZE),
     )
   }
 
@@ -588,7 +588,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
       0,
       gl.RGBA,
       gl.FLOAT,
-      padded
+      padded,
     )
     gl.bindTexture(gl.TEXTURE_2D, null)
   }
@@ -670,7 +670,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
    */
   prerender(
     glCtx: WebGLRenderingContext | WebGL2RenderingContext,
-    args: CustomRenderMethodInput
+    args: CustomRenderMethodInput,
   ): void {
     this.shadowsDrawn = false
     this.prerenderMs = 0
@@ -741,7 +741,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
     gl: WebGL2RenderingContext,
     source: WebGLTexture,
     targetWidth: number,
-    targetHeight: number
+    targetHeight: number,
   ): void {
     gl.useProgram(this.shadowProgram)
     gl.bindVertexArray(this.shadowVAO)
@@ -755,7 +755,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
 
   render(
     glCtx: WebGLRenderingContext | WebGL2RenderingContext,
-    args: CustomRenderMethodInput
+    args: CustomRenderMethodInput,
   ): void {
     if (!this.ready) return
     const gl = <WebGL2RenderingContext>glCtx
@@ -823,7 +823,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
           (rgba & 0xff) / 255,
           ((rgba >>> 8) & 0xff) / 255,
           ((rgba >>> 16) & 0xff) / 255,
-          1
+          1,
         )
         this.gpuTimer?.begin("shadow")
         gl.drawArrays(gl.TRIANGLES, 0, 3)
@@ -994,7 +994,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
     xmin: number,
     ymin: number,
     xmax: number,
-    ymax: number
+    ymax: number,
   ): [number, number] | undefined {
     const segMask = A.segMask
     if (!segMask) return
@@ -1037,7 +1037,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
 
   private zScale(): number {
     const terrain = this.map.getTerrain()
-    return terrain ? terrain.exaggeration ?? 1 : 0
+    return terrain ? (terrain.exaggeration ?? 1) : 0
   }
 
   /** The visible region in world px, padded */
@@ -1072,7 +1072,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
   /** The uniforms PROJECT_GLSL declares, for whichever program is bound */
   private setProjection(
     gl: WebGL2RenderingContext,
-    u: Record<string, WebGLUniformLocation>
+    u: Record<string, WebGLUniformLocation>,
   ): void {
     gl.uniformMatrix4fv(u.u_matrix, false, this.matrix32)
     gl.uniform1f(u.u_globe, this.globe)
@@ -1177,7 +1177,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
     gl.bufferData(
       gl.ARRAY_BUFFER,
       new Uint8Array(va.buffer, 0, (n + 1) * 20),
-      gl.DYNAMIC_DRAW
+      gl.DYNAMIC_DRAW,
     )
     this.pathInstances = Math.max(0, n - 1)
   }
@@ -1322,8 +1322,8 @@ export class HeatflaskLayer implements CustomLayerInterface {
       const style = !anySelected
         ? defaultOptions.normal
         : A.selected
-        ? defaultOptions.selected
-        : defaultOptions.unselected
+          ? defaultOptions.selected
+          : defaultOptions.unselected
       const o = a * META_TEXELS * 4
       m[o] = this.sampleOffset[a]
       m[o + 1] = this.sampleCount[a]
@@ -1369,7 +1369,7 @@ export class HeatflaskLayer implements CustomLayerInterface {
     const view = this.viewportBounds(0)
     const demZoom = Math.min(
       Math.max(0, Math.floor(this.map.getZoom())),
-      terrain.tileManager.maxzoom
+      terrain.tileManager.maxzoom,
     )
     let changed = false
 

@@ -213,7 +213,7 @@ const FIELD = /\{(\w+)\}/g
  */
 export function t(
   key: string,
-  params?: Record<string, string | number>
+  params?: Record<string, string | number>,
 ): string {
   const template = catalog[key] ?? EN[key]
   if (template === undefined) {
@@ -230,7 +230,7 @@ export function t(
 const ATTRS = ["title", "value", "placeholder", "alt", "aria-label"] as const
 
 const SELECTOR = ["[data-i18n]", ...ATTRS.map((a) => `[data-i18n-${a}]`)].join(
-  ","
+  ",",
 )
 
 /**

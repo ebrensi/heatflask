@@ -12,7 +12,7 @@ export type Mat4 = Float64Array | Float32Array | number[]
 export function compileProgram(
   gl: WebGL2RenderingContext,
   vertexSource: string,
-  fragmentSource: string
+  fragmentSource: string,
 ): WebGLProgram {
   const program = gl.createProgram()
   for (const [type, source] of [
@@ -41,7 +41,7 @@ export function compileProgram(
 export function uniformLocations<K extends string>(
   gl: WebGL2RenderingContext,
   program: WebGLProgram,
-  names: readonly K[]
+  names: readonly K[],
 ): Record<K, WebGLUniformLocation> {
   const out = <Record<K, WebGLUniformLocation>>{}
   for (const name of names) out[name] = gl.getUniformLocation(program, name)

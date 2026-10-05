@@ -128,7 +128,7 @@ type QueryResultItem = ImportedActivity | StatusObject
 export function qToQ(
   query: QueryParameters,
   streams: boolean,
-  exclude_ids?: number[]
+  exclude_ids?: number[],
 ) {
   const bq: ActivityQuery = { streams, exclude_ids }
   if (query.userid) bq.user_id = query.userid
@@ -184,7 +184,7 @@ export function qToQ(
  */
 export function decodePackedStreams(
   packed: Uint8Array,
-  polylinePrecision: number
+  polylinePrecision: number,
 ): ImportedActivity["streams"] {
   const mpk = <UnpackedStreams>decode(packed)
   return {
@@ -216,7 +216,7 @@ export async function* makeActivityQuery(
   query: ActivityQuery,
   url = BACKEND_QUERY_URL,
   keepPacked = false,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): AsyncGenerator<QueryResultItem | null, void, undefined> {
   let info: StatusObject["info"]
   try {
@@ -234,7 +234,7 @@ export async function* makeActivityQuery(
     })
 
     const resultStream = decodeMultiStream(
-      response.body
+      response.body,
     ) as AsyncGenerator<QueryResultItem>
 
     for await (const obj of resultStream) {

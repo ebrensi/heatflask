@@ -21,7 +21,7 @@ export class Dialog {
 
   constructor(
     parent: HTMLElement,
-    opts: { title?: string; content?: string; position?: Position } = {}
+    opts: { title?: string; content?: string; position?: Position } = {},
   ) {
     const el = (this.el = document.createElement("div"))
     el.className = "control-window heatflask-dialog"

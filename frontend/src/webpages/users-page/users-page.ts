@@ -79,7 +79,7 @@ function langHTML(tag: string): string {
   if (!tag) return ""
   const cls = tag.split("-")[0] === "en" ? ' class="dim"' : ""
   return `<span${cls} title="${escapeHTML(localeName(tag))}">${escapeHTML(
-    tag
+    tag,
   )}</span>`
 }
 
@@ -100,8 +100,8 @@ function languageTally(): string {
     .map(
       ([tag, n]) =>
         `<span title="${escapeHTML(localeName(tag))}">${escapeHTML(
-          tag
-        )}</span> ${n}`
+          tag,
+        )}</span> ${n}`,
     )
   return t("users.languages", {
     known,
@@ -197,7 +197,7 @@ let sortAsc = false
 const table_element = <HTMLTableElement>document.getElementById("users")
 
 function sortValue(col: Column, row: Row): string | number {
-  return col.sortKey ? col.sortKey(row) : row[col.field] ?? ""
+  return col.sortKey ? col.sortKey(row) : (row[col.field] ?? "")
 }
 
 function renderTable(): void {

@@ -74,7 +74,7 @@ function middleLightness(h: number): number {
     const C = Math.min(
       maxChroma(L - TONE_STEP, h),
       maxChroma(L, h),
-      maxChroma(L + TONE_STEP, h)
+      maxChroma(L + TONE_STEP, h),
     )
     if (C > bestC) {
       bestC = C

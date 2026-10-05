@@ -50,7 +50,7 @@ export function simplify(points: PointAccessor, n: number, tolerance: number) {
 function simplifyRadialDist(
   points: PointAccessor,
   n: number,
-  sqTolerance: number
+  sqTolerance: number,
 ) {
   const selectedIdx = new BitSet(n)
   let i: number
@@ -77,7 +77,7 @@ function simplifyRadialDist(
 function simplifyDouglasPeucker(
   points: PointAccessor,
   n: number,
-  sqTolerance: number
+  sqTolerance: number,
 ) {
   const bitSet = new BitSet(n)
 
@@ -99,7 +99,7 @@ function simplifyDPStep(
   sqTolerance: number,
   bitSet: BitSet,
   first: Point,
-  last: Point
+  last: Point,
 ) {
   let maxSqDist = sqTolerance,
     index

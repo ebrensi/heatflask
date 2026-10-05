@@ -63,7 +63,7 @@ export function addBoxSelect(map: MLMap): void {
   }
 
   const control = new ButtonControl("select-mode-control", () =>
-    setSelectMode(!selectMode)
+    setSelectMode(!selectMode),
   )
 
   function render(): void {
@@ -71,7 +71,7 @@ export function addBoxSelect(map: MLMap): void {
       selectMode ? CANCEL_ICON : SELECT_ICON,
       selectMode
         ? "Stop selecting"
-        : "Select activities: drag a box over them (or shift-drag any time)"
+        : "Select activities: drag a box over them (or shift-drag any time)",
     )
     control.button.setAttribute("aria-pressed", String(selectMode))
   }

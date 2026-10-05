@@ -57,7 +57,7 @@ async function check(parent: HTMLElement): Promise<void> {
 
   console.log(
     `update available: frontend ${FRONTEND_BUILD} -> ${running.frontend}` +
-      ` (${running.app})`
+      ` (${running.app})`,
   )
   dialog = new Dialog(parent, {
     position: "top",

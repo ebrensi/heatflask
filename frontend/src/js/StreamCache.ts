@@ -89,7 +89,7 @@ const nowSecs = () => Math.round(Date.now() / 1000)
  */
 export async function init(
   currentUserId?: number,
-  targetUserId?: number
+  targetUserId?: number,
 ): Promise<boolean> {
   store = null
   meta = null
@@ -184,7 +184,7 @@ async function evict(): Promise<number> {
 
   const target = BUDGET_BYTES * EVICT_TO
   const byAge = Object.keys(meta.entries).sort(
-    (a, b) => meta.entries[a].t - meta.entries[b].t
+    (a, b) => meta.entries[a].t - meta.entries[b].t,
   )
 
   let dropped = 0
@@ -245,7 +245,7 @@ export async function clear(): Promise<void> {
  */
 export async function peekCachedIds(
   currentUserId?: number,
-  targetUserId?: number
+  targetUserId?: number,
 ): Promise<Set<number>> {
   const ok = await init(currentUserId, targetUserId)
   return ok ? cachedIds() : new Set<number>()

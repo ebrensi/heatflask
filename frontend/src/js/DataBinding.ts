@@ -29,7 +29,7 @@ export class LiveParams<Params> {
     this: Params & LiveParams<Params>,
     key: K,
     callback: CallbackFunction<Params[K]>,
-    trigger = true
+    trigger = true,
   ): void {
     type V = Params[K]
     let binding = this.#bindings[key]

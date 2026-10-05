@@ -124,7 +124,7 @@ async function fillStreamsFromCache(
   activities: ImportedActivity[],
   polylinePrecision: number,
   signal: AbortSignal,
-  draw: Progressive
+  draw: Progressive,
 ): Promise<string | undefined> {
   if (!activities.length) return
 
@@ -140,7 +140,7 @@ async function fillStreamsFromCache(
    * render of 120 activities spent 1.2 seconds doing nothing at all. Issued
    * together they collapse into a single transaction. */
   const packed = await Promise.all(
-    activities.map((A) => StreamCache.get(A._id))
+    activities.map((A) => StreamCache.get(A._id)),
   )
   if (signal.reason === SUPERSEDED) return
 
@@ -197,7 +197,7 @@ async function fillStreamsFromCache(
       streamQuery,
       URLS.query,
       true,
-      signal
+      signal,
     )) {
       if (!obj) continue
       if (!("_id" in obj)) {
@@ -226,7 +226,7 @@ async function fillStreamsFromCache(
   console.log(
     `stream cache: ${hits} hits, ${misses.length} misses ` +
       `in ${Math.round(performance.now() - t0)}ms; ` +
-      `holding ${count} activities (${(bytes / 1e6).toFixed(1)} MB)`
+      `holding ${count} activities (${(bytes / 1e6).toFixed(1)} MB)`,
   )
 
   return error
@@ -299,10 +299,13 @@ class Progressive {
   private schedule(): void {
     if (this.finished || this.timer || this.drawing) return
     const wait = this.lastDraw + this.interval - performance.now()
-    this.timer = window.setTimeout(() => {
-      this.timer = 0
-      this.run()
-    }, Math.max(0, wait))
+    this.timer = window.setTimeout(
+      () => {
+        this.timer = 0
+        this.run()
+      },
+      Math.max(0, wait),
+    )
   }
 
   private run(): void {
@@ -345,7 +348,7 @@ class Progressive {
     this.lastDraw = performance.now()
     this.interval = Math.max(
       DRAW_INTERVAL_MS,
-      DRAW_SHARE * (this.lastDraw - t0)
+      DRAW_SHARE * (this.lastDraw - t0),
     )
   }
 
@@ -412,7 +415,7 @@ export async function renderFromQuery(): Promise<number> {
 async function render(
   backendQuery: ReturnType<typeof qToQ>,
   caching: boolean,
-  signal: AbortSignal
+  signal: AbortSignal,
 ): Promise<number> {
   message("importing…")
   ImportProgress.start()
@@ -436,7 +439,7 @@ async function render(
       backendQuery,
       URLS.query,
       caching,
-      signal
+      signal,
     )) {
       if (!obj) continue
 
@@ -487,7 +490,7 @@ async function render(
           summaries,
           polylinePrecision,
           signal,
-          draw
+          draw,
         )) || error
     }
     await draw.finish()

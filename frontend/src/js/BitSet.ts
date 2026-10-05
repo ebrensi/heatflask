@@ -50,7 +50,7 @@ export class BitSet {
     const w: number = index >>> 5
     if (w >= this.words.length) {
       throw new RangeError(
-        `cannot access word ${w} of ${this.words.length}-word bitset`
+        `cannot access word ${w} of ${this.words.length}-word bitset`,
       )
     }
     this.words[w] |= 1 << index
@@ -64,7 +64,7 @@ export class BitSet {
     const w: number = index >>> 5
     if (w >= this.words.length) {
       throw new RangeError(
-        `cannot access word ${w} of ${this.words.length} bitset`
+        `cannot access word ${w} of ${this.words.length} bitset`,
       )
     }
     this.words[w] ^= 1 << index
@@ -82,7 +82,7 @@ export class BitSet {
     const w: number = index >>> 5
     if (w >= this.words.length) {
       throw new RangeError(
-        `cannot access word ${w} of ${this.words.length}-word bitset`
+        `cannot access word ${w} of ${this.words.length}-word bitset`,
       )
     }
     this.words[w] &= ~(1 << index)
@@ -111,7 +111,7 @@ export class BitSet {
     const w: number = index >>> 5
     if (w >= this.words.length) {
       throw new RangeError(
-        `cannot access word ${w} of ${this.words.length}-word bitset`
+        `cannot access word ${w} of ${this.words.length}-word bitset`,
       )
     }
     const word = this.words[w]
@@ -235,7 +235,7 @@ export class BitSet {
   // i.e. for each i in subBitSet, yield the i-th member of this BitSet
   *imap_subset(
     bitSubSet: BitSet,
-    fnc?: (t: number) => unknown
+    fnc?: (t: number) => unknown,
   ): IterableIterator<unknown> {
     const idxGen = bitSubSet.imap()
 
@@ -585,7 +585,7 @@ function hammingWeight4(
   v1: number,
   v2: number,
   v3: number,
-  v4: number
+  v4: number,
 ): number {
   v1 -= (v1 >>> 1) & 0x55555555 // works with signed or unsigned shifts
   v2 -= (v2 >>> 1) & 0x55555555 // works with signed or unsigned shifts

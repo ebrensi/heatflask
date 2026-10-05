@@ -82,7 +82,7 @@ export class LayerPicker implements IControl {
     terrainBox.checked = !!visual.terrain
     terrainBox.addEventListener(
       "change",
-      () => (visual.terrain = terrainBox.checked)
+      () => (visual.terrain = terrainBox.checked),
     )
     terrainLabel.append(terrainBox, " 3D terrain")
     switches.appendChild(terrainLabel)
@@ -122,7 +122,7 @@ export class LayerPicker implements IControl {
     visual.onChange(
       "terrain",
       (on: boolean) => (terrainBox.checked = !!on),
-      false
+      false,
     )
     visual.onChange("globe", (on: boolean) => (globeBox.checked = !!on), false)
     return c

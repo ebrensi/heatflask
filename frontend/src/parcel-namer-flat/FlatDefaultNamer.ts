@@ -24,25 +24,25 @@ export default new Namer({
       bundleGroup,
       {
         includeInline: true,
-      }
+      },
     )
     const isEntry = bundleGraph.isEntryBundleGroup(bundleGroup)
 
     if (bundle.needsStableName) {
       const entryBundlesOfType = bundleGroupBundles.filter(
-        (b) => b.needsStableName && b.type === bundle.type
+        (b) => b.needsStableName && b.type === bundle.type,
       )
       assert(
         entryBundlesOfType.length === 1,
         // Otherwise, we'd end up naming two bundles the same thing.
-        "Bundle group cannot have more than one entry bundle of the same type"
+        "Bundle group cannot have more than one entry bundle of the same type",
       )
     }
 
     const mainBundle = nullthrows(
       bundleGroupBundles.find((b) =>
-        b.getEntryAssets().some((a) => a.id === bundleGroup.entryAssetId)
-      )
+        b.getEntryAssets().some((a) => a.id === bundleGroup.entryAssetId),
+      ),
     )
 
     if (
@@ -58,7 +58,7 @@ export default new Namer({
       if (!allowedExtensions.includes(distExtension) && loc) {
         const fullName = path.relative(
           path.dirname(loc.filePath),
-          path.join(bundle.target.distDir, distEntry)
+          path.join(bundle.target.distDir, distEntry),
         )
         const err = new ThrowableDiagnostic({
           diagnostic: {
@@ -99,7 +99,7 @@ export default new Namer({
       mainBundle,
       isEntry,
       bundleGroup.entryAssetId,
-      bundleGraph.getEntryRoot(bundle.target)
+      bundleGraph.getEntryRoot(bundle.target),
     )
     if (!bundle.needsStableName) {
       name += "." + bundle.hashReference
@@ -113,10 +113,10 @@ function nameFromContent(
   bundle: Bundle,
   isEntry: boolean,
   entryAssetId: string,
-  entryRoot: FilePath
+  entryRoot: FilePath,
 ): string {
   let entryFilePath = nullthrows(
-    bundle.getEntryAssets().find((a) => a.id === entryAssetId)
+    bundle.getEntryAssets().find((a) => a.id === entryAssetId),
   ).filePath
   let name = basenameWithoutExtension(entryFilePath)
 

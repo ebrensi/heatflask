@@ -8,7 +8,7 @@ import { initI18n, applyTranslations, t } from "~/src/js/i18n"
 console.log(`Environment: ${process.env.NODE_ENV}`)
 
 const runtime_json = JSON.parse(
-  document.getElementById("runtime_json").innerText
+  document.getElementById("runtime_json").innerText,
 )
 const urls = runtime_json["urls"]
 const flashes_el = document.getElementById("flashes")

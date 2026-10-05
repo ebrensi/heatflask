@@ -197,7 +197,7 @@ async function fillSportList(userid?: number): Promise<void> {
     if (!(s in counts)) counts[s] = 0
   })
   listed = Object.keys(counts).sort(
-    (a, b) => counts[b] - counts[a] || sportName(a).localeCompare(sportName(b))
+    (a, b) => counts[b] - counts[a] || sportName(a).localeCompare(sportName(b)),
   )
   list.replaceChildren(...listed.map((s) => sportRow(s, counts[s])))
   status.textContent = listed.length ? "" : t("tab.query.noSports")
@@ -251,7 +251,7 @@ export function SETUP(appState: State) {
   showFieldsFor(query.type)
 
   typeSelect.addEventListener("change", () =>
-    showFieldsFor(<QueryType>typeSelect.value)
+    showFieldsFor(<QueryType>typeSelect.value),
   )
 
   /* The date pickers keep each other honest: after can't be later than before */

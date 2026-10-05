@@ -117,7 +117,7 @@ function drawLogos(ctx: CanvasRenderingContext2D, sel: Selection): void {
 export async function captureVideo(
   map: MLMap,
   sel: Selection,
-  onProgress: ProgressFn = () => undefined
+  onProgress: ProgressFn = () => undefined,
 ): Promise<Blob | null> {
   if (_capturing) return null
 
@@ -221,7 +221,7 @@ export async function captureVideo(
           0,
           0,
           width,
-          height
+          height,
         )
       })
       drawLogos(ctx, { x: 0, y: 0, width, height })
@@ -232,7 +232,7 @@ export async function captureVideo(
 
       onProgress(
         (i + 1) / numFrames,
-        t("capture.encoding", { percent: ~~(((i + 1) / numFrames) * 100) })
+        t("capture.encoding", { percent: ~~(((i + 1) / numFrames) * 100) }),
       )
     }
 
@@ -264,7 +264,7 @@ function mapSettled(map: MLMap): Promise<void> {
  */
 function renderedFrame(
   map: MLMap,
-  read: (canvas: HTMLCanvasElement) => void
+  read: (canvas: HTMLCanvasElement) => void,
 ): Promise<void> {
   return new Promise((resolve) => {
     map.once("render", () => {

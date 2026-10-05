@@ -150,7 +150,7 @@ class Sidebar {
   constructor(private el: HTMLElement) {
     el.classList.add("sidebar-left")
     for (const a of Array.from(
-      el.querySelectorAll<HTMLAnchorElement>(".sidebar-tabs > ul > li > a")
+      el.querySelectorAll<HTMLAnchorElement>(".sidebar-tabs > ul > li > a"),
     )) {
       a.addEventListener("click", (e) => {
         e.preventDefault()
@@ -169,7 +169,9 @@ class Sidebar {
       pane.classList.toggle("active", pane.id === id)
     }
     for (const a of Array.from(
-      this.el.querySelectorAll<HTMLAnchorElement>(".sidebar-tabs > ul > li > a")
+      this.el.querySelectorAll<HTMLAnchorElement>(
+        ".sidebar-tabs > ul > li > a",
+      ),
     )) {
       a.parentElement.classList.toggle("active", a.hash === `#${id}`)
     }
@@ -184,7 +186,7 @@ class Sidebar {
 
   close(): void {
     for (const li of Array.from(
-      this.el.querySelectorAll(".sidebar-tabs > ul > li.active")
+      this.el.querySelectorAll(".sidebar-tabs > ul > li.active"),
     )) {
       li.classList.remove("active")
     }

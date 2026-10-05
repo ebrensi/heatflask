@@ -43,7 +43,7 @@ export function compressedSizeInBytes(input: Iterable<number>): number {
  */
 export function compress(
   input: Iterable<number>,
-  estimatedSize?: number
+  estimatedSize?: number,
 ): ArrayBuffer {
   const buf = new ArrayBuffer(estimatedSize || compressedSizeInBytes(input))
 

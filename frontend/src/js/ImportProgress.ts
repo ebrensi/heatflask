@@ -160,7 +160,7 @@ export function finish(finalMessage?: string, isError = false): void {
   visible = false
   hideTimer = setTimeout(
     () => win.hide(),
-    isError ? LINGER_ERROR_MS : LINGER_MS
+    isError ? LINGER_ERROR_MS : LINGER_MS,
   )
 }
 

@@ -88,7 +88,7 @@ export function addCaptureControl(map: MLMap): void {
               period: period.toFixed(1),
               max: CAPTURE_DURATION_MAX,
             })
-          : t("capture.record", { period: period.toFixed(1) })
+          : t("capture.record", { period: period.toFixed(1) }),
       )
     } else if (state === "selecting") {
       control.set(APPLY_ICON, t("capture.recordArea"))
@@ -116,7 +116,7 @@ export function addCaptureControl(map: MLMap): void {
 
     try {
       const blob = await captureVideo(map, sel, (_frac, label) =>
-        showProgress(label)
+        showProgress(label),
       )
       if (blob) {
         const name = filename()

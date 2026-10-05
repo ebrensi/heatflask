@@ -164,14 +164,14 @@ export function parseURL(urlString: string) {
   const type = urlParams.key
     ? "key"
     : urlParams.ids
-    ? "ids"
-    : urlParams.after || urlParams.before
-    ? "dates"
-    : urlParams.days
-    ? "days"
-    : urlParams.limit
-    ? "activities"
-    : undefined
+      ? "ids"
+      : urlParams.after || urlParams.before
+        ? "dates"
+        : urlParams.days
+          ? "days"
+          : urlParams.limit
+            ? "activities"
+            : undefined
 
   const qparams: QueryParameters = {}
   if (type) {
@@ -281,7 +281,7 @@ export function toString(urlParams: URLParameters): string {
   //  or not present
   for (const [param, val] of Object.entries(urlParams) as [
     URLParameter,
-    string
+    string,
   ][]) {
     if (
       param !== "userid" &&

@@ -33,7 +33,7 @@ export function addAnimationControl(map: MLMap, appState: State): void {
     else dotLayer.animate()
     control.set(
       paused ? PLAY_ICON : PAUSE_ICON,
-      t(paused ? "map.resumeAnimation" : "map.pauseAnimation")
+      t(paused ? "map.resumeAnimation" : "map.pauseAnimation"),
     )
   })
 

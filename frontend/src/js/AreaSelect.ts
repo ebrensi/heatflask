@@ -18,7 +18,10 @@ const MIN_SIZE = 32
 export class AreaSelect {
   private box: HTMLDivElement
 
-  constructor(private container: HTMLElement, fraction: number) {
+  constructor(
+    private container: HTMLElement,
+    fraction: number,
+  ) {
     const box = (this.box = document.createElement("div"))
     box.className = "area-select"
     const { clientWidth: w, clientHeight: h } = container

@@ -25,7 +25,7 @@ import type { ActivityType } from "~/src/js/Strava"
 const BASE_URL = "/"
 const strava_button_url = new URL(
   "~/src/images/strava_button.png",
-  import.meta.url
+  import.meta.url,
 )
 
 const status_msg_el = document.getElementById("status_msg")
@@ -78,10 +78,10 @@ function makeHeaderRow() {
      * Mongo, and this browser's IndexedDB. A track in neither has to be
      * re-fetched from Strava, which is the slow, rate-limited path. */
     `<span title="${t("activities.colServerCache")}">${icon(
-      "database1"
+      "database1",
     )}</span>`,
     `<span title="${t("activities.colBrowserCache")}">${icon(
-      "download2"
+      "download2",
     )}</span>`,
     icon("pencil"), // title
   ]
@@ -99,7 +99,7 @@ function cacheCell(
   present: boolean,
   yes: string,
   no: string,
-  aid: number
+  aid: number,
 ): string {
   const title = t(present ? yes : no, { id: aid })
   return present
@@ -118,7 +118,7 @@ async function main() {
    * comes back empty unless this list is the signed-in user's own. */
   locallyCached = await StreamCache.peekCachedIds(
     args.current_user_id,
-    args.query_obj.user_id
+    args.query_obj.user_id,
   )
 
   const data: string[][] = []
@@ -178,7 +178,7 @@ function makeRow(A: ImportedActivity): string[] {
   const heatflask_link = `${BASE_URL}?id=${aid}`
   const strava_link = href(`${activityURL(aid)}`, STRAVA_BUTTON)
   const date = new Date(
-    (A[F.UTC_START_TIME] + A[F.UTC_LOCAL_OFFSET]) * 1000
+    (A[F.UTC_START_TIME] + A[F.UTC_LOCAL_OFFSET]) * 1000,
   ).toLocaleString(getLocale())
   const dist = (A[F.DISTANCE_METERS] * DIST_SCALE).toFixed(2)
   const elapsed = HHMMSS(A[F.TIME_SECONDS])
@@ -191,13 +191,13 @@ function makeRow(A: ImportedActivity): string[] {
     serverCached.has(aid),
     "activities.cachedServer",
     "activities.notCachedServer",
-    aid
+    aid,
   )
   const inBrowser = cacheCell(
     locallyCached.has(aid),
     "activities.cachedBrowser",
     "activities.notCachedBrowser",
-    aid
+    aid,
   )
 
   const cells = [

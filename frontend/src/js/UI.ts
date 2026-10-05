@@ -114,7 +114,7 @@ export async function start() {
   if (caching) {
     const { count, bytes } = StreamCache.stats()
     console.log(
-      `stream cache ready: ${count} activities (${(bytes / 1e6).toFixed(1)} MB)`
+      `stream cache ready: ${count} activities (${(bytes / 1e6).toFixed(1)} MB)`,
     )
   }
 

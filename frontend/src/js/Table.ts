@@ -154,8 +154,8 @@ function scrollIntoView(A?: Activity): void {
       max,
       from +
         (rowBox.top + rowBox.height / 2) -
-        (listBox.top + listBox.height / 2)
-    )
+        (listBox.top + listBox.height / 2),
+    ),
   )
 
   cancelAnimationFrame(scrollFrame)
@@ -287,12 +287,12 @@ export function update(): void {
   if (!tableEl) return
 
   const activities = [...ActivityCollection.items.values()].sort(
-    (a, b) => (b.ts || 0) - (a.ts || 0) // most recent first
+    (a, b) => (b.ts || 0) - (a.ts || 0), // most recent first
   )
 
   if (!activities.length) {
     tableEl.innerHTML = `<tbody><tr><td>${t(
-      "table.noActivities"
+      "table.noActivities",
     )}</td></tr></tbody>`
     return
   }

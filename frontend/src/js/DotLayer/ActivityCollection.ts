@@ -131,7 +131,7 @@ function setDotColors(): void {
   const byDate = [...items.values()].sort((a, b) => (b.ts || 0) - (a.ts || 0))
   const colorPalette = ColorPalette.makePalette(
     Math.max(byDate.length, colorPlan?.size || 0),
-    colorRotation
+    colorRotation,
   )
   for (let i = 0; i < byDate.length; i++) {
     byDate[i].colors.dot = colorPalette[colorPlan?.get(byDate[i].id) ?? i]
@@ -159,7 +159,7 @@ const lastInView = new BitSet(1)
  */
 export async function updateContext(
   viewportPxBounds: Bounds,
-  zoom: number
+  zoom: number,
 ): Promise<void> {
   if (!_itemsArray) return
   inView.clear()
@@ -217,12 +217,12 @@ export function* inViewItems(): IterableIterator<Activity> {
 
 export async function getLatLngBounds(
   ids?: Iterable<number>,
-  only_selected?: boolean
+  only_selected?: boolean,
 ): Promise<LngLatBounds | undefined> {
   return boundsOf(
     [...(ids || items.keys())]
       .map((id) => items.get(id))
-      .filter((A) => A && (!only_selected || A.selected))
+      .filter((A) => A && (!only_selected || A.selected)),
   )
 }
 
@@ -235,7 +235,7 @@ export function boundsOf(activities: Iterable<Activity>): LngLatBounds {
     if (!bounds)
       bounds = new LngLatBounds(
         A.llBounds.getSouthWest(),
-        A.llBounds.getNorthEast()
+        A.llBounds.getNorthEast(),
       )
     else bounds.extend(A.llBounds)
   }
@@ -252,7 +252,7 @@ type DrawStyle = typeof options.normal
  * top of it -- so selected paths and dots are never buried under the rest.
  */
 export function forEachInViewLayered(
-  draw: (A: Activity, style: DrawStyle) => void
+  draw: (A: Activity, style: DrawStyle) => void,
 ): void {
   let anySelected = false
   for (const A of items.values()) {

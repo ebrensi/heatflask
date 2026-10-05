@@ -69,14 +69,14 @@ export function rld_decode(enc: Uint8Array, ArrayConstructor) {
     enc_diffs = new Uint8Array(
       enc.buffer,
       enc.byteOffset + headerBytes,
-      enc.length - headerBytes
+      enc.length - headerBytes,
     )
     rl_marker = 255
   } else {
     enc_diffs = new Int8Array(
       enc.buffer,
       enc.byteOffset + headerBytes,
-      enc.length - headerBytes
+      enc.length - headerBytes,
     )
     rl_marker = -128
   }

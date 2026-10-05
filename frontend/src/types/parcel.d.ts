@@ -17,3 +17,6 @@ declare module "url:*" {
   const value: string
   export default value
 }
+
+// Stylesheets imported for their side effect; Parcel bundles them.
+declare module "*.css"

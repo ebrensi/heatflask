@@ -118,7 +118,7 @@ export class Activity {
     /* The backend sends corners as [lat, lng]; MapLibre wants [lng, lat] */
     this.llBounds = new LngLatBounds(
       [bounds.SW[1], bounds.SW[0]],
-      [bounds.NE[1], bounds.NE[0]]
+      [bounds.NE[1], bounds.NE[0]],
     )
     this.pxBounds = new Bounds()
     for (const corner of [bounds.SW, bounds.NE]) {
@@ -240,7 +240,7 @@ export class Activity {
     const idxBitSet = simplifyPath(
       (i) => this.pointAt(i),
       this.streams.px.length / 2,
-      1 / 2 ** zoom
+      1 / 2 ** zoom,
     )
     this.idxSet[zoom] = idxBitSet
 

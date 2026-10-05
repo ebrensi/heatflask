@@ -52,7 +52,7 @@ export function img(
   url: string,
   w = 20,
   h = 20,
-  alt: number | string = ""
+  alt: number | string = "",
 ): string {
   return `<img loading=lazy src='${url}' width=${w}px height=${h}px alt="${alt}">`
 }
@@ -68,7 +68,7 @@ export function escapeHTML(s: string): string {
   return s.replace(
     /[&<>"']/g,
     (c) =>
-      `&${{ "&": "amp", "<": "lt", ">": "gt", '"': "quot", "'": "#39" }[c]};`
+      `&${{ "&": "amp", "<": "lt", ">": "gt", '"': "quot", "'": "#39" }[c]};`,
   )
 }
 
@@ -90,7 +90,7 @@ export function binarySearch<T>(
   target: T,
   start: number,
   end: number,
-  compare?: (x: T, y: T) => number
+  compare?: (x: T, y: T) => number,
 ): number {
   if (start > end) {
     return

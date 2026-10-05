@@ -23,7 +23,7 @@ export class Store {
     dbName: string,
     storeName: string,
     keyPath?: string,
-    version?: number
+    version?: number,
   ): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
       const openreq = indexedDB.open(dbName, version)
@@ -74,7 +74,7 @@ export class Store {
 
   _withIDBStore(
     type: IDBTransactionMode,
-    callback: (t: IDBObjectStore) => void
+    callback: (t: IDBObjectStore) => void,
   ) {
     return this._dbp.then(
       (db) =>
@@ -84,7 +84,7 @@ export class Store {
           transaction.onabort = transaction.onerror = () =>
             reject(transaction.error)
           callback(transaction.objectStore(this.storeName))
-        })
+        }),
     )
   }
 
@@ -154,7 +154,7 @@ function doBulkPutDel(store: Store) {
 
       // make all put and del requests
       for (const [key, { value, resolve, reject }] of Object.entries(
-        putQueries
+        putQueries,
       )) {
         const req = thisTransactionObjectStore.put(value, key)
         req.onsuccess = () => resolve()

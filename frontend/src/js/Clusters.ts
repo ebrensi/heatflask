@@ -101,12 +101,12 @@ export function updateClusters(): void {
     ...group(
       small.filter((A) => !A.selected),
       radius,
-      false
+      false,
     ),
     ...group(
       small.filter((A) => A.selected),
       radius,
-      true
+      true,
     ),
   ]
 
@@ -145,7 +145,7 @@ export function updateClusters(): void {
 function uncovered(
   small: Activity[],
   visible: Activity[],
-  cell: number
+  cell: number,
 ): Activity[] {
   if (!small.length || !visible.length) return small
   const W = Math.ceil(WORLD_PX / cell) + 2

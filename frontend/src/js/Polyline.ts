@@ -28,7 +28,7 @@
  */
 export function* decode(
   str: string,
-  precision?: number
+  precision?: number,
 ): IterableIterator<[number, number]> {
   let index = 0
   let lat = 0
@@ -94,7 +94,7 @@ export function lengthInPoints(str: string): number {
 export function decode2Buf(
   str: string,
   precision: number,
-  n?: number
+  n?: number,
 ): Float32Array {
   n = n || lengthInPoints(str)
   const buf = new Float32Array(2 * n)

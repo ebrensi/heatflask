@@ -38,7 +38,7 @@ export const STYLE_PARAMS = [
   "shadows",
 ] as const
 
-type StyleParam = typeof STYLE_PARAMS[number]
+type StyleParam = (typeof STYLE_PARAMS)[number]
 export type Style = Pick<VisualParameters, StyleParam>
 
 /** Fired on `document` when defaults are saved or forgotten */
