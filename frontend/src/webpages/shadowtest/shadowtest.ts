@@ -3,13 +3,18 @@
  * activities, a flat background basemap, and the layer exposed on window so
  * a debugger can pause it, toggle shadows and switch to the globe.
  */
-import { Map as MLMap } from "maplibre-gl"
+import { Map as MLMap, setWorkerUrl } from "maplibre-gl"
 import "maplibre-gl/dist/maplibre-gl.css"
 
 import { HeatflaskLayer } from "../../js/GL/HeatflaskLayer"
 import * as ActivityCollection from "../../js/DotLayer/ActivityCollection"
 import { DefaultVisual } from "../../js/Model"
 import type { ImportedActivity } from "../../js/DataImport"
+
+/* As in MapAPI.ts: without it the worker never loads, nor does the map */
+setWorkerUrl(
+  new URL("npm:maplibre-gl/dist/maplibre-gl-worker.mjs", import.meta.url).href,
+)
 
 const CENTER: [number, number] = [-122.2, 37.83] // lng, lat
 const N_ACTIVITIES = 24
