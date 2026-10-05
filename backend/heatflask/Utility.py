@@ -4,7 +4,7 @@
 from dateutil.parser import parse
 import aiohttp
 
-from datetime import datetime
+from datetime import UTC, datetime
 from itertools import islice, repeat, starmap, takewhile
 from operator import truth
 from logging import getLogger
@@ -41,7 +41,8 @@ def to_datetime(obj: DatetimeObj) -> datetime | None:
     if isinstance(obj, datetime):
         return obj
     elif isinstance(obj, int):
-        return datetime.utcfromtimestamp(obj)
+        # naive UTC, like the parse() branch below
+        return datetime.fromtimestamp(obj, UTC).replace(tzinfo=None)
     try:
         dt = parse(obj, ignoretz=True)
     except ValueError:
@@ -50,7 +51,7 @@ def to_datetime(obj: DatetimeObj) -> datetime | None:
         return dt
 
 
-EPOCH = datetime.utcfromtimestamp(0)
+EPOCH = datetime(1970, 1, 1)
 
 
 def to_epoch(dtObj: DatetimeObj):
