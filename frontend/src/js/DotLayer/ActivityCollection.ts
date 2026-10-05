@@ -53,48 +53,11 @@ export function reset(): void {
     _itemsArray[i].idx = i
   }
 
-  /*
-   * We will pack all relevant data into linear memory
-   */
-  const nbytes = {
-    px: 0,
-    time: 0,
-    alt: 0,
-  }
-
-  for (let i = 0; i < _itemsArray.length; i++) {
-    const A = _itemsArray[i]
-    nbytes.px += A.streams.px.byteLength
-    nbytes.time += A.streams.time.byteLength
-    nbytes.alt += A.streams.altitude.byteLength
-  }
-
-  /* One contiguous buffer holding every activity's streams, rounded up to
-   * whole 64k pages. This was a WebAssembly.Memory, used purely as a growable
-   * ArrayBuffer and unrelated to the (now deleted) wasm module. */
-  const numPages =
-    ((nbytes.px + nbytes.time + nbytes.alt + 0xffff) & ~0xffff) >>> 16
-
-  const buf = new ArrayBuffer(numPages << 16)
-  const pxView = new Float32Array(buf, 0, nbytes.px / 4)
-  const timeView = new Uint32Array(buf, nbytes.px, nbytes.time / 4)
-  const altView = new Int16Array(buf, nbytes.px + nbytes.time, nbytes.alt / 2)
-
-  let pxLoc = 0
-  let timeLoc = 0
-  let altLoc = 0
-
-  for (let i = 0; i < _itemsArray.length; i++) {
-    const s = _itemsArray[i].streams
-    pxView.set(s.px, pxLoc)
-    s.px = pxView.subarray(pxLoc, (pxLoc += s.px.length))
-
-    timeView.set(s.time, timeLoc)
-    s.time = timeView.subarray(timeLoc, (timeLoc += s.time.length))
-
-    altView.set(s.altitude, altLoc)
-    s.altitude = altView.subarray(altLoc, (altLoc += s.altitude.length))
-  }
+  /* Every activity's streams used to be copied into one contiguous buffer
+   * here, for the WebAssembly module. Nothing has read them that way since it
+   * was deleted, and reset() runs on every progressive draw, so the copy cost
+   * a pass over all the data and twice its memory each time. Each Activity
+   * keeps the compact arrays its constructor made. */
 
   inView.resize(_itemsArray.length)
   lastInView.resize(_itemsArray.length)
