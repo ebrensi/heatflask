@@ -7,7 +7,7 @@ This is the server-side code for [Heatflask](https://www.heatflask.com ).  It is
 If you want to try your hand at Heatflask development, you will need to be able to test any changes you make on your own machine.  These instuctions assume you are using Linux.  I have not tried development on another OS. New to Linux? I recommend [Pop_OS!](https://system76.com/pop).
 
 ### Set up the backend environment
-Fork this repo and clone it to your machine.   The backend runs on Python 3.13 (the floor is set by numpy 2.5, which requires 3.12+), with [MongoDB](https://www.mongodb.com) as its only datastore.
+Fork this repo and clone it to your machine.   The backend runs on Python 3.14 (the floor is set by numpy 2.5, which requires 3.12+), with [MongoDB](https://www.mongodb.com) as its only datastore.
 
 You will need [Nix](https://nixos.org). `nix develop` at the repo root gives you both, plus
 helper commands (`heatflask-setup`, `heatflask-start-services`, `heatflask-run`).

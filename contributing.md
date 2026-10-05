@@ -1,7 +1,7 @@
 # Contributing to Heatflask
 ### tl;dr
 If you mostly know what you are doing and you are on a Linux based operating system,
-  * install [Nix](https://nixos.org), clone this repo, and in the root of the repo run `nix develop`, which provides MongoDB, Python 3.13 and Node, then `heatflask-setup`.  It installs everything, and a pre-commit hook that formats what you commit.
+  * install [Nix](https://nixos.org), clone this repo, and in the root of the repo run `nix develop`, which provides MongoDB, Python 3.14 and Node, then `heatflask-setup`.  It installs everything, and a pre-commit hook that formats what you commit.
 
   * copy [`backend/.env.example`](./backend/.env.example) to `backend/.env` and put your Strava app credentials in it (see [`backend/README.md`](./backend/README.md)), then start MongoDB with `heatflask-start-services` and the server with `heatflask-run`, which loads that file for you.
 

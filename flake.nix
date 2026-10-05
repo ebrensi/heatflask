@@ -21,7 +21,7 @@
           config.allowUnfree = true;
         };
 
-        # Python 3.13. The floor is set by numpy 2.5, which requires >= 3.12.
+        # Python 3.14. The floor is set by numpy 2.5, which requires >= 3.12.
         # Sanic 25.12 supports 3.10-3.14 and pymongo 4.18 supports 3.9-3.14.
         #
         # The dev shell is the development environment, so the development
@@ -36,7 +36,7 @@
         # from inside it, and they are invoked as `python -m ...` from there
         # (see heatflask-test) rather than by their own console scripts, which
         # would run under this interpreter and not find sanic.
-        pythonEnv = pkgs.python313.withPackages (ps:
+        pythonEnv = pkgs.python314.withPackages (ps:
           with ps; [
             pip
             setuptools
@@ -214,7 +214,7 @@
           ${pkgs.uv}/bin/uv pip compile backend/pyproject.toml \
             --universal \
             --generate-hashes \
-            --python-version 3.13 \
+            --python-version 3.14 \
             -o backend/requirements.lock
           echo ""
           echo "backend/requirements.lock regenerated."
@@ -358,7 +358,7 @@
             ruff
 
             # Node.js for frontend assets
-            nodejs_22
+            nodejs_24
 
             # heatflask-setup and the pre-commit hook shell out to git.
             git

@@ -19,7 +19,7 @@
 # Render, or Heroku's container stack.
 
 # ---- frontend ----------------------------------------------------------------
-FROM node:22-slim AS frontend
+FROM node:24-slim AS frontend
 
 WORKDIR /app/frontend
 
@@ -43,7 +43,7 @@ COPY frontend/ ./
 RUN mkdir -p dist && npm run build
 
 # ---- backend -----------------------------------------------------------------
-FROM python:3.13-slim-bookworm
+FROM python:3.14-slim-bookworm
 
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
