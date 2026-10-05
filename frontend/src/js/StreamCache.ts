@@ -148,6 +148,12 @@ export async function get(id: number): Promise<Uint8Array | null> {
     }
     entry.t = nowSecs()
     metaDirty = true
+    /* Written by a build that stored whole network chunks (see compact).
+     * Rewrite it at its real size, once; not awaited, so the render does
+     * not wait on it. */
+    if (bytes.byteLength !== bytes.buffer.byteLength) {
+      idb.set(String(id), compact(bytes), store).catch(() => {})
+    }
     return bytes
   } catch (e) {
     console.warn("stream cache read failed", id, e)
@@ -155,11 +161,24 @@ export async function get(id: number): Promise<Uint8Array | null> {
   }
 }
 
+/**
+ * The bytes on their own, without the buffer around them.
+ *
+ * A fetched activity's bytes are a view into the msgpack decoder's buffer,
+ * which holds the whole network chunk they arrived in. IndexedDB clones a
+ * view's entire buffer, not just the view: measured in Chrome, a 12KB track
+ * in a 64KB chunk took 64KB on disk. The budget only counts the 12KB, so the
+ * cache could grow to several times BUDGET_BYTES.
+ */
+function compact(bytes: Uint8Array): Uint8Array {
+  return bytes.byteLength === bytes.buffer.byteLength ? bytes : bytes.slice()
+}
+
 /** Store one activity's packed bytes. */
 export async function put(id: number, bytes: Uint8Array): Promise<void> {
   if (!enabled() || !bytes || !bytes.length) return
   try {
-    await idb.set(String(id), bytes, store)
+    await idb.set(String(id), compact(bytes), store)
     meta.entries[id] = { n: bytes.length, t: nowSecs() }
     metaDirty = true
   } catch (e) {
