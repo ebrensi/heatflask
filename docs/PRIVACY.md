@@ -42,6 +42,7 @@ Strava shows you, and nobody else can ask Heatflask for it.
 | What | Where it comes from | How long |
 | --- | --- | --- |
 | Your Strava athlete ID, name, city/region/country, profile photo URL | Your Strava profile at login | Until you delete your account |
+| When you last opened a map, and whether Shared Maps is on | Heatflask itself | Until you delete your account |
 | The language your browser prefers, and the one Heatflask shows you (for example "ja-JP" and "ja") | Your browser, when you open a map while logged in | Until you delete your account |
 | Your Strava access and refresh tokens | Strava, when you log in | Until you delete your account or revoke access on Strava |
 | Activity summaries (id, name, type, time, distance, map outline, privacy flags) | Strava | 60 days after you last open your own map while logged in, then re-imported when you come back |
@@ -50,6 +51,14 @@ Strava shows you, and nobody else can ask Heatflask for it.
 
 Heatflask does not sell anything, does not run ads and does not share your data
 with anyone else. There is no analytics or tracking script on the page.
+
+## What the operator sees
+
+Heatflask is run by one person. To run it, they can see the list of accounts
+(the profile fields, language and last-visit date in the table above, and
+whether Shared Maps is on) and the request log. They get no exception to
+Shared Maps: a map that is not shared, and activities that are not public, are
+hidden from them as from anyone else.
 
 ## Your browser
 
@@ -65,7 +74,7 @@ Heatflask record, tokens and activity index, and it revokes Heatflask's access
 to your Strava account. You can also revoke access from Strava's side, under
 [Settings → My Apps](https://www.strava.com/settings/apps). Cached streams are
 not deleted by hand; they are keyed by activity rather than by athlete, and
-expire on their own within 10 days.
+expire on their own within 20 days.
 
 If you have not used Heatflask for a year, its access to your Strava account is
 revoked automatically, and your record is dropped once Strava confirms it.
