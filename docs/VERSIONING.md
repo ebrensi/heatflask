@@ -19,7 +19,11 @@ show them what they showed before?**
 | --------- | ------------------------------------------------------------------------ |
 | **Major** | An existing link no longer shows what it used to, although we could still have shown it. A name is gone or renamed with no fallback, a parameter has a new meaning or unit, or a changed default moves links that leave it out. |
 | **Minor** | New names — parameters, spellings, whatever — with every old one still accepted. Every old link still resolves the same way. |
-| **Patch** | No name changed: fixes, performance, layout, translations, backend work. |
+| **Patch** | No name changed: fixes, performance, layout, backend work. |
+
+Translations take no bump at all. Adding a language or correcting one changes
+nothing a link can ask for, and the app reports its build (below) for anyone
+who needs to know exactly which catalogs are running.
 
 What is promised is **the names**: the parameters in `urlArgNames` in
 [`frontend/src/js/URL.ts`](../frontend/src/js/URL.ts), and the names of the
