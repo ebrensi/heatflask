@@ -62,7 +62,7 @@
   "tab.profile.textReset": "Normal",
   "tab.profile.textLarger": "Større",
   "tab.profile.mapDefaultsHeading": "Kartstandarder",
-  "tab.profile.mapDefaultsNote": "Start med dette bakgrunnskartet, terrenget og lagfinnstillingene når du åpner et kart der lenken ikke angir sine egne. Lenker du deler viser fortsatt nøyaktig det du ser.",
+  "tab.profile.mapDefaultsNote": "Start med dette bakgrunnskartet, terrenget og laginnstillingene når du åpner et kart der lenken ikke angir sine egne. Lenker du deler viser fortsatt nøyaktig det du ser.",
   "tab.profile.mapDefaultsSave": "Lagre som mine standarder",
   "tab.profile.mapDefaultsForget": "Glem",
   "tab.info.title": "Info",

@@ -4,9 +4,9 @@ One JSON file per language. `en.json` is the source of truth: every string the
 front end shows is in it, and English is the fallback for any key a translation
 has not got to yet.
 
-Shipping thirty-three. English; in Europe, Czech, Dutch, French, German,
-Italian, Norwegian (Bokmål), Polish, Brazilian and European Portuguese,
-Russian, Spanish and Ukrainian; in Asia, Chinese in both Simplified and
+Shipping thirty-seven. English; in Europe, Czech, Dutch, French, German,
+Greek, Hungarian, Italian, Norwegian (Bokmål), Polish, Brazilian and European
+Portuguese, Russian, Slovenian, Spanish, Swedish and Ukrainian; in Asia, Chinese in both Simplified and
 Traditional, Indonesian, Japanese, Korean, Thai and Vietnamese; in the Middle East and
 South Asia, Arabic, Persian, Urdu, Hindi, Bengali, Marathi, Tamil, Telugu and
 Kannada; in Africa, Amharic, Tigrinya, Swahili and Hausa. All but English are a

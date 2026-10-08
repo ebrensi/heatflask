@@ -37,11 +37,13 @@ import AR_JSON from "../locales/ar.json"
 import BN_JSON from "../locales/bn.json"
 import CS_JSON from "../locales/cs.json"
 import DE_JSON from "../locales/de.json"
+import EL_JSON from "../locales/el.json"
 import ES_JSON from "../locales/es.json"
 import FA_JSON from "../locales/fa.json"
 import FR_JSON from "../locales/fr.json"
 import HA_JSON from "../locales/ha.json"
 import HI_JSON from "../locales/hi.json"
+import HU_JSON from "../locales/hu.json"
 import ID_JSON from "../locales/id.json"
 import IT_JSON from "../locales/it.json"
 import JA_JSON from "../locales/ja.json"
@@ -54,6 +56,8 @@ import PL_JSON from "../locales/pl.json"
 import PT_BR_JSON from "../locales/pt-BR.json"
 import PT_PT_JSON from "../locales/pt-PT.json"
 import RU_JSON from "../locales/ru.json"
+import SL_JSON from "../locales/sl.json"
+import SV_JSON from "../locales/sv.json"
 import SW_JSON from "../locales/sw.json"
 import TA_JSON from "../locales/ta.json"
 import TE_JSON from "../locales/te.json"
@@ -87,11 +91,13 @@ const CATALOGS: Record<string, Catalog> = {
   bn: <Catalog>BN_JSON,
   cs: <Catalog>CS_JSON,
   de: <Catalog>DE_JSON,
+  el: <Catalog>EL_JSON,
   es: <Catalog>ES_JSON,
   fa: <Catalog>FA_JSON,
   fr: <Catalog>FR_JSON,
   ha: <Catalog>HA_JSON,
   hi: <Catalog>HI_JSON,
+  hu: <Catalog>HU_JSON,
   id: <Catalog>ID_JSON,
   it: <Catalog>IT_JSON,
   ja: <Catalog>JA_JSON,
@@ -104,6 +110,8 @@ const CATALOGS: Record<string, Catalog> = {
   "pt-BR": <Catalog>PT_BR_JSON,
   "pt-PT": <Catalog>PT_PT_JSON,
   ru: <Catalog>RU_JSON,
+  sl: <Catalog>SL_JSON,
+  sv: <Catalog>SV_JSON,
   sw: <Catalog>SW_JSON,
   ta: <Catalog>TA_JSON,
   te: <Catalog>TE_JSON,
