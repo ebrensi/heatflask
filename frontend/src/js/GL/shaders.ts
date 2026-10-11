@@ -357,6 +357,38 @@ void main() {
 }
 `
 
+/* The most reads the shadow's blur makes along one side of its kernel, the
+ * centre included: enough for a radius of 16 texels, read in pairs. */
+export const SHADOW_MAX_TAPS = 9
+
+/**
+ * The shadow blur's kernel, for SHADOW_FS: a Gaussian of standard deviation
+ * `sigma` texels, cut off at three of them, as (offset, weight) pairs. The
+ * first is the centre texel; each of the rest stands for two neighbouring
+ * texels on one side, and is to be read on both sides. Returns how many there
+ * are.
+ */
+export function gaussianTaps(sigma: number, out: Float32Array): number {
+  const s = Math.max(sigma, 0.01)
+  const radius = Math.min(Math.ceil(3 * s), 2 * (SHADOW_MAX_TAPS - 1))
+  const g = (x: number) => (x > radius ? 0 : Math.exp((-0.5 * x * x) / (s * s)))
+
+  let n = 1
+  let total = 1
+  out[0] = 0
+  out[1] = 1
+  for (let x = 1; x <= radius; x += 2) {
+    const w1 = g(x)
+    const w2 = g(x + 1)
+    out[2 * n] = (x * w1 + (x + 1) * w2) / (w1 + w2)
+    out[2 * n + 1] = w1 + w2
+    total += 2 * (w1 + w2)
+    n++
+  }
+  for (let i = 0; i < n; i++) out[2 * i + 1] /= total
+  return n
+}
+
 /* ---------------------------------------------------------------------- *
  * Shadows: one for all the dots together, not one per dot.
  *
@@ -374,15 +406,21 @@ void main() {
  *   3. and that vertically back into the first.
  *   4. The result is stretched over the map, offset, and darkens it.
  *
- * The buffers are a fraction of the map's resolution (SHADOW_SCALE), and all
- * the blurring happens there, so the one pass at full resolution, 4, reads a
- * single texel per pixel, filtered. It covers the whole map whether there are
- * dots or not; blurring in it cost several milliseconds a frame on an iGPU.
+ * The buffers are a fraction of the map's resolution (see shadowScale), and
+ * all the blurring happens there, so the one pass at full resolution, 4, reads
+ * a single texel per pixel, filtered. It covers the whole map whether there
+ * are dots or not; blurring in it cost several milliseconds a frame on an iGPU.
  *
- * The blur is a Gaussian of standard deviation u_sigma source texels, as
- * CSS's drop-shadow blur radius is twice the standard deviation. All three
- * passes use this shader, on one oversized triangle that covers the viewport;
- * no vertex buffer is needed.
+ * The blur is a Gaussian, as CSS's drop-shadow is, with a blur radius of twice
+ * the standard deviation. Its weights are worked out once on the CPU (see
+ * gaussianTaps) and its texels are read two at a time: a sample placed
+ * between two neighbours, nearer the heavier one, has the linear filter
+ * return their weighted mean, so a kernel 2r + 1 texels wide takes r + 1
+ * reads. That is exact here because the blur's source and target are the same
+ * size, so the sample sits on a texel centre across the blur's direction.
+ *
+ * All three passes use this shader, on one oversized triangle that covers the
+ * viewport; no vertex buffer is needed.
  * ---------------------------------------------------------------------- */
 export const SHADOW_VS = `#version 300 es
 precision highp float;
@@ -396,13 +434,14 @@ void main() {
 export const SHADOW_FS = `#version 300 es
 precision highp float;
 
-const int MAX_RADIUS = 16;
+const int MAX_TAPS = ${SHADOW_MAX_TAPS};
 
 uniform sampler2D u_source;
 uniform vec2 u_viewport;   // the target's size, in its pixels
 uniform vec2 u_offset;     // target pixels to shift the source by
 uniform vec2 u_step;       // one source texel along the blur, in uv
-uniform float u_sigma;     // in source texels
+uniform vec2 u_taps[MAX_TAPS]; // offset in source texels, weight; [0] centre
+uniform int u_tapCount;
 uniform float u_final;     // 1 for the pass onto the map: no blur
 uniform float u_depth;     // 1 when terrain should occlude the shadow
 uniform vec2 u_depthRange; // glDepthRange in force on the map, near and far
@@ -441,20 +480,17 @@ void main() {
     return;
   }
 
-  float sigma = max(u_sigma, 0.01);
-  int radius = min(int(ceil(3.0 * sigma)), MAX_RADIUS);
-  vec2 sum = vec2(0.0);
-  float weights = 0.0;
-  for (int i = -MAX_RADIUS; i <= MAX_RADIUS; i++) {
-    if (abs(i) > radius) continue;
-    float x = float(i);
-    float w = exp(-0.5 * x * x / (sigma * sigma));
-    /* Coverage and premultiplied depth blur together: both are linear in the
-     * same weights, so one Gaussian carries the pair. In 2D the buffer is
-     * one-channel and g reads back 0, which u_depth then ignores. */
-    sum += w * texture(u_source, uv + x * u_step).rg;
-    weights += w;
+  /* Coverage and premultiplied depth blur together: both are linear in the
+   * same weights, so one Gaussian carries the pair. In 2D the buffer is
+   * one-channel and g reads back 0, which u_depth then ignores. The weights
+   * sum to 1 over the whole kernel, each off-centre tap counting twice. */
+  vec2 sum = u_taps[0].y * texture(u_source, uv).rg;
+  for (int i = 1; i < MAX_TAPS; i++) {
+    if (i >= u_tapCount) break;
+    vec2 d = u_taps[i].x * u_step;
+    sum += u_taps[i].y *
+      (texture(u_source, uv + d).rg + texture(u_source, uv - d).rg);
   }
-  fragColor = vec4(sum / weights, 0.0, 0.0);
+  fragColor = vec4(sum, 0.0, 0.0);
 }
 `

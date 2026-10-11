@@ -51,6 +51,8 @@ import {
   DOT_FS,
   SHADOW_VS,
   SHADOW_FS,
+  SHADOW_MAX_TAPS,
+  gaussianTaps,
 } from "./shaders"
 import {
   compileProgram,
@@ -112,11 +114,21 @@ const ALT_RECALIBRATE_ZOOM = 2
  * overlapping translucent dots pop. */
 const DEPTH_TEST = true
 
-/* The dot shadows are drawn and blurred offscreen at this fraction of the
- * drawing buffer's resolution, then stretched back over the map. They are
- * blurred by several pixels anyway, so half resolution is not visibly
- * coarser, and it has a quarter of the pixels to fill. See SHADOW_FS. */
-const SHADOW_SCALE = 0.5
+/* The dot shadows are drawn and blurred offscreen at a fraction of the
+ * drawing buffer's resolution, then stretched back over the map (see
+ * SHADOW_FS). The fraction is whatever makes the blur's standard deviation
+ * this many texels there: a blur that wide hides the coarser grid, and a
+ * wider blur, or a denser screen, gets a smaller buffer and a kernel no
+ * larger, where at a fixed fraction both the pixels to fill and the reads
+ * for each of them grew. 1.25 is what the default blur comes to at half
+ * resolution on a screen of pixel ratio 1, so every screen gets that look. */
+const SHADOW_SIGMA_TEXELS = 1.25
+
+/* The limits of that fraction. Never finer than half resolution, which a
+ * narrow blur would otherwise ask for; and never so coarse that the stretch
+ * back over the map shows, however wide the blur. */
+const SHADOW_SCALE_MAX = 0.5
+const SHADOW_SCALE_MIN = 0.125
 
 /* The height, in CSS px, of the light that shades the dots, against the
  * shadow's offset (see lightDirection). With the default 5px offset, 12 puts
@@ -227,6 +239,10 @@ export class HeatflaskLayer implements CustomLayerInterface {
   private shadowFramebuffers: WebGLFramebuffer[] = []
   private shadowWidth = 0
   private shadowHeight = 0
+  /* the blur's kernel (see gaussianTaps), and the sigma it was built for */
+  private shadowTaps = new Float32Array(2 * SHADOW_MAX_TAPS)
+  private shadowTapCount = 0
+  private shadowTapSigma = -1
   /** whether the silhouette buffers currently carry depth as well as
    * coverage, which only terrain needs */
   private shadowHasDepth = false
@@ -338,7 +354,8 @@ export class HeatflaskLayer implements CustomLayerInterface {
       "u_viewport",
       "u_offset",
       "u_step",
-      "u_sigma",
+      "u_taps",
+      "u_tapCount",
       "u_final",
       "u_depth",
       "u_depthRange",
@@ -474,8 +491,9 @@ export class HeatflaskLayer implements CustomLayerInterface {
     gl: WebGL2RenderingContext,
     wantDepth: boolean,
   ): void {
-    const w = Math.max(1, Math.round(gl.drawingBufferWidth * SHADOW_SCALE))
-    const h = Math.max(1, Math.round(gl.drawingBufferHeight * SHADOW_SCALE))
+    const scale = this.shadowScale()
+    const w = Math.max(1, Math.round(gl.drawingBufferWidth * scale))
+    const h = Math.max(1, Math.round(gl.drawingBufferHeight * scale))
     const depth = wantDepth && this.floatBuffers
     if (
       w === this.shadowWidth &&
@@ -513,11 +531,21 @@ export class HeatflaskLayer implements CustomLayerInterface {
     gl.bindTexture(gl.TEXTURE_2D, null)
   }
 
-  /** The shadow's blur, as a Gaussian's standard deviation in shadow buffer
-   * texels. CSS's blur radius, which dotShadows.blur is, is twice that. */
-  private shadowSigma(): number {
-    const blur = this.options.dotShadows.blur
-    return 0.5 * blur * this.map.getPixelRatio() * SHADOW_SCALE
+  /** The shadow's blur, as a Gaussian's standard deviation in device pixels.
+   * CSS's blur radius, which dotShadows.blur is, is twice that. */
+  private shadowSigmaPx(): number {
+    return 0.5 * this.options.dotShadows.blur * this.map.getPixelRatio()
+  }
+
+  /** The shadow buffers' resolution, as a fraction of the drawing buffer's
+   * (see SHADOW_SIGMA_TEXELS) */
+  private shadowScale(): number {
+    const sigma = this.shadowSigmaPx()
+    if (!(sigma > 0)) return SHADOW_SCALE_MAX
+    return Math.min(
+      SHADOW_SCALE_MAX,
+      Math.max(SHADOW_SCALE_MIN, SHADOW_SIGMA_TEXELS / sigma),
+    )
   }
 
   /** The cubes' orientation (see DOT_FS): columns are east, south and up in
@@ -696,15 +724,16 @@ export class HeatflaskLayer implements CustomLayerInterface {
     this.gpuTimer?.begin("shadow")
 
     /* 1. The silhouette. MAX, so a pixel under several dots is covered once,
-     * not more. The blend factors are ignored under MAX. The buffer is
-     * SHADOW_SCALE of the drawing buffer, so the dot size in device pixels
-     * scales with it. */
+     * not more. The blend factors are ignored under MAX. The buffer is a
+     * fraction of the drawing buffer, so the dot size in device pixels scales
+     * with it. */
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.shadowFramebuffers[0])
     gl.clearColor(0, 0, 0, 0)
     gl.clear(gl.COLOR_BUFFER_BIT)
     gl.enable(gl.BLEND)
     gl.blendEquation(gl.MAX)
-    this.useDotProgram(gl, this.map.getPixelRatio() * SHADOW_SCALE)
+    const scale = this.shadowScale()
+    this.useDotProgram(gl, this.map.getPixelRatio() * scale)
     gl.uniform1f(this.dotU.u_shadow, 1)
     gl.drawArrays(gl.POINTS, 0, this.slotCount)
     this.unbindDotTextures(gl)
@@ -715,6 +744,13 @@ export class HeatflaskLayer implements CustomLayerInterface {
     gl.disable(gl.BLEND)
     this.useShadowProgram(gl, silhouette, this.shadowWidth, this.shadowHeight)
     const u = this.shadowU
+    const sigma = this.shadowSigmaPx() * scale
+    if (sigma !== this.shadowTapSigma) {
+      this.shadowTapCount = gaussianTaps(sigma, this.shadowTaps)
+      this.shadowTapSigma = sigma
+    }
+    gl.uniform2fv(u.u_taps, this.shadowTaps)
+    gl.uniform1i(u.u_tapCount, this.shadowTapCount)
     gl.uniform2f(u.u_offset, 0, 0)
     gl.uniform2f(u.u_step, 1 / this.shadowWidth, 0)
     gl.uniform1f(u.u_final, 0)
@@ -750,7 +786,6 @@ export class HeatflaskLayer implements CustomLayerInterface {
     const u = this.shadowU
     gl.uniform1i(u.u_source, 0)
     gl.uniform2f(u.u_viewport, targetWidth, targetHeight)
-    gl.uniform1f(u.u_sigma, this.shadowSigma())
   }
 
   render(
