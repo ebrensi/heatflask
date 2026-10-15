@@ -10,7 +10,6 @@
   "tab.query.optActivities": "letzte Aktivitäten",
   "tab.query.optIds": "Aktivitäts-IDs",
   "tab.query.optDates": "Zeitraum",
-  "tab.query.optKey": "Schlüssel",
   "tab.query.idsPlaceholder": "Aktivitäts-IDs hier eingeben",
   "tab.query.after": "Ab:",
   "tab.query.before": "Bis:",

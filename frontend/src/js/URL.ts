@@ -32,7 +32,6 @@ const urlArgNames: Record<URLParameter, string[]> = {
   days: ["days", "preset", "d"],
   limit: ["limit", "n"],
   ids: ["id", "ids"],
-  key: ["key"],
   userid: ["user", "userid"],
   sport: ["sport", "sports", "st"],
   nosport: ["nosport"],
@@ -85,7 +84,6 @@ function QVtoURL({ query, visual }: QVParams): URLParameters {
     days: qtype === "days" ? str(query.quantity) : undefined,
     limit: qtype === "activities" ? str(query.quantity) : undefined,
     ids: undefined,
-    key: query.key,
     userid: str(query.userid),
     sport: query.sport || undefined,
     nosport: query.nosport || undefined,
@@ -161,17 +159,15 @@ export function parseURL(urlString: string) {
   /*
    * ***  Construct Query from URL args  ***
    */
-  const type = urlParams.key
-    ? "key"
-    : urlParams.ids
-      ? "ids"
-      : urlParams.after || urlParams.before
-        ? "dates"
-        : urlParams.days
-          ? "days"
-          : urlParams.limit
-            ? "activities"
-            : undefined
+  const type = urlParams.ids
+    ? "ids"
+    : urlParams.after || urlParams.before
+      ? "dates"
+      : urlParams.days
+        ? "days"
+        : urlParams.limit
+          ? "activities"
+          : undefined
 
   const qparams: QueryParameters = {}
   if (type) {
@@ -184,7 +180,6 @@ export function parseURL(urlString: string) {
       qparams.before = toEpoch(urlParams.before)
       qparams.after = toEpoch(urlParams.after)
     } else if (type === "ids") qparams.ids = urlParams.ids
-    else if (type === "key") qparams.key = urlParams.key
   }
 
   /* The sport filter goes with any query type. It is one list or the other;
@@ -345,7 +340,6 @@ const URL_QUERY: (keyof QueryParameters)[] = [
   "quantity",
   "after",
   "before",
-  "key",
   "userid",
   "sport",
   "nosport",

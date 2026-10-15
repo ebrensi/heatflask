@@ -25,7 +25,6 @@ export type ActivityQuery = {
   after?: number // seconds since EPOCH
   before?: number
   limit?: number
-  key?: string
   activity_type?: string[]
   /** Strava sport types; the backend matches any of them */
   sport_type?: string[]
@@ -169,9 +168,6 @@ export function qToQ(
       if (query.before) bq.before = query.before
       if (query.after) bq.after = query.after
       break
-
-    case "key":
-      bq.key = query.key
   }
   return bq
 }

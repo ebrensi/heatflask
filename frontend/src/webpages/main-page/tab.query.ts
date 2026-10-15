@@ -51,9 +51,8 @@ const FIELDS: Record<QueryType, string[]> = {
   activities: ["quantity-box"],
   ids: ["ids-box"],
   dates: ["dates-box"],
-  key: ["key-box"],
 }
-const ALL_FIELDS = ["quantity-box", "ids-box", "dates-box", "key-box"]
+const ALL_FIELDS = ["quantity-box", "ids-box", "dates-box"]
 
 function el<T extends HTMLElement = HTMLInputElement>(id: string): T {
   return <T>document.getElementById(id)
@@ -217,7 +216,6 @@ function runQuery({ query }: State): void {
     query.quantity = +el("quantity").value
   else if (type === "ids")
     query.ids = el<HTMLTextAreaElement>("query-ids").value
-  else if (type === "key") query.key = el("query-key").value.trim()
   else if (type === "dates") {
     query.after = fromDateInput(el("date-after").value)
     query.before = fromDateInput(el("date-before").value)
@@ -245,7 +243,6 @@ export function SETUP(appState: State) {
   typeSelect.value = query.type
   if (query.quantity) el("quantity").value = String(query.quantity)
   el<HTMLTextAreaElement>("query-ids").value = query.ids || ""
-  el("query-key").value = query.key || ""
   after.value = toDateInput(query.after)
   before.value = toDateInput(query.before)
   showFieldsFor(query.type)

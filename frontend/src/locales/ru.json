@@ -10,7 +10,6 @@
   "tab.query.optActivities": "последние активности",
   "tab.query.optIds": "ID активностей",
   "tab.query.optDates": "Диапазон дат",
-  "tab.query.optKey": "Ключ",
   "tab.query.idsPlaceholder": "введите здесь ID активностей",
   "tab.query.after": "С:",
   "tab.query.before": "По:",

@@ -10,7 +10,6 @@
   "tab.query.optActivities": "最近のアクティビティ数",
   "tab.query.optIds": "アクティビティ ID",
   "tab.query.optDates": "期間",
-  "tab.query.optKey": "キー",
   "tab.query.idsPlaceholder": "アクティビティ ID を入力",
   "tab.query.after": "開始:",
   "tab.query.before": "終了:",

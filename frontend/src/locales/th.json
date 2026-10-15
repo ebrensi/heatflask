@@ -10,7 +10,6 @@
   "tab.query.optActivities": "กิจกรรมล่าสุด",
   "tab.query.optIds": "ID กิจกรรม",
   "tab.query.optDates": "ช่วงวันที่",
-  "tab.query.optKey": "คีย์",
   "tab.query.idsPlaceholder": "ใส่ ID กิจกรรมที่นี่",
   "tab.query.after": "ตั้งแต่:",
   "tab.query.before": "ถึง:",

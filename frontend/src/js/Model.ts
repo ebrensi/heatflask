@@ -23,17 +23,11 @@ export type User = {
 
 /**
  * Query parameters are those that describe the query we make to the
- * backend for activity data. Note that there are two types of query:
- *   (1) stored on the backend and referenced by "key", or
- *   (2) specific to one user
- * Type (1) is more general and is meant to be used for long complex
- *   queries and those involving multiple users.
- *
+ * backend for activity data, all of it one user's.
  */
 export type QueryParameters = {
   userid?: number
-  type?: "days" | "activities" | "dates" | "ids" | "key"
-  key?: string // A lookup representing a query stored on the server
+  type?: "days" | "activities" | "dates" | "ids"
   after?: number // Start date Epoch
   before?: number // End date Epoch
   ids?: string // string representing and Array of activity ids
@@ -117,7 +111,6 @@ export type URLParameters = {
   days?: string
   limit?: string
   ids?: string
-  key?: string
   userid?: string
   sport?: string
   nosport?: string

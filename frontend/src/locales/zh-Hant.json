@@ -10,7 +10,6 @@
   "tab.query.optActivities": "最近活動數",
   "tab.query.optIds": "活動 ID",
   "tab.query.optDates": "日期範圍",
-  "tab.query.optKey": "金鑰",
   "tab.query.idsPlaceholder": "在此輸入活動 ID",
   "tab.query.after": "起始:",
   "tab.query.before": "結束:",
