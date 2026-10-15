@@ -8,6 +8,18 @@ everything since the one before it.
 
 ## Unreleased
 
+## [1.7.5] — 2026-10-15
+
+### The app
+- **The Key query type is gone.** The query tab offered it, and a `?key=` link selected it, but the backend has no stored queries to look up, so using it failed with an error. A link that still carries `?key=` now shows the default map.
+- **Swedish, Slovenian, Hungarian and Greek.**
+- Dot shadows cost less to draw. They are blurred at a reduced resolution sized to the blur, with a Gaussian kernel read two texels at a time, and the full-resolution pass only reads the result.
+- Each progressive draw no longer copies every loaded track into one buffer, which nothing has read since the WebAssembly module was removed and which briefly held twice their memory.
+- The browser's track cache stores each track at its own size. It used to store the whole network chunk around it, so the cache could grow to several times its budget; caches written by earlier versions shrink as their entries are read.
+
+### Under the hood
+- Python 3.14 and Node 24, and updated dependencies.
+
 ## [1.7.4] — 2026-09-30
 
 ### The app
