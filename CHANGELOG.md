@@ -8,11 +8,14 @@ everything since the one before it.
 
 ## Unreleased
 
-## [1.7.5] — 2026-10-15
+## [1.7.5] — 2026-11-04
+
+The first formal release of the revived Heatflask. www.heatflask.com has run this version stably since mid-October, and no map link made since v1.0.0 has stopped working (see [docs/VERSIONING.md](docs/VERSIONING.md)).
 
 ### The app
 - **The Key query type is gone.** The query tab offered it, and a `?key=` link selected it, but the backend has no stored queries to look up, so using it failed with an error. A link that still carries `?key=` now shows the default map.
 - **Swedish, Slovenian, Hungarian and Greek.**
+- The **info tab** links to Heatflask's listing on Apps for Strava.
 - Dot shadows cost less to draw. They are blurred at a reduced resolution sized to the blur, with a Gaussian kernel read two texels at a time, and the full-resolution pass only reads the result.
 - Each progressive draw no longer copies every loaded track into one buffer, which nothing has read since the WebAssembly module was removed and which briefly held twice their memory.
 - The browser's track cache stores each track at its own size. It used to store the whole network chunk around it, so the cache could grow to several times its budget; caches written by earlier versions shrink as their entries are read.
@@ -170,6 +173,7 @@ At the tag, the app was Flask with gevent and flask-sockets, Leaflet with the
 canvas dot layer, and PostgreSQL, Redis and MongoDB behind it. Work on a
 Parcel build for the frontend had started that March on a separate branch.
 
+[1.7.5]: https://github.com/ebrensi/heatflask/compare/v1.7.4...v1.7.5
 [1.7.4]: https://github.com/ebrensi/heatflask/compare/v1.7.3...v1.7.4
 [1.7.3]: https://github.com/ebrensi/heatflask/compare/v1.7.2...v1.7.3
 [1.7.2]: https://github.com/ebrensi/heatflask/compare/v1.0.0...v1.7.2
