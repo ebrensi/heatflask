@@ -83,7 +83,9 @@ function QVtoURL({ query, visual }: QVParams): URLParameters {
     before: str(query.before),
     days: qtype === "days" ? str(query.quantity) : undefined,
     limit: qtype === "activities" ? str(query.quantity) : undefined,
-    ids: undefined,
+    /* An explicit list (a Render Selected tab) must survive the address bar
+     * being rewritten, or reloading or sharing that tab loses it */
+    ids: qtype === "ids" ? query.ids : undefined,
     userid: str(query.userid),
     sport: query.sport || undefined,
     nosport: query.nosport || undefined,
@@ -338,6 +340,7 @@ const URL_VISUAL: (keyof VisualParameters)[] = [
 const URL_QUERY: (keyof QueryParameters)[] = [
   "type",
   "quantity",
+  "ids",
   "after",
   "before",
   "userid",
