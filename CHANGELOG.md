@@ -179,6 +179,7 @@ At the tag, the app was Flask with gevent and flask-sockets, Leaflet with the
 canvas dot layer, and PostgreSQL, Redis and MongoDB behind it. Work on a
 Parcel build for the frontend had started that March on a separate branch.
 
+[1.8.0]: https://github.com/ebrensi/heatflask/compare/v1.7.5...v1.8.0
 [1.7.5]: https://github.com/ebrensi/heatflask/compare/v1.7.4...v1.7.5
 [1.7.4]: https://github.com/ebrensi/heatflask/compare/v1.7.3...v1.7.4
 [1.7.3]: https://github.com/ebrensi/heatflask/compare/v1.7.2...v1.7.3
