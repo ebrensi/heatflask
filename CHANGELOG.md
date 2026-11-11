@@ -8,6 +8,12 @@ everything since the one before it.
 
 ## Unreleased
 
+## [1.8.0] — 2026-11-10
+
+### The app
+- **Short links to one activity**, `heatflask.com/a/<activity id>`, short enough to read in a Strava activity description ("View it live at …"). One opens the athlete's map of just that activity, tilted in perspective. The **Heatflask** link in an activity's popup is now this link: open it, or copy its address. A link the athlete opens or copies from their own map keeps working after Heatflask's index of their activities expires.
+- A tab opened with **Render Selected** keeps its activities in the address bar, so reloading it, or sharing it with the Share button, shows the same activities. The address used to lose them once the map had loaded, and the shared link showed the default map instead.
+
 ## [1.7.5] — 2026-11-04
 
 The first formal release of the revived Heatflask. www.heatflask.com has run this version stably since mid-October, and no map link made since v1.0.0 has stopped working (see [docs/VERSIONING.md](docs/VERSIONING.md)).

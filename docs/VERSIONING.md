@@ -46,7 +46,7 @@ warns and falls back to the default rather than failing.
 
 ## How we got here
 
-`v1.0.0` was tagged at `b47af4d8`. Since then the URL surface has grown six
+`v1.0.0` was tagged at `b47af4d8`. Since then the URL surface has grown seven
 times and never broken:
 
 - `1.1.0` — `5df44f4f`, the MapLibre/WebGL rewrite: adds `pitch`, `bearing` and
@@ -69,6 +69,9 @@ times and never broken:
 - `1.7.0` — `54e001d8`, the globe projection: adds `globe`, drawing the map on
   a sphere rather than flat Web Mercator. It defaults to off, which is how
   every map was drawn before, so a link that leaves it out is unchanged.
+- `1.8.0` — `28f7f4f8`, short activity links: adds `/a/<activity id>`, which
+  redirects to the athlete's map of that one activity. It is a new address
+  beside the others, and changes nothing an existing link asks for.
 
 Everything else in those commits — the WebGL dot layer, i18n, shared maps, the
 history log, the stream encoding — is invisible to a saved link, so it is patch
