@@ -8,8 +8,9 @@
  *
  * A port of master's activityDataPopup(): name, type and local start time,
  * distance and elapsed time, speed or pace, and links to the activity on
- * Strava and on its own Heatflask map. Distance and speed are in the
- * reader's units only (see Units.ts), and follow them when they change.
+ * Strava and on its own Heatflask map, by the short link that can go in its
+ * Strava description. Distance and speed are in the reader's units only (see
+ * Units.ts), and follow them when they change.
  *
  * Speed and pace are over moving time, as master showed them (it used Strava's
  * average_speed). Index entries made before moving time was stored fall back to
@@ -20,8 +21,8 @@
 import { Popup } from "maplibre-gl"
 import { href, HHMMSS, escapeHTML } from "./appUtil"
 import { activityURL, activity_vtype } from "./Strava"
-import { heatflaskURL } from "./Table"
 import { getLocale } from "./i18n"
+import { ownMap } from "./ShareControl"
 import { distance, UNITS_CHANGE } from "./Units"
 
 import type { Map as MLMap, LngLatLike } from "maplibre-gl"
@@ -49,8 +50,44 @@ function content(A: Activity): string {
     `${+d.value.toFixed(2)} ${d.label} in ${HHMMSS(A.elapsed_time || 0)}<br>` +
     (speed ? `${speed}<br>` : "") +
     `View in ${href(activityURL(A.id), "Strava")}, ` +
-    href(heatflaskURL([A.id]), "Heatflask")
+    `<a class="short-link" href="${shortLink(A)}" target="_blank">Heatflask</a>`
   )
+}
+
+/**
+ * The short link to A, for pasting into its Strava description: see Links.py.
+ * Without "www.": people read these, and heatflask.com redirects to www with
+ * the path intact.
+ */
+export function shortLink(A: Activity): string {
+  return `${location.origin.replace("://www.", "://")}/a/${A.id}`
+}
+
+/**
+ * The owner opening or copying A's link asks the server to keep it working
+ * after the index forgets A (see Links.py); anyone else's works while the index
+ * remembers. Right-click and long-press count, as "Copy link address" is how
+ * the link gets into a Strava description, and the browser says nothing to the
+ * page about the copy itself.
+ */
+function recordLink(A: Activity): void {
+  if (!ownMap()) return
+  fetch(`/a/${A.id}`, { method: "POST" }).catch((e) =>
+    console.warn("could not record the link", e),
+  )
+}
+
+/** Fill the popup, and hook up what in it can be clicked */
+function fill(popup: Popup, A: Activity): void {
+  popup.setHTML(content(A))
+  const link = popup.getElement()?.querySelector<HTMLElement>(".short-link")
+  let recorded = false
+  const record = () => {
+    if (!recorded) recordLink(A)
+    recorded = true
+  }
+  for (const type of ["click", "auxclick", "contextmenu"])
+    link?.addEventListener(type, record)
 }
 
 let open: Popup | undefined
@@ -69,15 +106,16 @@ export function closePopupIfUnselected(): void {
  */
 export function activityPopup(map: MLMap, A: Activity, at?: LngLatLike): void {
   open?.remove()
-  const popup = new Popup({ maxWidth: "320px" })
-    .setLngLat(at ?? A.llBounds.getCenter())
-    .setHTML(content(A))
+  const popup = new Popup({ maxWidth: "320px" }).setLngLat(
+    at ?? A.llBounds.getCenter(),
+  )
   /* however it closes -- its own button, a click on the map, or us */
   popup.on("close", () => {
     if (open === popup) open = openFor = undefined
   })
   open = popup.addTo(map)
   openFor = A
+  fill(popup, A)
 }
 
 /** The activity the popup is open for, if it is */
@@ -86,5 +124,5 @@ export function popupActivity(): Activity | undefined {
 }
 
 document.addEventListener(UNITS_CHANGE, () => {
-  if (open && openFor) open.setHTML(content(openFor))
+  if (open && openFor) fill(open, openFor)
 })

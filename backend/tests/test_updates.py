@@ -5,7 +5,7 @@
 
 import pytest
 
-from heatflask import Index, Streams, Updates, Users
+from heatflask import Index, Links, Streams, Updates, Users
 
 from conftest import make_user
 
@@ -41,6 +41,9 @@ def world(monkeypatch):
     async def delete_streams(ids):
         calls.append(("streams.delete", ids))
 
+    async def delete_link(activity_id):
+        calls.append(("links.delete", activity_id))
+
     async def subscription_id(recheck=False):
         return OUR_SUBSCRIPTION
 
@@ -50,6 +53,7 @@ def world(monkeypatch):
     monkeypatch.setattr(Index, "has_user_entries", has_user_entries)
     monkeypatch.setattr(Index, "refresh_one", refresh_one)
     monkeypatch.setattr(Streams, "delete", delete_streams)
+    monkeypatch.setattr(Links, "delete_one", delete_link)
     return calls, outcome
 
 
@@ -76,7 +80,7 @@ async def test_a_removed_activity_loses_its_cached_track(world):
     calls, outcome = world
     outcome["value"] = "removed"
     await Updates.handle_update_callback(update("delete"))
-    assert calls[-1] == ("streams.delete", [123])
+    assert calls[-2:] == [("streams.delete", [123]), ("links.delete", 123)]
 
 
 async def test_another_subscriptions_delivery_is_recorded_and_ignored(world):

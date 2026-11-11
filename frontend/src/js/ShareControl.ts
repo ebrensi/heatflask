@@ -26,6 +26,18 @@ import type { Map as MLMap } from "maplibre-gl"
 
 const SHARE_ICON = icon("share2")
 
+/** Whether this is the logged-in athlete's own map */
+export function ownMap(): boolean {
+  return !!CURRENT_USER && !!TARGET_USER && CURRENT_USER.id === TARGET_USER.id
+}
+
+/* A link to your own map works for no one else while the map is not
+ * shared, and nothing about sending it would tell you so. CURRENT_USER is
+ * the object the profile tab's switch updates, so this is always current. */
+export function ownMapUnshared(): boolean {
+  return ownMap() && CURRENT_USER?.private !== false
+}
+
 export function addShareControl(map: MLMap): void {
   const readout = document.createElement("div")
   readout.className = "share-readout"
@@ -39,18 +51,6 @@ export function addShareControl(map: MLMap): void {
     readout.textContent = text
     readout.hidden = false
     hideTimer = window.setTimeout(() => (readout.hidden = true), ms)
-  }
-
-  /* A link to your own map works for no one else while the map is not
-   * shared, and nothing about sending it would tell you so. CURRENT_USER is
-   * the object the profile tab's switch updates, so this is always current. */
-  function ownMapUnshared(): boolean {
-    return (
-      !!CURRENT_USER &&
-      !!TARGET_USER &&
-      CURRENT_USER.id === TARGET_USER.id &&
-      CURRENT_USER.private !== false
-    )
   }
 
   async function copy(url: string): Promise<void> {

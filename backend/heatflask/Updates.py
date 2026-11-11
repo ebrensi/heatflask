@@ -14,6 +14,7 @@ from . import Strava
 from . import Users
 from . import Index
 from . import Streams
+from . import Links
 
 log = getLogger(__name__)
 log.propagate = True
@@ -128,6 +129,7 @@ async def handle_update_callback(update: Strava.WebhookUpdate) -> None:
         uid = update["object_id"]
         if await Users.get(uid):
             await Index.delete_user_entries(**{Users.U.ID: uid})
+            await Links.delete_user_links(uid)
             await Users.delete(uid, deauthenticate=False)
         return
 
@@ -152,6 +154,8 @@ async def handle_update_callback(update: Strava.WebhookUpdate) -> None:
     if outcome == "removed":
         # and its track, which would otherwise sit in the cache until it expired
         await Streams.delete([activity_id])
+        # and any short link to it, which would lead to nothing
+        await Links.delete_one(activity_id)
 
     log.debug(
         "webhook: user %s %s activity %s: %s",

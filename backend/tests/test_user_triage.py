@@ -11,7 +11,7 @@ import time
 import aiohttp
 import pytest
 
-from heatflask import Index, Strava, Updates, Users
+from heatflask import Index, Links, Strava, Updates, Users
 
 U = Users.U
 YEAR = Users.TTL
@@ -149,7 +149,11 @@ async def test_a_deauthorization_webhook_forgets_the_athlete(setup, monkeypatch)
     async def record(update):
         pass
 
+    async def delete_user_links(uid):
+        dropped.append(("links", uid))
+
     monkeypatch.setattr(Index, "delete_user_entries", delete_user_entries)
+    monkeypatch.setattr(Links, "delete_user_links", delete_user_links)
     monkeypatch.setattr(Updates, "record", record)
     await Updates.handle_update_callback(
         {
@@ -162,6 +166,6 @@ async def test_a_deauthorization_webhook_forgets_the_athlete(setup, monkeypatch)
         }
     )
     assert ACTIVE not in coll.docs
-    assert dropped == [ACTIVE]
+    assert dropped == [ACTIVE, ("links", ACTIVE)]
     # its token is already dead; nothing to revoke
     assert strava.deauths == []

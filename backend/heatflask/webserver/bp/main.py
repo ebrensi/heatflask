@@ -15,6 +15,7 @@ import sanic
 from logging import getLogger
 from ... import Users
 from ... import Index
+from ... import Links
 from ... import History
 
 from ..config import APP_BUILD, APP_BASE_NAME, OFFLINE
@@ -163,6 +164,39 @@ async def user_page(request: Request, target_user_id=None):
     return Response.html(html)
 
 
+# ****** Short link to one activity ******
+# heatflask.com/a/<id>, for Strava activity descriptions (see Links.py). It
+# opens the owner's map of just that activity, tilted: a view in perspective
+# says "3D" in a way a flat one does not, and autozoom's fitBounds keeps the
+# pitch it starts with while it frames the activity.
+LINK_PITCH = 50
+
+
+@bp.get("/a/<activity_id:int>")
+@session_cookie(get=True, set=True, flashes=True)
+async def activity_link(request: Request, activity_id: int):
+    owner = await Links.owner_of(activity_id)
+    History.log_request(request, athlete=owner)
+    if not owner:
+        request.ctx.flash(f"Heatflask has no activity {activity_id}")
+        return Response.redirect(request.app.url_for("main.splash_page"))
+    target = request.app.url_for("main.user_page", target_user_id=owner)
+    return Response.redirect(f"{target}?id={activity_id}&pitch={LINK_PITCH}")
+
+
+# POST, as it writes: the owner copying a link makes it permanent. Anyone
+# else's copy works while the index has the activity.
+@bp.post("/a/<activity_id:int>")
+@session_cookie(get=True)
+async def record_activity_link(request: Request, activity_id: int):
+    user = request.ctx.current_user
+    if not user:
+        raise SanicException("Who are you?", status_code=401, quiet=True)
+    if not await Links.record(activity_id, user[U.ID]):
+        raise SanicException("not one of your activities", status_code=403, quiet=True)
+    return Response.json(True)
+
+
 @bp.get("/demo")
 async def demo_page(request: Request):
     # As on master: the admin's last 60 activities
@@ -273,6 +307,7 @@ async def visibility(request: Request, target_user, setting=None):
 async def delete(request: Request, target_user):
     uid = target_user[U.ID]
     await Index.delete_user_entries(**{U.ID: uid})
+    await Links.delete_user_links(uid)
     # The confirmation the user clicked through says this revokes our access to
     # their Strava data, and it was called with deauthenticate=False
     await Users.delete(uid, deauthenticate=True)

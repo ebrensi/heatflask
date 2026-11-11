@@ -9,7 +9,7 @@ import aiohttp
 import pytest
 from sanic import Sanic
 
-from heatflask import Index, Users
+from heatflask import Index, Links, Users
 from heatflask.webserver import sessions
 from heatflask.webserver.bp import auth, main
 
@@ -42,7 +42,12 @@ async def app_url(monkeypatch, sanic_server):
     monkeypatch.setattr(Users, "get", get_user)
     monkeypatch.setattr(Users, "add_or_update", add_or_update)
     monkeypatch.setattr(Users, "delete", delete_user)
+
+    async def delete_user_links(uid):
+        calls.append(("delete_links", uid))
+
     monkeypatch.setattr(Index, "delete_user_entries", delete_user_entries)
+    monkeypatch.setattr(Links, "delete_user_links", delete_user_links)
 
     app = Sanic(f"account_test_{time.monotonic_ns()}")
     app.blueprint(main.bp)
@@ -92,6 +97,7 @@ async def test_the_admin_can_delete_an_account(app_url):
             assert r.status == 302
     assert ("delete", USER, True) in calls
     assert ("delete_index", USER) in calls
+    assert ("delete_links", USER) in calls
 
 
 async def test_delete_revokes_strava_access(app_url):
@@ -101,6 +107,7 @@ async def test_delete_revokes_strava_access(app_url):
             assert r.status == 302
     assert ("delete", USER, True) in calls
     assert ("delete_index", USER) in calls
+    assert ("delete_links", USER) in calls
 
 
 async def test_logout_ends_the_session_and_goes_to_the_splash_page(app_url):
