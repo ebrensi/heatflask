@@ -10,8 +10,10 @@
  *   backend server, embedded in main.html template
  */
 
+import type { AthleteId } from "./DataImport"
+
 export type UserInfo = {
-  id: number
+  id: AthleteId
   name: string
   profile: string
   private: boolean
@@ -57,9 +59,9 @@ const flashes_text = document.getElementById("flashes").innerText
 export const FLASHES = flashes_text ? <string[]>JSON.parse(flashes_text) : null
 
 const StravaDomain = "https://www.strava.com"
-export const STRAVA_USER_URL = (uid: number) =>
+export const STRAVA_USER_URL = (uid: AthleteId) =>
   `${StravaDomain}/athletes/${uid}`
-export const STRAVA_ACTIVITY_URL = (aid: number) =>
+export const STRAVA_ACTIVITY_URL = (aid: string) =>
   `${StravaDomain}/activities/${aid}`
 export const STRAVA_PROFILE_URL = `${StravaDomain}/settings/profile`
 

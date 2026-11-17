@@ -28,6 +28,7 @@ import { t, getLocale } from "./i18n"
 import { distance, UNITS_CHANGE } from "./Units"
 
 import type { Map as MLMap, LngLatLike } from "maplibre-gl"
+import type { ActivityId } from "./DataImport"
 import type { Activity } from "./DotLayer/Activity"
 import type { ActivityType } from "./Strava"
 import type { State } from "./Model"
@@ -59,7 +60,7 @@ export function init(map: MLMap, appState: State): void {
     // let links inside a row do their own thing
     if ((<HTMLElement>e.target).closest("a")) return
 
-    toggle(+row.dataset.id, row)
+    toggle(row.dataset.id, row)
   })
 
   /* A row can't be scrolled into view while its pane is hidden, as it is
@@ -78,7 +79,7 @@ export function init(map: MLMap, appState: State): void {
   document.addEventListener(UNITS_CHANGE, update)
 }
 
-function toggle(id: number, row: HTMLElement): void {
+function toggle(id: ActivityId, row: HTMLElement): void {
   const A = ActivityCollection.items.get(id)
   if (!A) return
 
@@ -210,7 +211,7 @@ export function openSelected(): void {
 }
 
 /** This app's url for a map of just these activities */
-export function heatflaskURL(ids: number[]): string {
+export function heatflaskURL(ids: ActivityId[]): string {
   const uid = _state?.targetUser?.id
   const base = uid ? `/${uid}` : "/"
   return `${base}?id=${ids.join("+")}`
@@ -275,7 +276,7 @@ export function updateSwatches(): void {
   if (!tableEl) return
   const rows = Array.from(tableEl.querySelectorAll<HTMLElement>("tr[data-id]"))
   for (const row of rows) {
-    const A = ActivityCollection.items.get(+row.dataset.id)
+    const A = ActivityCollection.items.get(row.dataset.id)
     const swatch = row.querySelector<HTMLElement>(".dot-swatch")
     if (A && swatch) swatch.style.background = A.colors.dot || A.colors.path
   }

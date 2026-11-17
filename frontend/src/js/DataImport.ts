@@ -20,8 +20,20 @@ interface BBounds {
   NE: [number, number]
 }
 
+/**
+ * A Strava activity id. A string, never a number: Strava's ids become 64-bit
+ * after 2027-06-01, and a JS number is exact only up to 2^53, so a numeric id
+ * would be silently rounded to some other activity's. The server sends ids as
+ * strings (wire() in webserver/bp/activities.py), and nothing here should
+ * turn one back into a number -- no unary +, Number() or parseInt.
+ */
+export type ActivityId = string
+
+/** A Strava athlete id; a string for the same reason as ActivityId. */
+export type AthleteId = string
+
 export type ActivityQuery = {
-  user_id?: number
+  user_id?: AthleteId
   after?: number // seconds since EPOCH
   before?: number
   limit?: number
@@ -30,8 +42,8 @@ export type ActivityQuery = {
   sport_type?: string[]
   /** ...or every sport type but these */
   exclude_sport_type?: string[]
-  activity_ids?: number[]
-  exclude_ids?: number[]
+  activity_ids?: ActivityId[]
+  exclude_ids?: ActivityId[]
   commute?: boolean
   private?: boolean
   streams?: boolean
@@ -69,8 +81,8 @@ export const ACTIVITY_FIELDNAMES = {
 
 const A = ACTIVITY_FIELDNAMES
 export type ImportedActivity = {
-  [A.ID]: number
-  [A.USER_ID]: number
+  [A.ID]: ActivityId
+  [A.USER_ID]: AthleteId
   [A.N_ATHLETES]: number
   [A.N_PHOTOS]: number
   [A.ELEVATION_GAIN]: number
@@ -115,7 +127,7 @@ type StatusObject = {
   wait?: number
   info?: {
     atypes: string[]
-    avatars: { [id: number]: string }
+    avatars: Record<AthleteId, string>
     polyline_precision: number
   }
 }
@@ -127,7 +139,7 @@ type QueryResultItem = ImportedActivity | StatusObject
 export function qToQ(
   query: QueryParameters,
   streams: boolean,
-  exclude_ids?: number[],
+  exclude_ids?: ActivityId[],
 ) {
   const bq: ActivityQuery = { streams, exclude_ids }
   if (query.userid) bq.user_id = query.userid
@@ -157,9 +169,15 @@ export function qToQ(
     case "ids":
       if (!query.ids) return
       else {
-        const idSet = new Set(query.ids.split(/\D/).map(Number))
-        idSet.delete(0)
-        // create an array of ids (numbers) from a string
+        /* Digits only, kept as strings (see ActivityId). Leading zeros are
+         * stripped so "007" and "7" are one id, and an all-zero run, which
+         * Number() used to turn into the 0 deleted here, is dropped. */
+        const idSet = new Set(
+          query.ids
+            .split(/\D+/)
+            .map((s) => s.replace(/^0+/, ""))
+            .filter(Boolean),
+        )
         bq.activity_ids = Array.from(idSet)
       }
       break

@@ -17,7 +17,7 @@ export function activityURL(id: string | number) {
 
 /** Strava's url for an Athlete
  */
-export function athleteURL(id: string | number) {
+export function athleteURL(id: string) {
   return `https://www.strava.com/athletes/${id}`
 }
 

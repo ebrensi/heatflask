@@ -28,7 +28,7 @@ import { t } from "./i18n"
 import { LngLatBounds } from "maplibre-gl"
 import type { Map as MLMap } from "maplibre-gl"
 import type { State } from "./Model"
-import type { ImportedActivity } from "./DataImport"
+import type { ActivityId, ImportedActivity } from "./DataImport"
 
 let _map: MLMap
 let _state: State
@@ -144,7 +144,7 @@ async function fillStreamsFromCache(
   )
   if (signal.reason === SUPERSEDED) return
 
-  const misses: number[] = []
+  const misses: ActivityId[] = []
   let hits = 0
 
   for (let i = 0; i < activities.length; i++) {
@@ -261,7 +261,7 @@ let drawQueue: Promise<void> = Promise.resolve()
 class Progressive {
   count = 0
   private pending: ImportedActivity[] = []
-  private idsByDate?: number[]
+  private idsByDate?: ActivityId[]
   private started = false
   private finished = false
   private timer = 0

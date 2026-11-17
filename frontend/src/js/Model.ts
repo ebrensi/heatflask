@@ -8,13 +8,14 @@
  */
 import Geohash from "latlon-geohash"
 import type { Live } from "./DataBinding"
+import type { AthleteId } from "./DataImport"
 
 /**
  * User parameters are the current user browsing and
  * the user whose activities we are viewing
  */
 export type User = {
-  id: number
+  id: AthleteId
   name: string
   profile: string
   private: boolean
@@ -26,7 +27,7 @@ export type User = {
  * backend for activity data, all of it one user's.
  */
 export type QueryParameters = {
-  userid?: number
+  userid?: AthleteId
   type?: "days" | "activities" | "dates" | "ids"
   after?: number // Start date Epoch
   before?: number // End date Epoch

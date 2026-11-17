@@ -17,9 +17,9 @@ import { queueTask, nextTask } from "../appUtil"
 
 import { LngLatBounds } from "maplibre-gl"
 import type { Bounds } from "../Bounds"
-import type { ImportedActivity } from "../DataImport"
+import type { ActivityId, ImportedActivity } from "../DataImport"
 
-export const items: Map<number, Activity> = new Map()
+export const items: Map<ActivityId, Activity> = new Map()
 
 let _itemsArray: Activity[]
 
@@ -28,7 +28,7 @@ export function add(specs: ImportedActivity): void {
   items.set(A.id, A)
 }
 
-export function remove(id: number): void {
+export function remove(id: ActivityId): void {
   items.delete(id)
 }
 
@@ -68,7 +68,7 @@ let colorRotation = 0
 
 /** Each activity's place in the whole set a render is loading, most recent
  * first, when it knows that set before the tracks arrive. See planColors. */
-let colorPlan: Map<number, number> | undefined
+let colorPlan: Map<ActivityId, number> | undefined
 
 /**
  * Deal colours by each activity's place among these ids (most recent first),
@@ -79,7 +79,7 @@ let colorPlan: Map<number, number> | undefined
  * places of everything older than it, and the colours on the map would keep
  * changing under the viewer until the last track was in.
  */
-export function planColors(idsByDate: number[]): void {
+export function planColors(idsByDate: ActivityId[]): void {
   colorPlan = new Map(idsByDate.map((id, i) => [id, i]))
 }
 
@@ -179,7 +179,7 @@ export function* inViewItems(): IterableIterator<Activity> {
 }
 
 export async function getLatLngBounds(
-  ids?: Iterable<number>,
+  ids?: Iterable<ActivityId>,
   only_selected?: boolean,
 ): Promise<LngLatBounds | undefined> {
   return boundsOf(

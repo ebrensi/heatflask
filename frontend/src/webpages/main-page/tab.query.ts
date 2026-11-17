@@ -6,6 +6,7 @@
 import { icon } from "~/src/js/Icons"
 import { State } from "~/src/js/Model"
 import type { QueryParameters } from "~/src/js/Model"
+import type { AthleteId } from "~/src/js/DataImport"
 import { renderFromQuery } from "~/src/js/Render"
 import { CURRENT_USER, STRAVA_USER_URL, URLS } from "~/src/js/Env"
 import { t, getLocale } from "~/src/js/i18n"
@@ -117,7 +118,7 @@ function syncBoxes(): void {
   showSportSummary()
 }
 
-function sportsURL(userid?: number): string {
+function sportsURL(userid?: AthleteId): string {
   const base = `${URLS.query.replace(/\/$/, "")}/sport_types`
   return userid ? `${base}?user=${userid}` : base
 }
@@ -176,7 +177,7 @@ function sportRow(sport: string, count?: number): HTMLLIElement {
  * is open shows up. A sport a link names that the map has none of stays
  * listed, so it can be changed.
  */
-async function fillSportList(userid?: number): Promise<void> {
+async function fillSportList(userid?: AthleteId): Promise<void> {
   const list = el<HTMLUListElement>("sport-list")
   const status = el<HTMLElement>("sport-status")
   if (!list.children.length) status.textContent = t("tab.query.loadingSports")

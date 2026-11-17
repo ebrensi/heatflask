@@ -146,7 +146,13 @@ const adminColumns: Column[] = [
     render: (r) => user_thumbnail(r[U.ID], <string>r[U.PROFILE]),
     sortKey: () => 0,
   },
-  { titleKey: "users.col.id", field: U.ID, numeric: true },
+  {
+    titleKey: "users.col.id",
+    field: U.ID,
+    numeric: true,
+    /* Ids come as strings (see AthleteId), so order them by length first */
+    sortKey: (r) => String(r[U.ID]).padStart(20, "0"),
+  },
   {
     titleKey: "users.col.name",
     field: U.FIRSTNAME,

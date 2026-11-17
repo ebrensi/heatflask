@@ -197,7 +197,10 @@ export function parseURL(urlString: string) {
    *                 =>  endpoint = "1324531"
    */
   const endpoint = window.location.pathname.substring(1)
-  qparams.userid = +endpoint
+  /* Kept as the string it is: athlete ids can be 64-bit (see AthleteId).
+   * Leading zeros go so /007 and /7 are one athlete, and /, /0 are nobody. */
+  if (/^\d+$/.test(endpoint))
+    qparams.userid = endpoint.replace(/^0+/, "") || undefined
 
   /*
    * *** Construct Visual from URL args ***

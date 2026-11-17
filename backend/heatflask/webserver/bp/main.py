@@ -81,7 +81,7 @@ def target_info(target_user, viewer):
         and not Users.is_sharing(target_user)
         and not (viewer and viewer[U.ID] == target_user[U.ID])
     ):
-        return {"id": target_user[U.ID], "private": True}
+        return {"id": str(target_user[U.ID]), "private": True}
     return info
 
 
@@ -97,7 +97,9 @@ def relevant_info(user):
     )
 
     return {
-        "id": user[U.ID],
+        # A string: Strava's athlete ids can be 64-bit after 2027-06-01, past
+        # what a JS number holds exactly (see wire() in bp/activities.py)
+        "id": str(user[U.ID]),
         "name": name,
         # .get: a record without a photo, or imported without one, 500ed here
         "profile": user.get(U.PROFILE),

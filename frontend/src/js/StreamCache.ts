@@ -38,6 +38,7 @@
  */
 
 import * as idb from "./myIdb"
+import type { ActivityId, AthleteId } from "./DataImport"
 
 /*
  * Bump when the packed-stream encoding changes, which invalidates every
@@ -88,8 +89,8 @@ const nowSecs = () => Math.round(Date.now() / 1000)
  * then becomes a no-op, so callers need no special-casing.
  */
 export async function init(
-  currentUserId?: number,
-  targetUserId?: number,
+  currentUserId?: AthleteId,
+  targetUserId?: AthleteId,
 ): Promise<boolean> {
   store = null
   meta = null
@@ -125,15 +126,15 @@ export function enabled(): boolean {
 }
 
 /** The ids we hold, without touching the blobs themselves. */
-export function cachedIds(): Set<number> {
-  const ids = new Set<number>()
+export function cachedIds(): Set<ActivityId> {
+  const ids = new Set<ActivityId>()
   if (!enabled()) return ids
-  for (const k in meta.entries) ids.add(+k)
+  for (const k in meta.entries) ids.add(k)
   return ids
 }
 
 /** Packed bytes for one activity, or null. Counts as a use, for LRU. */
-export async function get(id: number): Promise<Uint8Array | null> {
+export async function get(id: ActivityId): Promise<Uint8Array | null> {
   if (!enabled()) return null
   const entry = meta.entries[id]
   if (!entry) return null
@@ -175,7 +176,7 @@ function compact(bytes: Uint8Array): Uint8Array {
 }
 
 /** Store one activity's packed bytes. */
-export async function put(id: number, bytes: Uint8Array): Promise<void> {
+export async function put(id: ActivityId, bytes: Uint8Array): Promise<void> {
   if (!enabled() || !bytes || !bytes.length) return
   try {
     await idb.set(String(id), compact(bytes), store)
@@ -263,9 +264,9 @@ export async function clear(): Promise<void> {
  * page that never opens the map. This reads just the index record.
  */
 export async function peekCachedIds(
-  currentUserId?: number,
-  targetUserId?: number,
-): Promise<Set<number>> {
+  currentUserId?: AthleteId,
+  targetUserId?: AthleteId,
+): Promise<Set<ActivityId>> {
   const ok = await init(currentUserId, targetUserId)
-  return ok ? cachedIds() : new Set<number>()
+  return ok ? cachedIds() : new Set<ActivityId>()
 }

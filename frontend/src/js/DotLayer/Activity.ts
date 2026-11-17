@@ -14,7 +14,11 @@ import { Bounds } from "../Bounds"
 import { RunningStatsCalculator } from "./stats"
 import { BitSet } from "../BitSet"
 
-import { ImportedActivity, ACTIVITY_FIELDNAMES as A } from "../DataImport"
+import {
+  ActivityId,
+  ImportedActivity,
+  ACTIVITY_FIELDNAMES as A,
+} from "../DataImport"
 import { ActivityType, activity_pathcolor } from "../Strava"
 
 interface SegMask extends BitSet {
@@ -52,7 +56,7 @@ const latLng2px = <(p: [number, number] | Float32Array) => void>(
 const ZSCORE_CUTOFF = 5
 
 export class Activity {
-  id: number
+  id: ActivityId
   type: ActivityType
   total_distance: number
   elapsed_time: number

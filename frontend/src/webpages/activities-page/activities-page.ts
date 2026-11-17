@@ -18,7 +18,12 @@ import { icon } from "~/src/js/Icons"
 import { initI18n, applyTranslations, t, getLocale } from "~/src/js/i18n"
 import * as StreamCache from "~/src/js/StreamCache"
 import { isMetric } from "~/src/js/Units"
-import type { ActivityQuery, ImportedActivity } from "~/src/js/DataImport"
+import type {
+  ActivityId,
+  ActivityQuery,
+  AthleteId,
+  ImportedActivity,
+} from "~/src/js/DataImport"
 import type { ActivityType } from "~/src/js/Strava"
 // import { JSTable } from "../../js/jstable"
 
@@ -36,7 +41,7 @@ type EmbeddedArgs = {
   query_url: string
   query_obj: ActivityQuery
   atypes: ActivityType[]
-  current_user_id?: number
+  current_user_id?: AthleteId
 }
 const argstr = document.getElementById("runtime_json").innerText
 const args = <EmbeddedArgs>JSON.parse(argstr)
@@ -46,15 +51,15 @@ const MULTI = !args.query_obj.user_id
 args.query_obj.stream_status = true
 
 /** Activities whose streams are in our Mongo cache; from the {cached} message. */
-let serverCached = new Set<number>()
+let serverCached = new Set<ActivityId>()
 /** Activities whose streams are in *this browser's* IndexedDB. Only ever
  * populated when you are looking at your own list: the cache holds nobody
  * else's tracks. */
-let locallyCached = new Set<number>()
+let locallyCached = new Set<ActivityId>()
 
-function user_thumbnail(id: number, img_url: string) {
+function user_thumbnail(id: AthleteId, img_url: string) {
   if (!(id && img_url)) return ""
-  const avatar = img(img_url, 40, 40, String(id))
+  const avatar = img(img_url, 40, 40, id)
   return href(`/${id}`, avatar)
 }
 
@@ -99,7 +104,7 @@ function cacheCell(
   present: boolean,
   yes: string,
   no: string,
-  aid: number,
+  aid: ActivityId,
 ): string {
   const title = t(present ? yes : no, { id: aid })
   return present
@@ -109,7 +114,7 @@ function cacheCell(
 
 const priv_icon = icon("eye-blocked")
 const pub_icon = icon("eye")
-const avatars = <Record<number, string>>{}
+const avatars = <Record<AthleteId, string>>{}
 
 async function main() {
   count_msg_el.classList.add("spinner")
@@ -140,7 +145,7 @@ async function main() {
       status_msg_el.innerText = t("activities.fetching")
     } else if ("cached" in obj) {
       /* Sent ahead of the summaries, so every row can be built knowing it */
-      serverCached = new Set(<number[]>obj.cached)
+      serverCached = new Set(<ActivityId[]>obj.cached)
     } else if ("wait" in obj) {
       const at = new Date(obj.wait * 1000).toLocaleTimeString(getLocale(), {
         hour: "numeric",

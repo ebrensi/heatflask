@@ -262,6 +262,8 @@ async def dump(output="json"):
     if csv:
         yield keys
     async for u in cursor:
+        # A string, for the browser: see AthleteId in frontend DataImport.ts
+        u[U.ID] = str(u[U.ID])
         yield [u.get(k, "") for k in keys] if csv else u
 
 

@@ -19,7 +19,7 @@ import pytest
 from pymongo import AsyncMongoClient
 from sanic import Sanic
 
-from heatflask import Index, Users
+from heatflask import Index, Streams, Users
 from heatflask.webserver import sessions
 from heatflask.webserver.bp import activities, main
 
@@ -122,6 +122,16 @@ async def test_privacy_holds_when_asking_for_ids_directly(index):
     assert await ids(
         activity_ids=asked, privacy=Index.visible_to(None, sharing=[OTHER])
     ) == {20}
+
+
+async def test_the_browser_asks_for_ids_as_strings(index):
+    """It holds them that way (see wire() in bp/activities.py); Mongo's are ints"""
+    mine = Index.visible_to(OWNER, sharing=[])
+    assert await ids(activity_ids=["11", "12", "21"], privacy=mine) == {11, 12}
+    result = await Index.query(
+        update_index_access=False, user_id=OWNER, exclude_ids=["10", "11"], privacy=mine
+    )
+    assert {d[F.ACTIVITY_ID] for d in result["docs"]} == {12, 13}
 
 
 async def test_privacy_holds_with_other_filters_and_exclusions(index):
@@ -265,10 +275,79 @@ def test_the_map_page_names_only_athletes_who_share():
         viewer = USERS[viewer] if viewer else None
         return main.target_info(USERS[target], viewer)
 
-    hidden = {"id": OWNER, "private": True}
+    hidden = {"id": str(OWNER), "private": True}
     assert info(OWNER) == hidden
     assert info(OWNER, viewer=SHARING) == hidden
-    assert info(OTHER) == {"id": OTHER, "private": True}
+    assert info(OTHER) == {"id": str(OTHER), "private": True}
     assert info(OWNER, viewer=OWNER)["name"] == "A B"
     assert info(OWNER, viewer=ADMIN) == hidden
     assert info(SHARING)["name"] == "E F"
+
+
+async def test_activity_ids_go_to_the_browser_as_strings(route, monkeypatch):
+    """Strava's ids become 64-bit after 2027-06-01, past the 2^53 a browser's
+    numbers hold exactly; as strings they survive the trip"""
+    big = 2**63 - 1  # the largest id Mongo's int64 can hold
+    small = 16_000_000_000  # about where Strava's activity ids are now
+
+    async def fake_query(**kwargs):
+        return {
+            "docs": [{"_id": big, "t": "Run"}, {"_id": small, "t": "Ride"}],
+            "delete": [big],
+        }
+
+    async def cached_ids(ids):
+        assert ids == [big, small]  # still ints on this side
+        return [big]
+
+    monkeypatch.setattr(Index, "query", fake_query)
+    monkeypatch.setattr(Streams, "cached_ids", cached_ids)
+
+    sent, _ = await route(
+        {"user_id": str(OWNER), "activity_ids": [str(big)], "stream_status": True},
+        as_user(OWNER),
+    )
+    assert {"delete": [str(big)]} in sent
+    assert {"cached": [str(big)]} in sent
+    assert [A["_id"] for A in sent if "t" in A] == [str(big), str(small)]
+
+
+async def test_athlete_ids_go_to_the_browser_as_strings(route, monkeypatch):
+    """The same goes for athlete ids, which Strava makes 64-bit on the same
+    date: in the page, in a multi-user query's entries and avatar lookup, and
+    sent back as strings, which the route takes as the ints it always was"""
+    big = 2**63 - 1
+    monkeypatch.setitem(
+        USERS, big, {"_id": big, "f": "I", "l": "J", "p": False, "P": "pic"}
+    )
+    assert main.relevant_info(USERS[big])["id"] == str(big)
+    assert main.target_info(USERS[big], None)["id"] == str(big)
+
+    seen = {}
+
+    async def fake_query(**kwargs):
+        seen.update(kwargs)
+        return {"docs": [{"_id": 7, "U": big, "t": "Run"}]}
+
+    class Users_:
+        def find(self, query, projection):
+            async def found():
+                for uid in query["_id"]["$in"]:
+                    yield {"_id": uid, "P": USERS[uid]["P"]}
+
+            return found()
+
+    async def get_collection():
+        return Users_()
+
+    monkeypatch.setattr(Index, "query", fake_query)
+    monkeypatch.setattr(Users, "get_collection", get_collection)
+
+    sent, _ = await route({"activity_ids": ["7"]})  # no user: everyone's
+    assert [A["U"] for A in sent if "t" in A] == [str(big)]
+    info = next(m["info"] for m in sent if "info" in m)
+    assert info["avatars"] == {str(big): "pic"}
+
+    sent, _ = await route({"user_id": str(big)})
+    assert "error" not in sent[0]
+    assert seen["user_id"] == big  # an int again on this side

@@ -228,6 +228,22 @@ async def sport_types(request: SessionRequest):
     return sanic.json(counts)
 
 
+def wire(A: dict) -> dict:
+    """
+    An index entry as the browser gets it: the activity id, and the athlete
+    id when there is one (a multi-user query), as strings.
+
+    Strava's ids become 64-bit after 2027-06-01, and the browser holds numbers
+    as doubles, exact only up to 2^53 -- msgpack's decoder would silently hand
+    it a neighbouring id. Mongo, and everything else on this side, keeps the
+    int; the browser sends strings back, which int() takes as they are.
+    """
+    A[I.ACTIVITY_ID] = str(A[I.ACTIVITY_ID])
+    if I.USER_ID in A:
+        A[I.USER_ID] = str(A[I.USER_ID])
+    return A
+
+
 async def run_query(request: SessionRequest, summary: QuerySummary):
     query = request.json
     summary.what = QueryKind.of(query)
@@ -254,9 +270,11 @@ async def run_query(request: SessionRequest, summary: QuerySummary):
     # private activities, and their cached tracks, to anyone who asked.
     query.pop("privacy", None)
 
+    # The browser sends athlete ids as strings; everything here wants the int
     target_user_id = query.get("user_id")
     if target_user_id:
-        summary.owner = int(target_user_id)
+        target_user_id = query["user_id"] = int(target_user_id)
+        summary.owner = target_user_id
     access = await Access.of(request, target_user_id)
     target_user, is_owner = access.target_user, access.is_owner
 
@@ -326,7 +344,7 @@ async def run_query(request: SessionRequest, summary: QuerySummary):
 
     query_result = await Index.query(**query)
     if "delete" in query_result:
-        await sendPacked({"delete": query_result["delete"]})
+        await sendPacked({"delete": [str(aid) for aid in query_result["delete"]]})
 
     summaries = query_result["docs"]
     summary.activities = len(summaries)
@@ -347,7 +365,7 @@ async def run_query(request: SessionRequest, summary: QuerySummary):
         uids = list(set(A[I.USER_ID] for A in summaries))
         users = await Users.get_collection()
         cursor = users.find({U.ID: {"$in": uids}}, {U.ID: True, U.PROFILE: True})
-        profile_lookup = {u[U.ID]: u[U.PROFILE] async for u in cursor}
+        profile_lookup = {str(u[U.ID]): u[U.PROFILE] async for u in cursor}
         info["avatars"] = profile_lookup
 
     await sendPacked({"info": info})
@@ -357,11 +375,12 @@ async def run_query(request: SessionRequest, summary: QuerySummary):
         # what is already cached server-side. Sent ahead of the summaries so
         # the page has it before it builds a single row.
         ids = [A[I.ACTIVITY_ID] for A in summaries]
-        await sendPacked({"cached": await Streams.cached_ids(ids)})
+        cached = await Streams.cached_ids(ids)
+        await sendPacked({"cached": [str(aid) for aid in cached]})
 
     if not streams:
         for A in summaries:
-            await sendPacked(A)
+            await sendPacked(wire(A))
             summary.sent += 1
         return
 
@@ -381,7 +400,7 @@ async def run_query(request: SessionRequest, summary: QuerySummary):
             async for aid, packed_streams in items:
                 A = summaries_lookup[aid]
                 A["mpk"] = packed_streams
-                await sendPacked(A)
+                await sendPacked(wire(A))
                 summary.sent += 1
     except Strava.RateLimitExceeded as e:
         summary.outcome = "rationed for today" if e.rationed else "rate limit"
@@ -461,7 +480,9 @@ async def activities_page(request: SessionRequest):
     current_user_id = (
         request.ctx.current_user[U.ID] if request.ctx.current_user else None
     )
+    # An int, from the query string or the session alike: is_owner compares them
     target_user_id = request.args.get("user_id", None if all_users else current_user_id)
+    target_user_id = int(target_user_id) if target_user_id else None
     if target_user_id:
         target_user = request.ctx.current_user or await Users.get(target_user_id)
         if not target_user:
@@ -469,7 +490,7 @@ async def activities_page(request: SessionRequest):
                 f"user {target_user_id} not registered", status_code=404, quiet=True
             )
 
-        query["user_id"] = target_user_id
+        query["user_id"] = str(target_user_id)  # for the browser; see wire()
         is_owner = current_user_id == target_user_id
         if not is_owner:
             query["private"] = False
@@ -493,7 +514,7 @@ async def activities_page(request: SessionRequest):
             # The page shows a "cached in this browser" column, and the local
             # cache only ever holds your own activities, so it needs to know
             # whether this list is yours.
-            "current_user_id": current_user_id,
+            "current_user_id": current_user_id and str(current_user_id),
         },
     }
     html = render_template("activities-page.html", **params)
