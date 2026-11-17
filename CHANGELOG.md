@@ -8,6 +8,12 @@ everything since the one before it.
 
 ## Unreleased
 
+## [1.8.1] — 2026-11-17
+
+### The app
+- Ready for Strava's **64-bit ids**. After 2027-06-01 Strava may give activities and athletes ids too large for a browser to hold exactly as numbers, so it would quietly round one into a different id. Heatflask now sends activity and athlete ids to the browser as text, so maps, links, the activity list and the browser's track cache keep every digit. Nothing changes for today's ids or for any saved link.
+- On the activity list (`/activities?user_id=<your id>`), your own private activities now show up. The list never recognized you as the owner there, so you saw only the public ones.
+
 ## [1.8.0] — 2026-11-10
 
 ### The app
@@ -179,6 +185,7 @@ At the tag, the app was Flask with gevent and flask-sockets, Leaflet with the
 canvas dot layer, and PostgreSQL, Redis and MongoDB behind it. Work on a
 Parcel build for the frontend had started that March on a separate branch.
 
+[1.8.1]: https://github.com/ebrensi/heatflask/compare/v1.8.0...v1.8.1
 [1.8.0]: https://github.com/ebrensi/heatflask/compare/v1.7.5...v1.8.0
 [1.7.5]: https://github.com/ebrensi/heatflask/compare/v1.7.4...v1.7.5
 [1.7.4]: https://github.com/ebrensi/heatflask/compare/v1.7.3...v1.7.4
