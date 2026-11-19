@@ -127,6 +127,9 @@ class FakeIndex:
     def __init__(self):
         self.docs = {123: {"_id": 123, "p": False}}
 
+    async def find_one(self, query, projection=None, sort=None):
+        return None  # no TTL clock to share; the real query is tested below
+
     async def replace_one(self, query, doc, upsert=False):
         self.docs[query["_id"]] = doc
 
@@ -224,3 +227,138 @@ async def test_delete_subscription_puts_the_id_in_the_path(strava):
     admin = Strava.AsyncClient("admin")
     assert await admin.delete_subscription(555, raise_exception=True) is True
     assert fake.subscription is None
+
+
+# ---- the TTL clock a webhook entry gets, against a real MongoDB -------------
+
+
+@pytest.fixture
+async def mongo_index(monkeypatch, limiter, strava_server):
+    import datetime
+    import os
+    import socket
+    import time
+
+    from pymongo import AsyncMongoClient
+
+    try:
+        socket.create_connection(("127.0.0.1", 27017), timeout=0.5).close()
+    except OSError:
+        pytest.skip("no MongoDB on localhost:27017")
+
+    client = AsyncMongoClient("mongodb://127.0.0.1:27017", tz_aware=True)
+    db = client[f"heatflask_test_{os.getpid()}_{time.monotonic_ns()}"]
+    coll = db["index"]
+
+    async def get_collection():
+        return coll
+
+    monkeypatch.setattr(Index, "get_collection", get_collection)
+    await strava_server()
+    yield coll, datetime
+    await client.drop_database(db.name)
+    await client.close()
+
+
+async def test_a_webhook_entry_expires_with_the_rest_of_the_index(mongo_index):
+    """An athlete who stops visiting but keeps recording: if each new activity
+    restarted its own TTL clock, the index would expire all but those, and the
+    remainder would never be rebuilt"""
+    coll, datetime = mongo_index
+    F = Index.F
+    now = datetime.datetime.now(datetime.timezone.utc)
+    oldest = (now - datetime.timedelta(days=59)).replace(microsecond=0)
+    await coll.insert_many(
+        [
+            {F.ACTIVITY_ID: 1, F.USER_ID: 1, F.TIMESTAMP: oldest},
+            {F.ACTIVITY_ID: 2, F.USER_ID: 1, F.TIMESTAMP: now},
+            {F.ACTIVITY_ID: 3, F.USER_ID: 1},  # older than ts: never expires
+            # someone else's older clock is not this athlete's
+            {F.ACTIVITY_ID: 4, F.USER_ID: 2, F.TIMESTAMP: oldest.replace(year=2020)},
+        ]
+    )
+
+    assert await Index.refresh_one(123, **make_user(1)) == "imported"
+    doc = await coll.find_one({F.ACTIVITY_ID: 123})
+    assert doc[F.TIMESTAMP] == oldest
+
+
+async def test_an_athlete_with_no_clock_gets_now(mongo_index):
+    coll, datetime = mongo_index
+    before = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
+    assert await Index.refresh_one(123, **make_user(1)) == "imported"
+    doc = await coll.find_one({Index.F.ACTIVITY_ID: 123})
+    assert doc[Index.F.TIMESTAMP] >= before
+
+
+@pytest.fixture
+async def touched(mongo_index, monkeypatch):
+    """mongo_index with flags of its own and no users collection: who got
+    their index clock restarted, read back as the entries' ts"""
+    coll, datetime = mongo_index
+    flags = coll.database["flags"]
+
+    async def get_flag_collection():
+        return flags
+
+    async def add_or_update(**kw):
+        pass
+
+    monkeypatch.setattr(Index, "get_flag_collection", get_flag_collection)
+    monkeypatch.setattr(Index.Users, "add_or_update", add_or_update)
+    F = Index.F
+    old = datetime.datetime(2026, 1, 1, tzinfo=datetime.timezone.utc)
+    await coll.insert_many(
+        [
+            {F.ACTIVITY_ID: 1, F.USER_ID: 1, F.UTC_START_TIME: 1, F.TIMESTAMP: old},
+            {F.ACTIVITY_ID: 2, F.USER_ID: 1, F.UTC_START_TIME: 2, F.TIMESTAMP: old},
+            {F.ACTIVITY_ID: 3, F.USER_ID: 2, F.UTC_START_TIME: 3, F.TIMESTAMP: old},
+            {F.ACTIVITY_ID: 4, F.USER_ID: 3, F.UTC_START_TIME: 4, F.TIMESTAMP: old},
+        ]
+    )
+
+    async def fresh():
+        return {d[F.ACTIVITY_ID] async for d in coll.find({F.TIMESTAMP: {"$gt": old}})}
+
+    return coll, flags, fresh
+
+
+async def test_any_query_of_a_map_keeps_its_index(touched):
+    """The index saves Strava reads whoever is looking, so a shared map that
+    people keep opening is kept just as its owner's visits would keep it.
+    Index.query does not know who is asking, which is the point."""
+    coll, flags, fresh = touched
+    await Index.query(user_id=1)
+    assert await fresh() == {1, 2}
+
+
+async def test_the_clock_restarts_at_most_once_a_day(touched):
+    """Not a bulk write per page view"""
+    coll, flags, fresh = touched
+    import datetime
+
+    F = Index.F
+    old = (await coll.find_one({F.ACTIVITY_ID: 3}))[F.TIMESTAMP]
+    await Index.query(user_id=1)
+    await coll.update_many({}, {"$set": {F.TIMESTAMP: old}})
+
+    await Index.query(user_id=1)
+    assert await fresh() == set()
+
+    # a day on
+    flag = await flags.find_one({"_id": "touch:1"})
+    day = Index.TOUCH_INTERVAL
+    await flags.update_one(
+        {"_id": "touch:1"},
+        {"$set": {"ts": flag["ts"] - datetime.timedelta(seconds=day)}},
+    )
+    await Index.query(user_id=1)
+    assert await fresh() == {1, 2}
+
+
+async def test_the_global_map_keeps_everyone_it_matched(touched):
+    """Including athletes whose activities the browser already had, and so
+    were not sent again"""
+    coll, flags, fresh = touched
+    await Index.query(activity_ids=[1, 3], exclude_ids=["3"])
+    assert await fresh() == {1, 2, 3}

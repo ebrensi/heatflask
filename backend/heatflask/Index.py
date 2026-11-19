@@ -14,7 +14,7 @@ import datetime
 import time
 import asyncio
 import types
-from pymongo import DESCENDING, ReplaceOne
+from pymongo import ASCENDING, DESCENDING, ReplaceOne
 from aiohttp import ClientResponseError
 from typing import Iterable, TypedDict
 
@@ -36,9 +36,9 @@ SECS_IN_DAY = 24 * SECS_IN_HOUR
 
 # How long we keep a user's index after they last used the app.
 #
-# The clock runs from last use, not from import: touch_user_entries refreshes
-# it while the owner is active, so this expires the indexes of people who have
-# stopped coming and nobody else's. Rebuilding one is cheap in Strava reads --
+# The clock runs from last use, not from import: every query of an athlete's
+# map refreshes it (touch_if_due), whoever is looking, so this expires only the
+# indexes nobody is using. Rebuilding one is cheap in Strava reads --
 # about one per fifty activities, against one per activity for streams -- but
 # it costs the user a wait, so it wants to be long.
 TTL = int(os.environ.get("INDEX_TTL", 60)) * SECS_IN_DAY
@@ -473,9 +473,8 @@ async def update_user_entries(**user) -> int:
     This asks Strava only for what started after the newest activity we
     already hold, which is normally a single request returning nothing.
 
-    It also restarts the index's TTL clock, since the owner is evidently still
-    here. due_for_update gates this to once per UPDATE_INTERVAL, so it is one
-    bulk write every five minutes at worst.
+    The index's TTL clock is not this function's business: query() restarts
+    it for whoever's map is looked at, owner or not.
     """
     uid = int(user[U.ID])
 
@@ -483,8 +482,6 @@ async def update_user_entries(**user) -> int:
     if after is None:
         # Nothing indexed yet: that is import_user_entries' job, not this one
         return 0
-
-    await touch_user_entries(uid)
 
     strava = Users.strava_client(user)
     await strava.update_access_token()
@@ -557,7 +554,11 @@ async def refresh_one(activity_id: int, **user) -> str:
         log.info("activity %d: could not fetch (%r), left as is", activity_id, e)
         return "unchanged"
 
-    doc = mongo_doc(**activity) if activity else None
+    doc = (
+        mongo_doc(**activity, ts=await index_timestamp(user[U.ID]))
+        if activity
+        else None
+    )
     if not doc:
         await index.delete_one({F.ACTIVITY_ID: activity_id})
         log.debug("%s removed activity %d from index", user[U.ID], activity_id)
@@ -566,6 +567,29 @@ async def refresh_one(activity_id: int, **user) -> str:
     await index.replace_one({F.ACTIVITY_ID: activity_id}, doc, upsert=True)
     log.debug("%s refreshed activity %d", user[U.ID], activity_id)
     return "imported"
+
+
+async def index_timestamp(user_id: int) -> datetime.datetime | None:
+    """
+    The TTL clock of this user's index: the oldest `ts` among their entries.
+
+    An entry a webhook adds takes this rather than now. With now, an athlete
+    whose map nobody opens but who keeps recording would see it expire all
+    but the activities that arrived by webhook since -- and that remainder is
+    an index, so nothing would rebuild it: has_user_entries says yes, and
+    update_user_entries only asks Strava for what is newer. Their history
+    would be gone for good. Sharing the oldest clock, the index expires as one
+    piece, and the next visit imports it whole.
+
+    None when no entry carries a ts; mongo_doc then uses now.
+    """
+    index = await get_collection()
+    doc = await index.find_one(
+        {F.USER_ID: int(user_id), F.TIMESTAMP: {"$exists": True}},
+        projection={F.TIMESTAMP: True},
+        sort=[(F.TIMESTAMP, ASCENDING)],
+    )
+    return doc and doc[F.TIMESTAMP]
 
 
 async def delete_one(activity_id: int):
@@ -579,13 +603,56 @@ async def touch_user_entries(user_id: int) -> None:
 
     Without this the index would expire TTL after it was *imported*, taking
     the index of somebody who uses Heatflask every week along with it. What
-    should expire is the index of someone who has stopped coming.
+    should expire is an index nobody is using.
     """
     index = await get_collection()
     await index.update_many(
         {F.USER_ID: int(user_id)},
         {"$set": {F.TIMESTAMP: datetime.datetime.now(datetime.timezone.utc)}},
     )
+
+
+"""
+How often a map in use restarts its index's TTL clock, in seconds. Against a
+60-day TTL a day is as good as every load, and it is one bulk write per athlete
+per day rather than one per page view.
+"""
+TOUCH_INTERVAL = 24 * 3600
+
+
+async def touch_if_due(user_id: int) -> None:
+    """
+    Restart this athlete's index clock if it has not been in TOUCH_INTERVAL.
+
+    Called for every map that is queried, whoever is looking: the index is
+    there to save Strava reads, and a shared map that people keep opening
+    saves them just the same as the owner's visits do. Only what the browser
+    keeps is the viewer's own business.
+    """
+    flags = await get_flag_collection()
+    key = f"touch:{int(user_id)}"
+    now = datetime.datetime.now(datetime.timezone.utc)
+
+    doc = await flags.find_one({"_id": key})
+    if doc and (now - doc["ts"]).total_seconds() < TOUCH_INTERVAL:
+        return
+
+    await flags.replace_one(
+        {"_id": key},
+        {"_id": key, "msg": "index touch", "ttl": TOUCH_INTERVAL, "ts": now},
+        upsert=True,
+    )
+    await touch_user_entries(user_id)
+
+
+async def note_access(user_ids) -> None:
+    """These athletes' maps were just queried: record it, and keep them."""
+
+    async def one(uid):
+        await Users.add_or_update(id=uid, update_index_access=True)
+        await touch_if_due(uid)
+
+    await asyncio.gather(*(one(uid) for uid in set(user_ids)))
 
 
 async def delete_user_entries(**user):
@@ -817,6 +884,8 @@ async def query(
         )
 
     to_delete = None
+    # athletes whose entries matched, for note_access
+    accessed: set[int] = set()
 
     index = await get_collection()
 
@@ -826,13 +895,15 @@ async def query(
         t0 = time.perf_counter()
         cursor = index.find(
             filter=mongo_query,
-            projection={F.ACTIVITY_ID: True},
+            projection={F.ACTIVITY_ID: True, F.USER_ID: True},
             sort=SORT_SPECS,
             limit=limit,
         )
 
         # These are the ids of activities that matched the mongo_query
-        mongo_query_ids = set([doc[F.ACTIVITY_ID] async for doc in cursor])
+        matched = await cursor.to_list(length=None)
+        mongo_query_ids = set(doc[F.ACTIVITY_ID] for doc in matched)
+        accessed = set(doc[F.USER_ID] for doc in matched)
         excl = set(int(aid) for aid in exclude_ids)
         to_fetch = list(mongo_query_ids - excl)
         to_delete = list(excl - mongo_query_ids)
@@ -859,17 +930,11 @@ async def query(
     log.debug("queried %d activities in %dms", len(docs), elapsed)
 
     if update_index_access:
-        if user_id:
-            await Users.add_or_update(id=user_id, update_index_access=True)
-        else:
-            ids = set(a[F.USER_ID] for a in docs)
-            tasks = [
-                asyncio.create_task(
-                    Users.add_or_update(id=user_id, update_index_access=True)
-                )
-                for user_id in ids
-            ]
-            await asyncio.gather(*tasks)
+        # Everyone whose activities this query matched, including those the
+        # browser already had and so were not sent again
+        await note_access(
+            [int(user_id)] if user_id else accessed | {a[F.USER_ID] for a in docs}
+        )
     return result
 
 
