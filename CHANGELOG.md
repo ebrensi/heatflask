@@ -8,6 +8,12 @@ everything since the one before it.
 
 ## Unreleased
 
+## [1.8.2] — 2026-11-19
+
+### The app
+- Heatflask keeps its index of an athlete's activities for as long as anyone opens their map. Visits to a shared map count as well as the owner's own. Before, only the owner's visits counted, so a shared map could lose its index while people were still using it.
+- An athlete who stopped visiting but kept recording could end up with an index that held only their newest activities and was never rebuilt. Now the whole index expires together, and the next visit rebuilds it in full.
+
 ## [1.8.1] — 2026-11-17
 
 ### The app
@@ -185,6 +191,7 @@ At the tag, the app was Flask with gevent and flask-sockets, Leaflet with the
 canvas dot layer, and PostgreSQL, Redis and MongoDB behind it. Work on a
 Parcel build for the frontend had started that March on a separate branch.
 
+[1.8.2]: https://github.com/ebrensi/heatflask/compare/v1.8.1...v1.8.2
 [1.8.1]: https://github.com/ebrensi/heatflask/compare/v1.8.0...v1.8.1
 [1.8.0]: https://github.com/ebrensi/heatflask/compare/v1.7.5...v1.8.0
 [1.7.5]: https://github.com/ebrensi/heatflask/compare/v1.7.4...v1.7.5
